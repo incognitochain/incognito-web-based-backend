@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"sync"
 	"time"
 )
@@ -26,12 +28,17 @@ func requestUSAToken(endpoint string) error {
 			}
 			Error interface{}
 		}
-
+		var reqBody = struct {
+			DeviceID    string
+			DeviceToken string
+		}{
+			"be123", "be123",
+		}
 		var responseBodyData Respond
 		res, err := restyClient.R().
 			EnableTrace().
-			SetHeader("Content-Type", "application/json").
-			Get(config.ShieldService + "/auth/new-token")
+			SetHeader("Content-Type", "application/json").SetBody(reqBody).
+			Post(config.ShieldService + "/auth/new-token")
 		if err != nil {
 			return err
 		}
@@ -39,6 +46,15 @@ func requestUSAToken(endpoint string) error {
 		if err != nil {
 			return err
 		}
+		if responseBodyData.Error != nil {
+			return errors.New("can't gen auth token")
+		}
+		usa.expireAt, err = time.Parse(time.RFC3339, responseBodyData.Result.Expired)
+		if err != nil {
+			return err
+		}
+		usa.token = responseBodyData.Result.Token
+		log.Println("usa.expireAt", usa.expireAt, responseBodyData.Result.Expired)
 	}
 	return nil
 }

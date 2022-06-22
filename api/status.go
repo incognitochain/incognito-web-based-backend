@@ -23,6 +23,7 @@ func APIGetStatusByShieldService(c *gin.Context) {
 		PrivacyTokenAddress string
 	}
 	requestBody.WalletAddress = pyd
+retry:
 	re, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(requestBody).
@@ -43,7 +44,12 @@ func APIGetStatusByShieldService(c *gin.Context) {
 			c.JSON(400, gin.H{"Error": responseBodyData.Error})
 			return
 		} else {
-			requestUSAToken(config.ShieldService)
+			err = requestUSAToken(config.ShieldService)
+			if err != nil {
+				c.JSON(400, gin.H{"Error": err.Error()})
+				return
+			}
+			goto retry
 		}
 	}
 

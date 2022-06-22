@@ -5,5 +5,5 @@ type Config struct {
 	DatabaseURL    string
 	CoinserviceURL string
 	FullnodeURL    string
-	CrossChainURL  string
+	ShieldService  string
 }

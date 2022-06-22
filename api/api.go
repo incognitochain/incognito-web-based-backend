@@ -20,9 +20,19 @@ func StartAPIservice(cfg common.Config) {
 	r := gin.Default()
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	r.GET("/supportedtokens", APIGetSupportedToken)
+	// r.GET("/supportedtokens", APIGetSupportedToken)
+
 	r.POST("/estimateswap", APIGetSupportedToken)
-	r.GET("/supportedtokens", APIGetSupportedToken)
+
+	r.GET("/tokenlist", APIGetSupportedToken)
+
+	r.POST("/estimateshieldreward", APIEstimateReward)
+
+	r.POST("/estimateunshieldfee", APIEstimateUnshield)
+
+	r.GET("/statusbyservice", APIGetStatusByShieldService)
+
+	r.GET("/statusbyinctx", APIGetStatusByIncTx)
 
 	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

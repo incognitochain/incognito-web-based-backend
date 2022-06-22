@@ -22,7 +22,7 @@ func StartAPIservice(cfg common.Config) {
 
 	// r.GET("/supportedtokens", APIGetSupportedToken)
 
-	r.POST("/estimateswap", APIGetSupportedToken)
+	// r.POST("/estimateswap", APIGetSupportedToken)
 
 	r.GET("/tokenlist", APIGetSupportedToken)
 

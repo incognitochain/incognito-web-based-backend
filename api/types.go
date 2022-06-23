@@ -128,3 +128,28 @@ type UnifiedReward struct {
 	Amount uint64
 	Reward uint64
 }
+
+type GenUnshieldAddressRequest struct {
+	Network             string
+	RequestedAmount     string
+	AddressType         int
+	IncognitoAmount     string
+	PaymentAddress      string
+	PrivacyTokenAddress string
+	WalletAddress       string
+}
+
+type SubmitUnshieldTxRequest struct {
+	Network             string
+	RequestedAmount     string
+	AddressType         int
+	IncognitoAmount     string
+	PaymentAddress      string
+	PrivacyTokenAddress string
+	WalletAddress       string
+
+	UserFeeLevel     int
+	ID               int
+	IncognitoTx      string
+	UserFeeSelection int
+}

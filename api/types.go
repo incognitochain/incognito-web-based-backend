@@ -153,3 +153,10 @@ type SubmitUnshieldTxRequest struct {
 	IncognitoTx      string
 	UserFeeSelection int
 }
+
+type GenShieldAddressRequest struct {
+	Network             string
+	AddressType         int
+	PrivacyTokenAddress string
+	WalletAddress       string
+}

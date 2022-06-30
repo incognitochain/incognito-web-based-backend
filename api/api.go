@@ -30,6 +30,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/genunshieldaddress", APIGenUnshieldAddress)
 
+	r.POST("/genshieldaddress", APIGenShieldAddress)
+
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
 	r.GET("/statusbyinctx", APIGetStatusByIncTx)

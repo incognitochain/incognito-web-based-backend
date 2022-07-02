@@ -20,7 +20,7 @@ func StartAPIservice(cfg common.Config) {
 	r := gin.Default()
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	r.GET("/tokenlist", APIGetSupportedToken)
+	r.GET("/tokenlist", APIGetTokenList)
 
 	r.POST("/estimateshieldreward", APIEstimateReward)
 

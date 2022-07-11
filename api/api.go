@@ -36,6 +36,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.GET("/statusbyinctx", APIGetStatusByIncTx)
 
+	r.POST("/submitshieldtx", APISubmitShieldTx)
+
 	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {
 		panic(err)

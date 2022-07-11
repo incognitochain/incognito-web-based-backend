@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/incognitochain/coin-service/apiservice"
 )
 
 func APIGetSupportedToken(c *gin.Context) {
@@ -10,7 +9,7 @@ func APIGetSupportedToken(c *gin.Context) {
 }
 
 func APIGetTokenList(c *gin.Context) {
-	var responseBodyData apiservice.APIRespond
+	var responseBodyData APIRespond
 	_, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").

@@ -160,3 +160,14 @@ type GenShieldAddressRequest struct {
 	PrivacyTokenAddress string
 	WalletAddress       string
 }
+
+type SubmitShieldTx struct {
+	Txhash  string
+	Network int
+	TokenID string
+}
+
+type APIRespond struct {
+	Result interface{}
+	Error  *string
+}

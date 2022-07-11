@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/incognitochain/coin-service/apiservice"
 )
 
 func APIEstimateSwap(c *gin.Context) {
@@ -33,7 +32,7 @@ func APIEstimateReward(c *gin.Context) {
 		},
 	})
 
-	var responseBodyData apiservice.APIRespond
+	var responseBodyData APIRespond
 	_, err = restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").

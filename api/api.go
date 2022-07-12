@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -18,6 +19,9 @@ func StartAPIservice(cfg common.Config) {
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
 	r := gin.Default()
+
+	r.Use(cors.Default())
+
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	r.GET("/tokenlist", APIGetTokenList)

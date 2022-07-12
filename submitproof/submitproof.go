@@ -1,18 +1,23 @@
 package submitproof
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
+	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/pkg/errors"
 )
 
+var config wcommon.Config
 var incClient *incclient.IncClient
 var keyList []string
 
-func Start(keylist []string, network string) error {
+func Start(keylist []string, network string, cfg wcommon.Config) error {
+	config = cfg
 	keyList = keylist
 	var err error
 	switch network {
@@ -39,52 +44,104 @@ func Start(keylist []string, network string) error {
 			return err
 		}
 	}
-
-	fmt.Println("Done submit keys")
+	incclient.Logger = incclient.NewLogger(true)
+	log.Println("Done submit keys")
 
 	return nil
 }
 
 func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
-	// networkID := 0
-	// switch network {
-	// case "eth":
-	// 	networkID = rpc.ETHNetworkID
-	// case "bsc":
-	// 	networkID = rpc.BSCNetworkID
-	// case "plg":
-	// 	networkID = rpc.PLGNetworkID
-	// case "ftm":
-	// 	networkID = rpc.FTMNetworkID
-	// }
-	status, err := incClient.GetEVMTransactionStatus(txhash, networkID)
-	if err != nil {
-		return err
+	if networkID == 0 {
+		return errors.New("unsported network")
 	}
-	if status != 1 {
-		return errors.New("tx failed")
-	}
-	proof, err := getProof(txhash, networkID)
-	if err != nil {
-		return err
-	}
-	submitProof(proof, tokenID, networkID)
+	go func() {
+		linkedTokenID := getLinkedTokenID(tokenID, networkID)
+		fmt.Println("used tokenID: ", linkedTokenID)
+		i := 0
+	retry:
+		if i == 20 {
+			panic(fmt.Sprintln("failed to shield txhash:", txhash))
+		}
+
+		time.Sleep(15 * time.Second)
+		i++
+		proof, err := getProof(txhash, networkID-1)
+		if err != nil {
+			log.Println("error:", err)
+			goto retry
+		}
+		result, err := submitProof(proof, linkedTokenID, tokenID, networkID)
+		if err != nil {
+			log.Println("error:", err)
+			goto retry
+		}
+		fmt.Println("done submit proof")
+		log.Println(result)
+	}()
 	return nil
 }
 
 func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, error) {
-	proof, _, err := incClient.GetEVMDepositProof(txhash, networkID)
+	_, blockHash, txIdx, proof, err := getETHDepositProof(incClient, networkID, txhash)
 	if err != nil {
 		return nil, err
 	}
-	return proof, nil
+	if len(proof) == 0 {
+		return nil, fmt.Errorf("invalid proof or tx not found")
+	}
+	result := incclient.NewETHDepositProof(0, common.HexToHash(blockHash), txIdx, proof)
+	return result, nil
 }
 
-func submitProof(proof *incclient.EVMDepositProof, tokenID string, networkID int) (string, error) {
+func submitProof(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int) (string, error) {
 	t := time.Now().Unix()
-	result, err := incClient.CreateAndSendIssuingEVMRequestTransaction(keyList[t%int64(len(keyList))], tokenID, *proof, networkID)
+	key := keyList[t%int64(len(keyList))]
+	result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *proof, networkID)
 	if err != nil {
 		return result, err
 	}
 	return result, err
+}
+
+func getTokenInfo(pUTokenID string) (*TokenInfo, error) {
+
+	type APIRespond struct {
+		Result []TokenInfo
+		Error  *string
+	}
+
+	reqBody := struct {
+		TokenIDs []string
+	}{
+		TokenIDs: []string{pUTokenID},
+	}
+
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqBody).
+		Post(config.CoinserviceURL + "/coins/tokeninfo")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(responseBodyData.Result) == 1 {
+		return &responseBodyData.Result[0], nil
+	}
+	return nil, errors.New(fmt.Sprintf("token not found"))
+}
+
+func getLinkedTokenID(pUTokenID string, networkID int) string {
+	tokenInfo, err := getTokenInfo(pUTokenID)
+	if err != nil {
+		log.Println("getLinkedTokenID", err)
+		return pUTokenID
+	}
+	for _, v := range tokenInfo.ListUnifiedToken {
+		if v.NetworkID == networkID {
+			return v.TokenID
+		}
+	}
+	return pUTokenID
 }

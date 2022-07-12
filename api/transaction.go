@@ -13,7 +13,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 	var req SubmitUnshieldTxRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(400, gin.H{"Error": err.Error()})
+		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -24,7 +24,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
 			Post(config.ShieldService + "/" + req.Network + "/add-tx-withdraw")
 		if err != nil {
-			c.JSON(400, gin.H{"Error": err.Error()})
+			c.JSON(200, gin.H{"Error": err.Error()})
 			return
 		}
 		var responseBodyData struct {
@@ -33,13 +33,13 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		}
 		err = json.Unmarshal(re.Body(), &responseBodyData)
 		if err != nil {
-			c.JSON(400, gin.H{"Error": err})
+			c.JSON(200, gin.H{"Error": err})
 			return
 		}
 		c.JSON(200, responseBodyData)
 		return
 	default:
-		c.JSON(400, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
 		return
 	}
 }
@@ -48,16 +48,16 @@ func APISubmitShieldTx(c *gin.Context) {
 	var req SubmitShieldTx
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(400, gin.H{"Error": err.Error()})
+		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
 	if req.Txhash == "" || req.TokenID == "" {
-		c.JSON(400, gin.H{"Error": errors.New("invalid params")})
+		c.JSON(200, gin.H{"Error": errors.New("invalid params")})
 		return
 	}
 	err = submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID)
 	if err != nil {
-		c.JSON(400, gin.H{"Error": err.Error()})
+		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"Result": "ok"})

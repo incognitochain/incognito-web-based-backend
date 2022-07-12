@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = submitproof.Start(keylist, "testnet")
+	err = submitproof.Start(keylist, "testnet", config)
 	if err != nil {
 		panic(err)
 	}

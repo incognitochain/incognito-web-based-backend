@@ -6,7 +6,7 @@ require (
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20220622114107-4942574dbe0c
+	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20220712041746-227ed6c74fcd
 	github.com/mongodb/mongo-tools v0.0.0-20220222145442-9a0003067b69
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
@@ -45,6 +45,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.7 // indirect
 	github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/gin-contrib/cors v1.4.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-kit/kit v0.8.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
@@ -173,7 +174,7 @@ require (
 	github.com/spf13/viper v1.3.2 // indirect
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570 // indirect
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
-	github.com/stretchr/testify v1.7.1 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954 // indirect
 	github.com/tendermint/btcd v0.0.0-20180816174608-e5840949ff4f // indirect
 	github.com/tendermint/go-amino v0.14.1 // indirect
@@ -210,6 +211,6 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/resty.v1 v1.10.3 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	stathat.com/c/consistent v1.0.0 // indirect
 )

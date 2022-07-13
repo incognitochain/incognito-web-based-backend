@@ -59,7 +59,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
 		fmt.Println("used tokenID: ", linkedTokenID)
 		i := 0
 	retry:
-		if i == 20 {
+		if i == 120 {
 			panic(fmt.Sprintln("failed to shield txhash:", txhash))
 		}
 

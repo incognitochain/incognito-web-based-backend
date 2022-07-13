@@ -137,6 +137,9 @@ type GenUnshieldAddressRequest struct {
 	PaymentAddress      string
 	PrivacyTokenAddress string
 	WalletAddress       string
+	IncognitoTx         string
+	UnifiedTokenID      string
+	SignPublicKeyEncode string
 }
 
 type SubmitUnshieldTxRequest struct {

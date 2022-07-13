@@ -18,6 +18,7 @@ func APIGenUnshieldAddress(c *gin.Context) {
 
 	switch req.Network {
 	case "eth", "bsc", "plg", "ftm":
+	retry:
 		re, err := restyClient.R().
 			EnableTrace().
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
@@ -28,13 +29,31 @@ func APIGenUnshieldAddress(c *gin.Context) {
 		}
 		var responseBodyData struct {
 			Result interface{}
-			Error  interface{}
+			Error  *struct {
+				Code    int
+				Message string
+			} `json:"Error"`
 		}
 		err = json.Unmarshal(re.Body(), &responseBodyData)
 		if err != nil {
 			c.JSON(400, gin.H{"Error": err})
 			return
 		}
+
+		if responseBodyData.Error != nil {
+			if responseBodyData.Error.Code != 401 {
+				c.JSON(400, gin.H{"Error": responseBodyData.Error})
+				return
+			} else {
+				err = requestUSAToken(config.ShieldService)
+				if err != nil {
+					c.JSON(400, gin.H{"Error": err.Error()})
+					return
+				}
+				goto retry
+			}
+		}
+
 		c.JSON(200, responseBodyData)
 		return
 	default:

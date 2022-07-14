@@ -2,7 +2,7 @@ package common
 
 type Config struct {
 	Port           int
-	DatabaseURL    string
+	DatabaseURLs   []string
 	CoinserviceURL string
 	FullnodeURL    string
 	ShieldService  string

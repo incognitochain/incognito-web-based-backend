@@ -9,17 +9,32 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/redb"
 	"github.com/pkg/errors"
+	"github.com/rueian/rueidis"
 )
 
 var config wcommon.Config
 var incClient *incclient.IncClient
 var keyList []string
 
+var db rueidis.Client
+
+func connectDB(endpoint []string) error {
+	var err error
+	db, err = redb.NewClient(endpoint)
+	return err
+}
+
 func Start(keylist []string, network string, cfg wcommon.Config) error {
 	config = cfg
 	keyList = keylist
-	var err error
+
+	err := connectDB(cfg.DatabaseURLs)
+	if err != nil {
+		return err
+	}
+
 	switch network {
 	case "mainnet":
 		incClient, err = incclient.NewMainNetClient()
@@ -54,6 +69,12 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
 	if networkID == 0 {
 		return errors.New("unsported network")
 	}
+
+	currentStatus, err := getShieldTxStatus(txhash, networkID, tokenID)
+	if err != nil {
+		return err
+	}
+	_ = currentStatus
 	go func() {
 		linkedTokenID := getLinkedTokenID(tokenID, networkID)
 		fmt.Println("used tokenID: ", linkedTokenID)

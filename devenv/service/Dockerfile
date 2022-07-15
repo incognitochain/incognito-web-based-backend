@@ -1,4 +1,4 @@
 FROM alpine
-COPY coinservice /home/coinservice
-ADD config /home/config
+COPY webservice /home/webservice
+COPY keylist.json /home/keylist.json
 COPY run.sh /home/run.sh

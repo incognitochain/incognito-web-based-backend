@@ -147,10 +147,10 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 	return result, err
 }
 
-func getTokenInfo(pUTokenID string) (*TokenInfo, error) {
+func getTokenInfo(pUTokenID string) (*wcommon.TokenInfo, error) {
 
 	type APIRespond struct {
-		Result []TokenInfo
+		Result []wcommon.TokenInfo
 		Error  *string
 	}
 

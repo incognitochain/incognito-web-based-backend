@@ -1,10 +1,16 @@
 package submitproof
 
 const (
-	ShieldStatus = iota
+	ShieldStatusUnknown = iota
 	ShieldStatusSubmitting
 	ShieldStatusSubmitFailed
+	ShieldStatusSubmitted
 	ShieldStatusPending
 	ShieldStatusRejected
 	ShieldStatusAccepted
+)
+
+const (
+	ShieldErrorPrefix = "error-shield-"
+	ShieldStatusrefix = "status-shield-"
 )

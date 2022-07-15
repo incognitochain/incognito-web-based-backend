@@ -1,6 +1,9 @@
 package submitproof
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 func getShieldTxStatus(externalTxHash string, networkID int, tokenID string) (int, error) {
 	ctx := context.Background()
@@ -16,10 +19,18 @@ func updateShieldTxStatus(externalTxHash string, networkID int, tokenID string, 
 	ctx := context.Background()
 
 	key := buildShieldStatusKey(externalTxHash, networkID, tokenID)
-	value := string(status)
+	value := fmt.Sprint(status)
+	return db.Do(ctx, db.B().Set().Key(key).Value(value).Nx().Build()).Error()
+}
+
+func setShieldTxStatusError(externalTxHash string, networkID int, tokenID string, errStr string) error {
+	ctx := context.Background()
+
+	key := buildShieldStatusKey(externalTxHash, networkID, tokenID)
+	value := fmt.Sprint(errStr)
 	return db.Do(ctx, db.B().Set().Key(key).Value(value).Nx().Build()).Error()
 }
 
 func buildShieldStatusKey(externalTxHash string, networkID int, tokenID string) string {
-	return externalTxHash + "_" + string(networkID) + "_" + tokenID
+	return externalTxHash + "_" + fmt.Sprint(networkID) + "_" + tokenID
 }

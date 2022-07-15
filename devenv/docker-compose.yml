@@ -1,0 +1,46 @@
+version: "2.2"
+services:
+  chainsync:
+    image: servicebe
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    working_dir: /home
+    entrypoint: [./run.sh]
+    env_file:
+      - service.env
+    depends_on:
+      - mongo
+      - redisstack
+
+  query:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    env_file:
+      - service.env
+    depends_on:
+      - mongo
+      - redisstack
+
+  nginx-server:
+    image: nginx-load-balancer
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - 6002:80
+    restart: unless-stopped
+    depends_on:
+      - query
+      - redisstack
+
+  redis:
+    image: redis/redis-stack
+    restart: always
+    ports:
+      - 6379:6379 
+      - 8001:8001
+    volumes:
+      - ./data/mongodb:/data
+      

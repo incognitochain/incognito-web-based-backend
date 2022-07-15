@@ -1,6 +1,27 @@
 package api
 
-import "time"
+import (
+	"time"
+
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
+	"github.com/incognitochain/go-incognito-sdk-v2/common"
+	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
+)
+
+type UnshieldRequest struct {
+	UnifiedTokenID common.Hash           `json:"UnifiedTokenID"`
+	Data           []UnshieldRequestData `json:"Data"`
+	Receiver       coin.OTAReceiver      `json:"Receiver"`
+	IsDepositToSC  bool                  `json:"IsDepositToSC"`
+	metadataCommon.MetadataBase
+}
+
+type UnshieldRequestData struct {
+	IncTokenID        common.Hash `json:"IncTokenID"`
+	BurningAmount     uint64      `json:"BurningAmount"`
+	MinExpectedAmount uint64      `json:"MinExpectedAmount"`
+	RemoteAddress     string      `json:"RemoteAddress"`
+}
 
 type EstimateSwapResult struct {
 	EstimateReceive float64
@@ -144,7 +165,6 @@ type GenUnshieldAddressRequest struct {
 
 type SubmitUnshieldTxRequest struct {
 	Network             string
-	RequestedAmount     string
 	IncognitoAmount     string
 	PaymentAddress      string
 	PrivacyTokenAddress string
@@ -172,4 +192,42 @@ type SubmitShieldTx struct {
 type APIRespond struct {
 	Result interface{}
 	Error  *string
+}
+
+type TransactionDetail struct {
+	BlockHash   string `json:"BlockHash"`
+	BlockHeight uint64 `json:"BlockHeight"`
+	TxSize      uint64 `json:"TxSize"`
+	Index       uint64 `json:"Index"`
+	ShardID     byte   `json:"ShardID"`
+	Hash        string `json:"Hash"`
+	Version     int8   `json:"Version"`
+	Type        string `json:"Type"` // Transaction type
+	LockTime    string `json:"LockTime"`
+	RawLockTime int64  `json:"RawLockTime,omitempty"`
+	Fee         uint64 `json:"Fee"` // Fee applies: always consant
+	Image       string `json:"Image"`
+
+	IsPrivacy bool `json:"IsPrivacy"`
+	// Proof           privacy.Proof `json:"Proof"`
+	// ProofDetail     interface{}   `json:"ProofDetail"`
+	InputCoinPubKey string `json:"InputCoinPubKey"`
+	SigPubKey       string `json:"SigPubKey,omitempty"` // 64 bytes
+	RawSigPubKey    []byte `json:"RawSigPubKey,omitempty"`
+	Sig             string `json:"Sig,omitempty"` // 64 bytes
+
+	Metadata                      string      `json:"Metadata"`
+	CustomTokenData               string      `json:"CustomTokenData"`
+	PrivacyCustomTokenID          string      `json:"PrivacyCustomTokenID"`
+	PrivacyCustomTokenName        string      `json:"PrivacyCustomTokenName"`
+	PrivacyCustomTokenSymbol      string      `json:"PrivacyCustomTokenSymbol"`
+	PrivacyCustomTokenData        string      `json:"PrivacyCustomTokenData"`
+	PrivacyCustomTokenProofDetail interface{} `json:"PrivacyCustomTokenProofDetail"`
+	PrivacyCustomTokenIsPrivacy   bool        `json:"PrivacyCustomTokenIsPrivacy"`
+	PrivacyCustomTokenFee         uint64      `json:"PrivacyCustomTokenFee"`
+
+	IsInMempool bool `json:"IsInMempool"`
+	IsInBlock   bool `json:"IsInBlock"`
+
+	Info string `json:"Info"`
 }

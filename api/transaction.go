@@ -55,10 +55,10 @@ func APISubmitShieldTx(c *gin.Context) {
 		c.JSON(200, gin.H{"Error": errors.New("invalid params")})
 		return
 	}
-	err = submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID)
+	status, err := submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID)
 	if err != nil {
 		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"Result": "ok"})
+	c.JSON(200, gin.H{"Result": status})
 }

@@ -145,7 +145,6 @@ type GenUnshieldAddressRequest struct {
 type SubmitUnshieldTxRequest struct {
 	Network             string
 	RequestedAmount     string
-	AddressType         int
 	IncognitoAmount     string
 	PaymentAddress      string
 	PrivacyTokenAddress string

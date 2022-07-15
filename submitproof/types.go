@@ -39,3 +39,9 @@ type TokenInfo struct {
 	MovedUnifiedToken bool
 	ParentUnifiedID   int
 }
+
+type SubmitProofStatus struct {
+	Status       int
+	StatusString string
+	Error        string
+}

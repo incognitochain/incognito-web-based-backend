@@ -65,41 +65,20 @@ func Start(keylist []string, network string, cfg wcommon.Config) error {
 	return nil
 }
 
-func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
+func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{}, error) {
 	if networkID == 0 {
-		return errors.New("unsported network")
+		return "", errors.New("unsported network")
 	}
 
 	currentStatus, err := getShieldTxStatus(txhash, networkID, tokenID)
 	if err != nil {
-		return err
+		return "", err
 	}
-	_ = currentStatus
-	go func() {
-		linkedTokenID := getLinkedTokenID(tokenID, networkID)
-		fmt.Println("used tokenID: ", linkedTokenID)
-		i := 0
-	retry:
-		if i == 120 {
-			panic(fmt.Sprintln("failed to shield txhash:", txhash))
-		}
+	if currentStatus != ShieldStatusUnknown {
 
-		time.Sleep(15 * time.Second)
-		i++
-		proof, err := getProof(txhash, networkID-1)
-		if err != nil {
-			log.Println("error:", err)
-			goto retry
-		}
-		result, err := submitProof(proof, linkedTokenID, tokenID, networkID)
-		if err != nil {
-			log.Println("error:", err)
-			goto retry
-		}
-		fmt.Println("done submit proof")
-		log.Println(result)
-	}()
-	return nil
+	}
+	go submitProof(txhash, tokenID, networkID)
+	return "submitting", nil
 }
 
 func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, error) {
@@ -114,7 +93,51 @@ func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, error) 
 	return result, nil
 }
 
-func submitProof(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int) (string, error) {
+func submitProof(txhash, tokenID string, networkID int) {
+	err := updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitting)
+	if err != nil {
+		log.Println("error:", err)
+	}
+	linkedTokenID := getLinkedTokenID(tokenID, networkID)
+	fmt.Println("used tokenID: ", linkedTokenID)
+	i := 0
+	var finalErr string
+retry:
+	if i == 120 {
+		err = updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitFailed)
+		if err != nil {
+			log.Println("updateShieldTxStatus error:", err)
+		}
+		err = setShieldTxStatusError(txhash, networkID, tokenID, finalErr)
+		if err != nil {
+			log.Println("setShieldTxStatusError error:", err)
+		}
+		panic(fmt.Sprintln("failed to shield txhash:", txhash))
+	}
+
+	time.Sleep(15 * time.Second)
+	i++
+	proof, err := getProof(txhash, networkID-1)
+	if err != nil {
+		log.Println("error:", err)
+		finalErr = "getProof " + err.Error()
+		goto retry
+	}
+	result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID)
+	if err != nil {
+		log.Println("error:", err)
+		finalErr = "submitProof " + err.Error()
+		goto retry
+	}
+	fmt.Println("done submit proof")
+	err = updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitted)
+	if err != nil {
+		log.Println("error:", err)
+	}
+	log.Println(result)
+}
+
+func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int) (string, error) {
 	t := time.Now().Unix()
 	key := keyList[t%int64(len(keyList))]
 	result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *proof, networkID)

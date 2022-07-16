@@ -28,6 +28,7 @@ func Start(keylist []string, network string, cfg wcommon.Config) error {
 	case "testnet1":
 		incClient, err = incclient.NewTestNet1Client()
 	case "devnet":
+		return errors.New("unsupported network")
 		// incclient.NewIncClient()
 	}
 	if err != nil {
@@ -55,20 +56,32 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
 		return errors.New("unsported network")
 	}
 	go func() {
-		linkedTokenID := getLinkedTokenID(tokenID, networkID)
-		fmt.Println("used tokenID: ", linkedTokenID)
+		var linkedTokenID string
+		if tokenID != "" {
+			linkedTokenID = getLinkedTokenID(tokenID, networkID)
+			fmt.Println("used tokenID: ", linkedTokenID)
+		}
+
 		i := 0
 	retry:
 		if i == 120 {
 			panic(fmt.Sprintln("failed to shield txhash:", txhash))
 		}
-
-		time.Sleep(15 * time.Second)
+		if i > 0 {
+			time.Sleep(15 * time.Second)
+		}
 		i++
-		proof, err := getProof(txhash, networkID-1)
+		proof, contractID, err := getProof(txhash, networkID-1)
 		if err != nil {
 			log.Println("error:", err)
 			goto retry
+		}
+		if linkedTokenID == "" && tokenID == "" {
+			tokenID, linkedTokenID, err = findTokenByContractID(contractID, networkID)
+			if err != nil {
+				log.Println("error:", err)
+				goto retry
+			}
 		}
 		result, err := submitProof(proof, linkedTokenID, tokenID, networkID)
 		if err != nil {
@@ -81,16 +94,16 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
 	return nil
 }
 
-func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, error) {
-	_, blockHash, txIdx, proof, err := getETHDepositProof(incClient, networkID, txhash)
+func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string, error) {
+	_, blockHash, txIdx, proof, contractID, err := getETHDepositProof(incClient, networkID, txhash)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if len(proof) == 0 {
-		return nil, fmt.Errorf("invalid proof or tx not found")
+		return nil, "", fmt.Errorf("invalid proof or tx not found")
 	}
 	result := incclient.NewETHDepositProof(0, common.HexToHash(blockHash), txIdx, proof)
-	return result, nil
+	return result, contractID, nil
 }
 
 func submitProof(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int) (string, error) {
@@ -101,47 +114,4 @@ func submitProof(proof *incclient.EVMDepositProof, tokenID string, pUTokenID str
 		return result, err
 	}
 	return result, err
-}
-
-func getTokenInfo(pUTokenID string) (*wcommon.TokenInfo, error) {
-
-	type APIRespond struct {
-		Result []wcommon.TokenInfo
-		Error  *string
-	}
-
-	reqBody := struct {
-		TokenIDs []string
-	}{
-		TokenIDs: []string{pUTokenID},
-	}
-
-	var responseBodyData APIRespond
-	_, err := restyClient.R().
-		EnableTrace().
-		SetHeader("Content-Type", "application/json").
-		SetResult(&responseBodyData).SetBody(reqBody).
-		Post(config.CoinserviceURL + "/coins/tokeninfo")
-	if err != nil {
-		return nil, err
-	}
-
-	if len(responseBodyData.Result) == 1 {
-		return &responseBodyData.Result[0], nil
-	}
-	return nil, errors.New(fmt.Sprintf("token not found"))
-}
-
-func getLinkedTokenID(pUTokenID string, networkID int) string {
-	tokenInfo, err := getTokenInfo(pUTokenID)
-	if err != nil {
-		log.Println("getLinkedTokenID", err)
-		return pUTokenID
-	}
-	for _, v := range tokenInfo.ListUnifiedToken {
-		if v.NetworkID == networkID {
-			return v.TokenID
-		}
-	}
-	return pUTokenID
 }

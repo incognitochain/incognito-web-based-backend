@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 )
 
 type AirdropKey struct {
@@ -15,7 +14,7 @@ func loadKeyList() ([]string, error) {
 	var keylist []AirdropKey
 	data, err := ioutil.ReadFile("./keylist.json")
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	if data != nil {
 		err = json.Unmarshal(data, &keylist)

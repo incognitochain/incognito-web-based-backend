@@ -42,6 +42,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitshieldtx", APISubmitShieldTx)
 
+	r.POST("/estimatetradefee")
+
 	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {
 		panic(err)

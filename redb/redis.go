@@ -6,7 +6,7 @@ import (
 
 func NewClient(endpoints []string) (rueidis.Client, error) {
 	c, err := rueidis.NewClient(rueidis.ClientOption{
-		InitAddress: []string{"127.0.0.1:6379"},
+		InitAddress: endpoints,
 	})
 	if err != nil {
 		return nil, err

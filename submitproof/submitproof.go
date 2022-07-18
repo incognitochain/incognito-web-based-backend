@@ -22,6 +22,7 @@ var db rueidis.Client
 
 func connectDB(endpoint []string) error {
 	var err error
+	fmt.Println("endpoint: ", endpoint)
 	db, err = redb.NewClient(endpoint)
 	return err
 }
@@ -44,7 +45,6 @@ func Start(keylist []string, network string, cfg wcommon.Config) error {
 		incClient, err = incclient.NewTestNet1Client()
 	case "devnet":
 		return errors.New("unsupported network")
-		// incclient.NewIncClient()
 	}
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 		return "", err
 	}
 	if currentStatus != ShieldStatusUnknown {
-
+		return ShieldStatusMap[currentStatus], nil
 	}
 	go submitProof(txhash, tokenID, networkID)
 	return "submitting", nil
@@ -118,8 +118,9 @@ retry:
 		}
 		panic(fmt.Sprintln("failed to shield txhash:", txhash))
 	}
-
-	time.Sleep(15 * time.Second)
+	if i > 0 {
+		time.Sleep(15 * time.Second)
+	}
 	i++
 	proof, contractID, err := getProof(txhash, networkID-1)
 	if err != nil {
@@ -134,18 +135,19 @@ retry:
 			goto retry
 		}
 	}
-	result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID)
-	if err != nil {
-		log.Println("error:", err)
-		finalErr = "submitProof " + err.Error()
-		goto retry
-	}
+	// result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID)
+	// if err != nil {
+	// 	log.Println("error:", err)
+	// 	finalErr = "submitProof " + err.Error()
+	// 	goto retry
+	// }
+	_ = proof
 	fmt.Println("done submit proof")
 	err = updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitted)
 	if err != nil {
-		log.Println("error:", err)
+		log.Println("error123:", err)
 	}
-	log.Println(result)
+	// log.Println(result)
 }
 
 func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int) (string, error) {

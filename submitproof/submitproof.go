@@ -70,43 +70,6 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	if networkID == 0 {
 		return "", errors.New("unsported network")
 	}
-	go func() {
-		var linkedTokenID string
-		if tokenID != "" {
-			linkedTokenID = getLinkedTokenID(tokenID, networkID)
-			fmt.Println("used tokenID: ", linkedTokenID)
-		}
-
-		i := 0
-	retry:
-		if i == 120 {
-			panic(fmt.Sprintln("failed to shield txhash:", txhash))
-		}
-		if i > 0 {
-			time.Sleep(15 * time.Second)
-		}
-		i++
-		proof, contractID, err := getProof(txhash, networkID-1)
-		if err != nil {
-			log.Println("error:", err)
-			goto retry
-		}
-		if linkedTokenID == "" && tokenID == "" {
-			tokenID, linkedTokenID, err = findTokenByContractID(contractID, networkID)
-			if err != nil {
-				log.Println("error:", err)
-				goto retry
-			}
-		}
-		result, err := submitProof(proof, linkedTokenID, tokenID, networkID)
-		if err != nil {
-			log.Println("error:", err)
-			goto retry
-		}
-		fmt.Println("done submit proof")
-		log.Println(result)
-	}()
-	return nil
 
 	currentStatus, err := getShieldTxStatus(txhash, networkID, tokenID)
 	if err != nil {
@@ -136,8 +99,11 @@ func submitProof(txhash, tokenID string, networkID int) {
 	if err != nil {
 		log.Println("error:", err)
 	}
-	linkedTokenID := getLinkedTokenID(tokenID, networkID)
-	fmt.Println("used tokenID: ", linkedTokenID)
+	var linkedTokenID string
+	if tokenID != "" {
+		linkedTokenID = getLinkedTokenID(tokenID, networkID)
+		fmt.Println("used tokenID: ", linkedTokenID)
+	}
 	i := 0
 	var finalErr string
 retry:
@@ -155,11 +121,18 @@ retry:
 
 	time.Sleep(15 * time.Second)
 	i++
-	proof, err := getProof(txhash, networkID-1)
+	proof, contractID, err := getProof(txhash, networkID-1)
 	if err != nil {
 		log.Println("error:", err)
 		finalErr = "getProof " + err.Error()
 		goto retry
+	}
+	if linkedTokenID == "" && tokenID == "" {
+		tokenID, linkedTokenID, err = findTokenByContractID(contractID, networkID)
+		if err != nil {
+			log.Println("error:", err)
+			goto retry
+		}
 	}
 	result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID)
 	if err != nil {

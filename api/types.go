@@ -42,11 +42,17 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	SourceToken string
-	// SourceNetwork string
-	DestToken   string
-	DestNetwork string
-	Amount      float64
+	Network           string `json:"ExternalNetwork"`
+	BurningAmount     uint64 `json:"BurningAmount"`
+	IncTokenID        string `json:"IncTokenID"`
+	ReceiveToken      string `json:"ReceiveToken"`
+	RedepositReceiver string `json:"RedepositReceiver"`
+	WithdrawAddress   string `json:"WithdrawAddress"`
+}
+
+type SubmitSwapTx struct {
+	Network string
+	Txhash  string
 }
 
 type EstimateRewardRequest struct {

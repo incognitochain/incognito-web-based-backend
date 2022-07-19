@@ -42,7 +42,9 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitshieldtx", APISubmitShieldTx)
 
-	r.POST("/estimatetradefee")
+	r.POST("/estimateswapfee", APIEstimateSwapFee)
+
+	r.POST("/submitswaptx", APISubmitSwapTx)
 
 	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

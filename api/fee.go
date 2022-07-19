@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-func APIEstimateSwap(c *gin.Context) {
+func APIEstimateSwapFee(c *gin.Context) {
 	var req EstimateSwapRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {

@@ -42,12 +42,28 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	Network           string `json:"ExternalNetwork"`
-	BurningAmount     uint64 `json:"BurningAmount"`
-	IncTokenID        string `json:"IncTokenID"`
-	ReceiveToken      string `json:"ReceiveToken"`
-	RedepositReceiver string `json:"RedepositReceiver"`
-	WithdrawAddress   string `json:"WithdrawAddress"`
+	Network           string
+	BurningAmount     uint64
+	FromToken         string // IncTokenID
+	ToToken           string // ReceiveToken
+	RedepositReceiver string
+	WithdrawAddress   string
+}
+
+type EstimateSwapRespone struct {
+	Quote      QuoteDataResp
+	ExpiredAt  time.Time
+	Fee        uint64
+	FeeAddress uint64
+}
+
+type QuoteDataResp struct {
+	TokenIn      string
+	TokenOut     string
+	AmountIn     string
+	AmountInRaw  string
+	AmountOut    string
+	AmountOutRaw string
 }
 
 type SubmitSwapTx struct {

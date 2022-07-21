@@ -63,12 +63,15 @@ func APISubmitUnshieldTx(c *gin.Context) {
 				IncognitoAmount:     IncognitoAmount,
 				PaymentAddress:      PaymentAddress,
 				PrivacyTokenAddress: PrivacyTokenAddress,
-				WalletAddress:       req.PaymentAddress,
+				WalletAddress:       req.WalletAddress,
 				UserFeeLevel:        1,
 				IncognitoTx:         req.IncognitoTx,
 				ID:                  ID,
 				UserFeeSelection:    1,
 			}
+
+			a, _ := json.Marshal(newReq)
+			fmt.Println("newReq", string(a))
 
 			switch Network {
 			case "eth", "bsc", "plg", "ftm":
@@ -177,7 +180,7 @@ func extractUnshieldInfoField(txdetail *TransactionDetail) (ID int, PaymentAddre
 	case 4:
 		Network = "ftm"
 	}
-	IncognitoAmount = fmt.Sprintf("%v", unshieldMeta.Data[0].BurningAmount)
+	IncognitoAmount = fmt.Sprintf("%d", unshieldMeta.Data[0].BurningAmount)
 	PaymentAddress = "0x" + unshieldMeta.Data[0].RemoteAddress
 	return
 }

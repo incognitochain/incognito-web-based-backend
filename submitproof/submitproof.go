@@ -16,9 +16,10 @@ var config wcommon.Config
 var incClient *incclient.IncClient
 var keyList []string
 
-func Start(keylist []string, network string, cfg wcommon.Config) error {
+func Start(keylist []string, cfg wcommon.Config) error {
 	config = cfg
 	keyList = keylist
+	network := cfg.NetworkID
 	var err error
 	switch network {
 	case "mainnet":

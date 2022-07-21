@@ -24,9 +24,9 @@ func Start(keylist []string, cfg wcommon.Config) error {
 	switch network {
 	case "mainnet":
 		incClient, err = incclient.NewMainNetClient()
-	case "testnet": // testnet2
+	case "testnet-2": // testnet2
 		incClient, err = incclient.NewTestNetClient()
-	case "testnet1":
+	case "testnet-1":
 		incClient, err = incclient.NewTestNet1Client()
 	case "devnet":
 		return errors.New("unsupported network")

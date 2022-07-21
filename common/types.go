@@ -6,6 +6,7 @@ type Config struct {
 	CoinserviceURL string
 	FullnodeURL    string
 	ShieldService  string
+	NetworkID      string
 }
 
 type TokenInfo struct {

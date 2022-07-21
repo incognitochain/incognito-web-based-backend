@@ -1,0 +1,7 @@
+{
+	"Port": 9898,
+	"NetworkID": "mainnet",
+	"CoinserviceURL": "https://api-coinservice.incognito.org",
+	"FullnodeURL": "https://mainnet.incognito.org/fullnode",
+	"ShieldService": "https://api-service.incognito.org"
+}

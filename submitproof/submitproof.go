@@ -27,7 +27,7 @@ func connectDB(endpoint []string) error {
 	return err
 }
 
-func Start(keylist []string, network string, cfg wcommon.Config) error {
+func Start(keylist []string, cfg wcommon.Config) error {
 	config = cfg
 	keyList = keylist
 
@@ -36,6 +36,7 @@ func Start(keylist []string, network string, cfg wcommon.Config) error {
 		return err
 	}
 
+	network := cfg.NetworkID
 	switch network {
 	case "mainnet":
 		incClient, err = incclient.NewMainNetClient()

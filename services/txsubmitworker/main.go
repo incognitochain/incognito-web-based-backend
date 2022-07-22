@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	err = submitproof.StartWorker(keylist, "testnet", config)
+	err = submitproof.StartWorker(keylist, config, serviceID)
 	if err != nil {
 		panic(err)
 	}

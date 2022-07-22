@@ -2,6 +2,7 @@ package common
 
 type Config struct {
 	Port           int
+	Mode           string
 	DatabaseURLs   []string
 	CoinserviceURL string
 	FullnodeURL    string

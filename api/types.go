@@ -134,7 +134,7 @@ type HistoryAddressResp struct {
 
 	UnifiedReward *UnifiedReward
 
-	Decimals  uint64
+	Decimals  int64
 	PDecimals uint64
 }
 

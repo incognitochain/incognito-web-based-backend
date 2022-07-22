@@ -18,7 +18,7 @@ type TokenInfo struct {
 	IsBridge           bool
 	ExternalID         string
 	PDecimals          int
-	Decimals           uint64
+	Decimals           int64
 	ContractID         string
 	Status             int
 	Type               int

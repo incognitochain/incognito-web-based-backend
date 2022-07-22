@@ -23,10 +23,13 @@ func Start(keylist []string, cfg wcommon.Config) error {
 	var err error
 	switch network {
 	case "mainnet":
+		log.Println("init mainnet client")
 		incClient, err = incclient.NewMainNetClient()
 	case "testnet-2": // testnet2
+		log.Println("init testnet-2 client")
 		incClient, err = incclient.NewTestNetClient()
 	case "testnet-1":
+		log.Println("init testnet-1 client")
 		incClient, err = incclient.NewTestNet1Client()
 	case "devnet":
 		return errors.New("unsupported network")
@@ -64,29 +67,33 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) error {
 		}
 
 		i := 0
+		incTxhash := ""
 	retry:
 		if i == 120 {
 			panic(fmt.Sprintln("failed to shield txhash:", txhash))
 		}
 		if i > 0 {
+			fmt.Println("incTxhash", incTxhash)
 			time.Sleep(15 * time.Second)
 		}
 		i++
 		proof, contractID, err := getProof(txhash, networkID-1)
 		if err != nil {
-			log.Println("error:", err)
+			log.Println("error: getProof", err)
 			goto retry
 		}
 		if linkedTokenID == "" && tokenID == "" {
 			tokenID, linkedTokenID, err = findTokenByContractID(contractID, networkID)
 			if err != nil {
-				log.Println("error:", err)
+				log.Println("error: findTokenByContractID", err)
 				goto retry
 			}
+			fmt.Println("used tokenID: ", linkedTokenID, tokenID)
 		}
 		result, err := submitProof(proof, linkedTokenID, tokenID, networkID)
 		if err != nil {
-			log.Println("error:", err)
+			log.Println("error: submitProof", err)
+			incTxhash = result
 			goto retry
 		}
 		fmt.Println("done submit proof")

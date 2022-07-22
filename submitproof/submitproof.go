@@ -7,65 +7,53 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
-	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
-	"github.com/incognitochain/incognito-web-based-backend/redb"
 	"github.com/pkg/errors"
-	"github.com/rueian/rueidis"
 )
 
 var config wcommon.Config
 var incClient *incclient.IncClient
 var keyList []string
 
-var db rueidis.Client
+// func Start(keylist []string, cfg wcommon.Config) error {
+// 	config = cfg
+// 	keyList = keylist
 
-func connectDB(endpoint []string) error {
-	var err error
-	fmt.Println("endpoint: ", endpoint)
-	db, err = redb.NewClient(endpoint)
-	return err
-}
+// 	err := connectDB(cfg.DatabaseURLs)
+// 	if err != nil {
+// 		return err
+// 	}
 
-func Start(keylist []string, cfg wcommon.Config) error {
-	config = cfg
-	keyList = keylist
+// 	network := cfg.NetworkID
+// 	switch network {
+// 	case "mainnet":
+// 		incClient, err = incclient.NewMainNetClient()
+// 	case "testnet": // testnet2
+// 		incClient, err = incclient.NewTestNetClient()
+// 	case "testnet1":
+// 		incClient, err = incclient.NewTestNet1Client()
+// 	case "devnet":
+// 		return errors.New("unsupported network")
+// 	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err := connectDB(cfg.DatabaseURLs)
-	if err != nil {
-		return err
-	}
+// 	for _, v := range keyList {
+// 		wl, err := wallet.Base58CheckDeserialize(v)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+// 	incclient.Logger = incclient.NewLogger(true)
+// 	log.Println("Done submit keys")
 
-	network := cfg.NetworkID
-	switch network {
-	case "mainnet":
-		incClient, err = incclient.NewMainNetClient()
-	case "testnet": // testnet2
-		incClient, err = incclient.NewTestNetClient()
-	case "testnet1":
-		incClient, err = incclient.NewTestNet1Client()
-	case "devnet":
-		return errors.New("unsupported network")
-	}
-	if err != nil {
-		return err
-	}
-
-	for _, v := range keyList {
-		wl, err := wallet.Base58CheckDeserialize(v)
-		if err != nil {
-			panic(err)
-		}
-		err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
-		if err != nil {
-			return err
-		}
-	}
-	incclient.Logger = incclient.NewLogger(true)
-	log.Println("Done submit keys")
-
-	return nil
-}
+// 	return nil
+// }
 
 func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{}, error) {
 	if networkID == 0 {

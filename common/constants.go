@@ -8,3 +8,8 @@ var DefaultConfig = Config{
 	FullnodeURL:    "https://testnet.incognito.org/fullnode",
 	ShieldService:  "https://staging-api-service.incognito.org",
 }
+
+const (
+	MODE_TXSUBMITWORKER = "submitworker"
+	MODE_API            = "api"
+)

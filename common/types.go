@@ -7,6 +7,7 @@ type Config struct {
 	FullnodeURL    string
 	ShieldService  string
 	NetworkID      string
+	CaptchaSecret  string
 }
 
 type TokenInfo struct {

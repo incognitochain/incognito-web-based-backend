@@ -187,6 +187,7 @@ type SubmitShieldTx struct {
 	Txhash  string
 	Network int
 	TokenID string
+	Captcha string
 }
 
 type APIRespond struct {

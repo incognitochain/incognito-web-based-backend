@@ -226,7 +226,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 	}
 	if contractID == EthAddrStr {
 		for _, token := range tokenList {
-			if token.IsBridge && token.Verified {
+			if token.IsBridge && token.Verified && token.NetworkID == networkID {
 				linkedTokenID = token.TokenID
 				if token.MovedUnifiedToken {
 					for _, pUtokenInfo := range tokenList {

@@ -108,6 +108,7 @@ require (
 	github.com/kamva/mgm/v3 v3.1.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/kleash/gin-hcaptcha v0.0.0-20220313155823-6bd6a856a74b // indirect
 	github.com/koron/go-ssdp v0.0.0-20191105050749-2e1c40ed0b5d // indirect
 	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect

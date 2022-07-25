@@ -156,7 +156,7 @@ type HistoryAddressResp struct {
 
 	UnifiedReward *UnifiedReward
 
-	Decimals  uint64
+	Decimals  int64
 	PDecimals uint64
 }
 
@@ -209,6 +209,7 @@ type SubmitShieldTx struct {
 	Txhash  string
 	Network int
 	TokenID string
+	Captcha string
 }
 
 type APIRespond struct {

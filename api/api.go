@@ -18,6 +18,7 @@ func StartAPIservice(cfg common.Config) {
 	log.Println("initiating api-service...")
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
+
 	r := gin.Default()
 
 	r.Use(cors.Default())

@@ -63,12 +63,15 @@ func APISubmitUnshieldTx(c *gin.Context) {
 				IncognitoAmount:     IncognitoAmount,
 				PaymentAddress:      PaymentAddress,
 				PrivacyTokenAddress: PrivacyTokenAddress,
-				WalletAddress:       req.PaymentAddress,
+				WalletAddress:       req.WalletAddress,
 				UserFeeLevel:        1,
 				IncognitoTx:         req.IncognitoTx,
 				ID:                  ID,
 				UserFeeSelection:    1,
 			}
+
+			a, _ := json.Marshal(newReq)
+			fmt.Println("newReq", string(a))
 
 			switch Network {
 			case "eth", "bsc", "plg", "ftm":
@@ -108,6 +111,18 @@ func APISubmitShieldTx(c *gin.Context) {
 		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
+
+	capse := "0xd6Ca2DF787C5619F55102EBCCFe67164FEf45Fc4"
+	if ok, err := VerifyCaptcha(req.Captcha, capse); !ok {
+		if err != nil {
+			log.Println("VerifyCaptcha", err)
+			c.JSON(200, gin.H{"Error": err})
+			return
+		}
+		c.JSON(200, gin.H{"Error": errors.New("invalid captcha")})
+		return
+	}
+
 	if req.Txhash == "" {
 		c.JSON(200, gin.H{"Error": errors.New("invalid params").Error()})
 		return
@@ -177,7 +192,7 @@ func extractUnshieldInfoField(txdetail *TransactionDetail) (ID int, PaymentAddre
 	case 4:
 		Network = "ftm"
 	}
-	IncognitoAmount = fmt.Sprintf("%v", unshieldMeta.Data[0].BurningAmount)
+	IncognitoAmount = fmt.Sprintf("%d", unshieldMeta.Data[0].BurningAmount)
 	PaymentAddress = "0x" + unshieldMeta.Data[0].RemoteAddress
 	return
 }

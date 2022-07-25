@@ -1,6 +1,13 @@
 package submitproof
 
 const (
+	MqSubmitTx        = "submitproof"
+	MqWatchTx         = "watchsubmit"
+	TxTypeShielding   = "shielding"
+	TxTypeUnshielding = "unshielding"
+)
+
+const (
 	ShieldStatusUnknown = iota
 	ShieldStatusSubmitting
 	ShieldStatusSubmitFailed

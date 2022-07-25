@@ -10,7 +10,17 @@ services:
     env_file:
       - service.env
     environment:
-      MODE: "api"
+      MODE: "submitworker"
+    depends_on:
+      - redisstack
+  watcher:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    env_file:
+      - service.env
+    environment:
+      MODE: "submitwatcher"
     depends_on:
       - redisstack
 
@@ -21,7 +31,7 @@ services:
     env_file:
       - service.env
     environment:
-      MODE: "submitworker"
+      MODE: "api"
     depends_on:
       - redisstack
 

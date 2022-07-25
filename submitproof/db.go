@@ -21,10 +21,16 @@ func connectDB(endpoint []string) error {
 }
 
 func connectMQ(serviceID uuid.UUID, endpoint []string) error {
-	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs: endpoint,
-	})
+	var redisClient redis.Cmdable
+	if len(endpoint) > 1 {
+		redisClient = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: endpoint,
+		})
+	} else {
+		redisClient = redis.NewClient(&redis.Options{Addr: endpoint[0]})
+	}
+
 	var err error
-	rdmq, err = rmq.OpenConnectionWithRedisClient("worker-"+serviceID.String(), client, nil)
+	rdmq, err = rmq.OpenConnectionWithRedisClient("worker-"+serviceID.String(), redisClient, nil)
 	return err
 }

@@ -22,6 +22,10 @@ func main() {
 		panic(err)
 	}
 	switch config.Mode {
+	case common.MODE_TXSUBMITWATCHER:
+		if err := submitproof.StartWatcher(config, serviceID); err != nil {
+			log.Fatalln(err)
+		}
 	case common.MODE_TXSUBMITWORKER:
 		keylist, err := loadKeyList()
 		if err != nil {
@@ -34,7 +38,7 @@ func main() {
 		}()
 	case common.MODE_API:
 		go func() {
-			if err := submitproof.StartAssigner(config); err != nil {
+			if err := submitproof.StartAssigner(config, serviceID); err != nil {
 				log.Fatalln(err)
 			}
 		}()

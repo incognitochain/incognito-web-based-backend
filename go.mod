@@ -13,8 +13,11 @@ require (
 
 require (
 	github.com/RichardKnop/machinery v1.10.6
+	github.com/adjust/rmq/v4 v4.0.5
 	github.com/ethereum/go-ethereum v1.10.7
 	github.com/gin-contrib/cors v1.4.0
+	github.com/go-redis/redis/v8 v8.11.5
+	github.com/google/uuid v1.2.0
 	github.com/incognitochain/coin-service v1.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/rueian/rueidis v0.0.60
@@ -30,7 +33,6 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/adjust/rmq v1.0.0 // indirect
-	github.com/adjust/rmq/v4 v4.0.5 // indirect
 	github.com/adjust/uniuri v0.0.0-20130923163420-498743145e60 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190704150520-f44d68189fd7 // indirect
@@ -66,7 +68,6 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.10.0 // indirect
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-redsync/redsync/v4 v4.0.4 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/goccy/go-json v0.9.7 // indirect
@@ -77,7 +78,6 @@ require (
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gopacket v1.1.17 // indirect
-	github.com/google/uuid v1.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

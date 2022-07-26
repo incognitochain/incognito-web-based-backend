@@ -8,6 +8,14 @@ const (
 )
 
 const (
+	INC_NetworkID = iota
+	ETH_NetworkID = 1
+	BSC_NetworkID = 2
+	PLG_NetworkID = 3
+	FTM_NetworkID = 4
+)
+
+const (
 	ShieldStatusUnknown = iota
 	ShieldStatusSubmitting
 	ShieldStatusSubmitFailed

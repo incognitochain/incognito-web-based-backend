@@ -2,6 +2,7 @@ package submitproof
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -36,11 +37,12 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 		return ShieldStatusMap[currentStatus], nil
 	}
 
-	task := SubmitProofTask{
+	task := SubmitProofShieldTask{
 		Txhash:    txhash,
 		NetworkID: networkID,
 		TokenID:   tokenID,
 		Metatype:  TxTypeShielding,
+		Time:      time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
 

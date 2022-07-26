@@ -1,6 +1,14 @@
 package feeestimator
 
-import "github.com/incognitochain/incognito-web-based-backend/common"
+import (
+	"time"
+
+	"github.com/incognitochain/incognito-web-based-backend/common"
+)
+
+const (
+	checkFeeInterval = 15 * time.Second
+)
 
 func StartService(network string, cfg common.Config) error {
 
@@ -8,7 +16,7 @@ func StartService(network string, cfg common.Config) error {
 }
 
 func checkFee() error {
-	for {
+	for range time.Tick(checkFeeInterval) {
 
 	}
 	return nil

@@ -40,7 +40,7 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, err
 	i := 0
 	var finalErr string
 retry:
-	if i == 120 {
+	if i == 10 {
 		err = updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitFailed)
 		if err != nil {
 			log.Println("updateShieldTxStatus error:", err)
@@ -54,7 +54,7 @@ retry:
 		return "", nil
 	}
 	if i > 0 {
-		time.Sleep(15 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	i++
 	proof, contractID, err := getProof(txhash, networkID-1)
@@ -93,4 +93,10 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		return result, err
 	}
 	return result, err
+}
+
+func checkProofSubmitted(proof string) (bool, error) {
+	var result bool
+
+	return result, nil
 }

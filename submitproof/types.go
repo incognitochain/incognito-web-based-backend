@@ -1,17 +1,24 @@
 package submitproof
 
-type SubmitProofTask struct {
+import "time"
+
+type SubmitProofShieldTask struct {
 	Txhash    string
 	NetworkID int
 	TokenID   string
 	Metatype  string
+	Time      time.Time
 }
 
 type WatchProofTask struct {
-	Txhash string
-	IncTx  string
+	Txhash    string
+	NetworkID int
+	TokenID   string
+	IncTx     string
+	Time      time.Time
 }
 
-type TaskConsumer struct {
-	UseKey string
+type SubmitProofConsumer struct {
+	UseKey    string
+	NetworkID int
 }

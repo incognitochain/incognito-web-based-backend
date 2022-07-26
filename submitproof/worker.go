@@ -29,16 +29,7 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		return err
 	}
 
-	switch network {
-	case "mainnet":
-		incClient, err = incclient.NewMainNetClient()
-	case "testnet-2": // testnet2
-		incClient, err = incclient.NewTestNetClient()
-	case "testnet-1":
-		incClient, err = incclient.NewTestNet1Client()
-	case "devnet":
-		return errors.New("unsupported network")
-	}
+	err = initIncClient(network)
 	if err != nil {
 		return err
 	}
@@ -60,7 +51,7 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 	incclient.Logger = incclient.NewLogger(true)
 	log.Println("Done submit keys")
 	go func() {
-		err := consumeTasks(keyList)
+		err := createConsumer(keyList)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -68,7 +59,7 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 	return nil
 }
 
-func consumeTasks(keylist []string) error {
+func createConsumer(keylist []string) error {
 	taskQueue, err := rdmq.OpenQueue(MqSubmitTx)
 	if err != nil {
 		return err
@@ -80,49 +71,35 @@ func consumeTasks(keylist []string) error {
 
 	for i := 0; i < len(keylist); i++ {
 		name := fmt.Sprintf("consumer %d", i)
-		if _, err := taskQueue.AddConsumer(name, NewConsumer(keylist[i])); err != nil {
+		if _, err := taskQueue.AddConsumer(name, NewSubmitProofConsumer(keylist[i], INC_NetworkID)); err != nil {
 			panic(err)
 		}
 	}
 
 	return nil
 }
-func NewConsumer(key string) *TaskConsumer {
-	return &TaskConsumer{
-		UseKey: key,
+func NewSubmitProofConsumer(key string, network int) *SubmitProofConsumer {
+	return &SubmitProofConsumer{
+		UseKey:    key,
+		NetworkID: network,
 	}
 }
 
-func (consumer *TaskConsumer) Consume(delivery rmq.Delivery) {
+func (consumer *SubmitProofConsumer) Consume(delivery rmq.Delivery) {
 	payload := delivery.Payload()
 	log.Println("start consume task...")
-	task := SubmitProofTask{}
+	task := SubmitProofShieldTask{}
 	err := json.Unmarshal([]byte(payload), &task)
 	if err != nil {
-		if err := delivery.Reject(); err != nil {
-			log.Printf("failed to reject %s: %s", payload, err)
-			return
-		} else {
-			log.Printf("rejected %s", payload)
-			return
-		}
-	}
-	incTx, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, consumer.UseKey)
-	if err != nil {
-		if err := delivery.Reject(); err != nil {
-			log.Printf("failed to reject %s: %s", payload, err)
-			return
-		} else {
-			log.Printf("rejected %s", payload)
-			return
-		}
+		rejectDelivery(delivery, payload)
 	}
 
-	if err := delivery.Ack(); err != nil {
-		log.Printf("failed to ack %s: %s", payload, err)
-	} else {
-		log.Printf("acked %s", payload)
+	incTx, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, consumer.UseKey)
+	if err != nil {
+		rejectDelivery(delivery, payload)
 	}
+
+	ackDelivery(delivery, payload)
 	if incTx != "" {
 		watchQueue, err := rdmq.OpenQueue(MqWatchTx)
 		if err != nil {
@@ -131,8 +108,11 @@ func (consumer *TaskConsumer) Consume(delivery rmq.Delivery) {
 		}
 
 		task := WatchProofTask{
-			Txhash: task.Txhash,
-			IncTx:  incTx,
+			Txhash:    task.Txhash,
+			IncTx:     incTx,
+			TokenID:   task.TokenID,
+			NetworkID: task.NetworkID,
+			Time:      time.Now(),
 		}
 		taskBytes, _ := json.Marshal(task)
 
@@ -142,29 +122,4 @@ func (consumer *TaskConsumer) Consume(delivery rmq.Delivery) {
 			return
 		}
 	}
-
-	// debugf("start consume %s", payload)
-	// time.Sleep(consumeDuration)
-
-	// consumer.count++
-	// if consumer.count%reportBatchSize == 0 {
-	// 	duration := time.Now().Sub(consumer.before)
-	// 	consumer.before = time.Now()
-	// 	perSecond := time.Second / (duration / reportBatchSize)
-	// 	log.Printf("%s consumed %d %s %d", consumer.name, consumer.count, payload, perSecond)
-	// }
-
-	// if consumer.count%reportBatchSize > 0 {
-	// 	if err := delivery.Ack(); err != nil {
-	// 		debugf("failed to ack %s: %s", payload, err)
-	// 	} else {
-	// 		debugf("acked %s", payload)
-	// 	}
-	// } else { // reject one per batch
-	// 	if err := delivery.Reject(); err != nil {
-	// 		debugf("failed to reject %s: %s", payload, err)
-	// 	} else {
-	// 		debugf("rejected %s", payload)
-	// 	}
-	// }
 }

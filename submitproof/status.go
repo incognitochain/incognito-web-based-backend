@@ -10,6 +10,7 @@ import (
 func getShieldTxStatus(externalTxHash string, networkID int, tokenID string) (int, error) {
 	ctx := context.Background()
 	key := ShieldStatusPrefix + buildShieldStatusKey(externalTxHash, networkID, tokenID)
+
 	value, err := db.Do(ctx, db.B().Get().Key(key).Build()).AsInt64()
 	if err != nil {
 		if err.Error() == "redis nil message" {

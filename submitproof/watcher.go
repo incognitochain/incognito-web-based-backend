@@ -16,12 +16,12 @@ func StartWatcher(cfg common.Config, serviceID uuid.UUID) error {
 	config = cfg
 	network := cfg.NetworkID
 
-	err := connectDB(cfg.DatabaseURLs)
+	err := connectDB(cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
 	if err != nil {
 		return err
 	}
 
-	err = connectMQ(serviceID, cfg.DatabaseURLs)
+	err = connectMQ(serviceID, cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
 	if err != nil {
 		return err
 	}
@@ -74,8 +74,18 @@ func retryFailedTask() {
 		if err != nil {
 			panic(err)
 		}
+		log.Printf("queue MqSubmitTx returner returned %d rejected deliveries", returned)
 
-		log.Printf("queue returner returned %d rejected deliveries", returned)
+		queue, err = rdmq.OpenQueue(MqWatchTx)
+		if err != nil {
+			panic(err)
+		}
+		returned, err = queue.ReturnRejected(math.MaxInt64)
+		if err != nil {
+			panic(err)
+		}
+
+		log.Printf("queue MqWatchTx returner returned %d rejected deliveries", returned)
 	}
 }
 
@@ -97,18 +107,18 @@ func watchSubmittedTx(delivery rmq.Delivery) {
 	if isInBlock {
 		status, err := incClient.CheckShieldStatus(task.IncTx)
 		if err != nil {
-			log.Printf("CheckShieldStatus err", err)
+			log.Println("CheckShieldStatus err", err)
 			rejectDelivery(delivery, payload)
 		}
 		switch status {
 		case 1:
-			err = updateShieldTxStatus(task.Txhash, task.NetworkID, task.TokenID, ShieldStatusPending)
+			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusPending)
 			if err != nil {
 				log.Println("error123:", err)
 				rejectDelivery(delivery, payload)
 			}
 		case 2:
-			err = updateShieldTxStatus(task.Txhash, task.NetworkID, task.TokenID, ShieldStatusAccepted)
+			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusAccepted)
 			if err != nil {
 				log.Println("error123:", err)
 				rejectDelivery(delivery, payload)
@@ -116,7 +126,7 @@ func watchSubmittedTx(delivery rmq.Delivery) {
 			ackDelivery(delivery, payload)
 			return
 		case 3:
-			err = updateShieldTxStatus(task.Txhash, task.NetworkID, task.TokenID, ShieldStatusRejected)
+			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusRejected)
 			if err != nil {
 				log.Println("error123:", err)
 				rejectDelivery(delivery, payload)

@@ -1,6 +1,7 @@
 package submitproof
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -27,7 +28,7 @@ func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string,
 }
 
 func submitProof(txhash, tokenID string, networkID int, key string) (string, error) {
-	err := updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitting)
+	err := updateShieldTxStatus(txhash, networkID, ShieldStatusSubmitting)
 	if err != nil {
 		log.Println("error:", err)
 		return "", err
@@ -41,17 +42,17 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, err
 	var finalErr string
 retry:
 	if i == 10 {
-		err = updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitFailed)
+		err = updateShieldTxStatus(txhash, networkID, ShieldStatusSubmitFailed)
 		if err != nil {
 			log.Println("updateShieldTxStatus error:", err)
 			return "", err
 		}
-		err = setShieldTxStatusError(txhash, networkID, tokenID, finalErr)
+		err = setShieldTxStatusError(txhash, networkID, finalErr)
 		if err != nil {
 			log.Println("setShieldTxStatusError error:", err)
 			return "", err
 		}
-		return "", nil
+		return "", errors.New(finalErr)
 	}
 	if i > 0 {
 		time.Sleep(1 * time.Second)
@@ -70,16 +71,16 @@ retry:
 			goto retry
 		}
 	}
-	// result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID,key)
-	// if err != nil {
-	// 	log.Println("error:", err)
-	// 	finalErr = "submitProof " + err.Error()
-	// 	goto retry
-	// }
-	_ = proof
-	result := "sdfgsdfds"
-	fmt.Println("done submit proof")
-	err = updateShieldTxStatus(txhash, networkID, tokenID, ShieldStatusSubmitted)
+	result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID, key)
+	if err != nil {
+		log.Println("error:", err)
+		finalErr = "submitProof " + err.Error()
+		goto retry
+	}
+	// _ = proof
+	// result := "sdfgsdfds"
+	fmt.Println("done submit proof", result)
+	err = updateShieldTxStatus(txhash, networkID, ShieldStatusPending)
 	if err != nil {
 		log.Println("error123:", err)
 		return "", err

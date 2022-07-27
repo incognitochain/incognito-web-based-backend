@@ -12,12 +12,12 @@ import (
 func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 	config = cfg
 
-	err := connectDB(cfg.DatabaseURLs)
+	err := connectDB(cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
 	if err != nil {
 		return err
 	}
 
-	err = connectMQ(serviceID, cfg.DatabaseURLs)
+	err = connectMQ(serviceID, cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 		return "", errors.New("unsported network")
 	}
 
-	currentStatus, err := getShieldTxStatus(txhash, networkID, tokenID)
+	currentStatus, err := getShieldTxStatus(txhash, networkID)
 	if err != nil {
 		return "", err
 	}

@@ -47,12 +47,22 @@ services:
       - query
       - redisstack
 
-  redis:
+  redisstack:
     image: redis/redis-stack
     restart: always
+    environment:
+      REDIS_ARGS: "--aclfile /config/users.acl"
     ports:
       # - 6379:6379 
       - 8002:8001
     volumes:
       - ./data/redis:/data
+      - ./redis/:/config
       
+  # pancakeswapep:
+  #   image: 0xbahamoot/pancakeswapep
+  #   restart: always
+
+  # uniswapep:
+  #   image: 0xbahamoot/uniswapep
+  #   restart: always

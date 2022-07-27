@@ -13,4 +13,5 @@ const (
 	MODE_TXSUBMITWATCHER = "submitwatcher"
 	MODE_TXSUBMITWORKER  = "submitworker"
 	MODE_API             = "api"
+	MODE_FEEESTIMATOR    = "feeestimator"
 )

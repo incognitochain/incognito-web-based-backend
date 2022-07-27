@@ -19,12 +19,12 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 	keyList = keylist
 	network := cfg.NetworkID
 
-	err := connectDB(cfg.DatabaseURLs)
+	err := connectDB(cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
 	if err != nil {
 		return err
 	}
 
-	err = connectMQ(serviceID, cfg.DatabaseURLs)
+	err = connectMQ(serviceID, cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
 	if err != nil {
 		return err
 	}
@@ -97,6 +97,7 @@ func (consumer *SubmitProofConsumer) Consume(delivery rmq.Delivery) {
 	incTx, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, consumer.UseKey)
 	if err != nil {
 		rejectDelivery(delivery, payload)
+		return
 	}
 
 	ackDelivery(delivery, payload)

@@ -7,9 +7,9 @@ import (
 	"github.com/rueian/rueidis"
 )
 
-func getShieldTxStatus(externalTxHash string, networkID int, tokenID string) (int, error) {
+func getShieldTxStatus(externalTxHash string, networkID int) (int, error) {
 	ctx := context.Background()
-	key := ShieldStatusPrefix + buildShieldStatusKey(externalTxHash, networkID, tokenID)
+	key := ShieldStatusPrefix + buildShieldStatusKey(externalTxHash, networkID)
 
 	value, err := db.Do(ctx, db.B().Get().Key(key).Build()).AsInt64()
 	if err != nil {
@@ -21,10 +21,10 @@ func getShieldTxStatus(externalTxHash string, networkID int, tokenID string) (in
 	return int(value), nil
 }
 
-func updateShieldTxStatus(externalTxHash string, networkID int, tokenID string, status int) error {
+func updateShieldTxStatus(externalTxHash string, networkID int, status int) error {
 	ctx := context.Background()
 
-	key := ShieldStatusPrefix + buildShieldStatusKey(externalTxHash, networkID, tokenID)
+	key := ShieldStatusPrefix + buildShieldStatusKey(externalTxHash, networkID)
 	value := fmt.Sprint(status)
 	action := func(rd rueidis.DedicatedClient) error {
 		result := rd.DoMulti(ctx, db.B().Set().Key(key).Value(value).Build(), rd.B().Persist().Key(key).Build())
@@ -39,14 +39,14 @@ func updateShieldTxStatus(externalTxHash string, networkID int, tokenID string, 
 	return db.Dedicated(action)
 }
 
-func setShieldTxStatusError(externalTxHash string, networkID int, tokenID string, errStr string) error {
+func setShieldTxStatusError(externalTxHash string, networkID int, errStr string) error {
 	ctx := context.Background()
 
-	key := ShieldErrorPrefix + buildShieldStatusKey(externalTxHash, networkID, tokenID)
+	key := ShieldErrorPrefix + buildShieldStatusKey(externalTxHash, networkID)
 	value := fmt.Sprint(errStr)
 	return db.Do(ctx, db.B().Set().Key(key).Value(value).Nx().Build()).Error()
 }
 
-func buildShieldStatusKey(externalTxHash string, networkID int, tokenID string) string {
-	return externalTxHash + "_" + fmt.Sprint(networkID) + "_" + tokenID
+func buildShieldStatusKey(externalTxHash string, networkID int) string {
+	return externalTxHash + "_" + fmt.Sprint(networkID)
 }

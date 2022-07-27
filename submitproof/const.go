@@ -19,7 +19,6 @@ const (
 	ShieldStatusUnknown = iota
 	ShieldStatusSubmitting
 	ShieldStatusSubmitFailed
-	ShieldStatusSubmitted
 	ShieldStatusPending
 	ShieldStatusRejected
 	ShieldStatusAccepted
@@ -29,7 +28,6 @@ var ShieldStatusMap = map[int]string{
 	ShieldStatusUnknown:      "unknown",
 	ShieldStatusSubmitting:   "submitting",
 	ShieldStatusSubmitFailed: "submit failed",
-	ShieldStatusSubmitted:    "submitted",
 	ShieldStatusPending:      "pending",
 	ShieldStatusRejected:     "rejected",
 	ShieldStatusAccepted:     "accepted",

@@ -3,8 +3,10 @@
 	"NetworkID": "mainnet",
 	"Mode": "api",
 	"Database":[],
+	"DBUSER":"",
+	"DBPASS":"",
 	"CoinserviceURL": "https://api-coinservice.incognito.org",
 	"FullnodeURL": "https://mainnet.incognito.org/fullnode",
 	"ShieldService": "https://api-service.incognito.org",
-	"CaptchaSecret":"abc"
+	"CaptchaSecret":""
 }

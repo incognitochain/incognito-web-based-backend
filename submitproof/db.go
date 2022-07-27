@@ -13,21 +13,25 @@ import (
 var db rueidis.Client
 var rdmq rmq.Connection
 
-func connectDB(endpoint []string) error {
+func connectDB(endpoint []string, user string, pass string) error {
 	var err error
 	fmt.Println("endpoint: ", endpoint)
-	db, err = redb.NewClient(endpoint)
+	db, err = redb.NewClient(endpoint, user, pass)
 	return err
 }
 
-func connectMQ(serviceID uuid.UUID, endpoint []string) error {
+func connectMQ(serviceID uuid.UUID, endpoint []string, user string, pass string) error {
 	var redisClient redis.Cmdable
 	if len(endpoint) > 1 {
 		redisClient = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs: endpoint,
+			Addrs:    endpoint,
+			Username: user,
+			Password: pass,
 		})
 	} else {
-		redisClient = redis.NewClient(&redis.Options{Addr: endpoint[0]})
+		redisClient = redis.NewClient(&redis.Options{Addr: endpoint[0],
+			Username: user,
+			Password: pass})
 	}
 
 	var err error

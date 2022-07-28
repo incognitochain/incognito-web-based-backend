@@ -16,6 +16,10 @@ const (
 )
 
 const (
+	ProofAlreadySubmitError = "proof already submitted"
+)
+
+const (
 	ShieldStatusUnknown = iota
 	ShieldStatusSubmitting
 	ShieldStatusSubmitFailed

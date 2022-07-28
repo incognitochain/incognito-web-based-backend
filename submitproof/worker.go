@@ -94,8 +94,21 @@ func (consumer *SubmitProofConsumer) Consume(delivery rmq.Delivery) {
 		rejectDelivery(delivery, payload)
 	}
 
-	incTx, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, consumer.UseKey)
+	if time.Since(task.Time) > time.Hour {
+		err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusSubmitFailed)
+		if err != nil {
+			log.Println("updateShieldTxStatus error:", err)
+			return
+		}
+		ackDelivery(delivery, payload)
+		return
+	}
+	incTx, paymentAddr, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, consumer.UseKey)
 	if err != nil {
+		if err.Error() == ProofAlreadySubmitError {
+			ackDelivery(delivery, payload)
+			return
+		}
 		rejectDelivery(delivery, payload)
 		return
 	}
@@ -108,12 +121,13 @@ func (consumer *SubmitProofConsumer) Consume(delivery rmq.Delivery) {
 			return
 		}
 
-		task := WatchProofTask{
-			Txhash:    task.Txhash,
-			IncTx:     incTx,
-			TokenID:   task.TokenID,
-			NetworkID: task.NetworkID,
-			Time:      time.Now(),
+		task := WatchShieldProofTask{
+			PaymentAddress: paymentAddr,
+			Txhash:         task.Txhash,
+			IncTx:          incTx,
+			TokenID:        task.TokenID,
+			NetworkID:      task.NetworkID,
+			Time:           time.Now(),
 		}
 		taskBytes, _ := json.Marshal(task)
 

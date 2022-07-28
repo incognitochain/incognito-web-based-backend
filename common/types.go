@@ -9,6 +9,7 @@ type Config struct {
 	CoinserviceURL string
 	FullnodeURL    string
 	ShieldService  string
+	FaucetService  string
 	NetworkID      string
 	CaptchaSecret  string
 }

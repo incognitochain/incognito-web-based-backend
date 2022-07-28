@@ -1,0 +1,17 @@
+{
+    "eth":{
+        "uniswap":[""],
+        "pancake":[""],
+        "curve":[""]
+    },
+    "bsc":{
+        "uniswap":[""],
+        "pancake":[""],
+        "curve":[""]
+    },
+    "plg":{
+        "uniswap":[""],
+        "pancake":[""],
+        "curve":[""]
+    }
+}

@@ -33,6 +33,5 @@ func loadConfig() error {
 		log.Println("cfg.json is empty")
 		config = common.DefaultConfig
 	}
-
 	return nil
 }

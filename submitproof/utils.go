@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/adjust/rmq/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -339,3 +340,41 @@ func retrieveTokenList() ([]wcommon.TokenInfo, error) {
 // func getNativeToken(networkID string) (string, error) {
 
 // }
+
+func initIncClient(network string) error {
+	var err error
+	switch network {
+	case "mainnet":
+		incClient, err = incclient.NewMainNetClient()
+	case "testnet-2": // testnet2
+		incClient, err = incclient.NewTestNetClient()
+	case "testnet-1":
+		incClient, err = incclient.NewTestNet1Client()
+	case "devnet":
+		return errors.New("unsupported network")
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func rejectDelivery(delivery rmq.Delivery, payload string) {
+	if err := delivery.Reject(); err != nil {
+		log.Printf("failed to reject %s: %s", payload, err)
+		return
+	} else {
+		log.Printf("rejected %s", payload)
+		return
+	}
+}
+
+func ackDelivery(delivery rmq.Delivery, payload string) {
+	if err := delivery.Ack(); err != nil {
+		log.Printf("failed to ack %s: %s", payload, err)
+		return
+	} else {
+		log.Printf("acked %s", payload)
+		return
+	}
+}

@@ -31,17 +31,22 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/estimateunshieldfee", APIEstimateUnshield)
 
-	r.GET("/statusbyservice", APIGetStatusByShieldService)
-
 	r.POST("/genunshieldaddress", APIGenUnshieldAddress)
 
 	r.POST("/genshieldaddress", APIGenShieldAddress)
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
+	r.POST("/submitshieldtx", APISubmitShieldTx)
+
 	r.GET("/statusbyinctx", APIGetStatusByIncTx)
 
-	r.POST("/submitshieldtx", APISubmitShieldTx)
+	r.GET("/statusbyservice", APIGetStatusByShieldService)
+
+	//papps
+	r.POST("/estimateswapfee", APIEstimateSwapFee)
+
+	r.POST("/submitswaptx", APISubmitSwapTx)
 
 	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

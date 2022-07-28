@@ -16,3 +16,6 @@ vendor/
 .idea/
 cfg.json
 /incognito-web-based-backend
+
+devenv/data
+webservice

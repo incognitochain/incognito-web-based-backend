@@ -2,14 +2,16 @@ package common
 
 type Config struct {
 	Port           int
-	DatabaseURL    string
+	Mode           string
+	DatabaseURLs   []string
+	DBUSER         string
+	DBPASS         string
 	CoinserviceURL string
 	FullnodeURL    string
 	ShieldService  string
 	NetworkID      string
 	CaptchaSecret  string
 }
-
 type TokenInfo struct {
 	TokenID            string
 	Name               string

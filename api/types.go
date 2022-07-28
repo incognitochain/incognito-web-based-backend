@@ -42,11 +42,33 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	SourceToken string
-	// SourceNetwork string
-	DestToken   string
-	DestNetwork string
-	Amount      float64
+	Network           string
+	BurningAmount     uint64
+	FromToken         string // IncTokenID
+	ToToken           string // ReceiveToken
+	RedepositReceiver string
+	WithdrawAddress   string
+}
+
+type EstimateSwapRespone struct {
+	Quote      QuoteDataResp
+	ExpiredAt  time.Time
+	Fee        uint64
+	FeeAddress uint64
+}
+
+type QuoteDataResp struct {
+	TokenIn      string
+	TokenOut     string
+	AmountIn     string
+	AmountInRaw  string
+	AmountOut    string
+	AmountOutRaw string
+}
+
+type SubmitSwapTx struct {
+	Network string
+	Txhash  string
 }
 
 type EstimateRewardRequest struct {

@@ -1,0 +1,68 @@
+version: "2.2"
+services:
+  worker:
+    image: servicebe
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    working_dir: /home
+    entrypoint: [./run.sh]
+    env_file:
+      - service.env
+    environment:
+      MODE: "submitworker"
+    depends_on:
+      - redisstack
+  watcher:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    env_file:
+      - service.env
+    environment:
+      MODE: "submitwatcher"
+    depends_on:
+      - redisstack
+
+  api:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    env_file:
+      - service.env
+    environment:
+      MODE: "api"
+    depends_on:
+      - redisstack
+
+  nginx-server:
+    image: nginx-load-balancer
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - 6002:80
+    restart: unless-stopped
+    depends_on:
+      - query
+      - redisstack
+
+  redisstack:
+    image: redis/redis-stack
+    restart: always
+    environment:
+      REDIS_ARGS: "--aclfile /config/users.acl"
+    ports:
+      # - 6379:6379 
+      - 8002:8001
+    volumes:
+      - ./data/redis:/data
+      - ./redis/:/config
+      
+  # pancakeswapep:
+  #   image: 0xbahamoot/pancakeswapep
+  #   restart: always
+
+  # uniswapep:
+  #   image: 0xbahamoot/uniswapep
+  #   restart: always

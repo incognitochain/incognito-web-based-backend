@@ -112,27 +112,29 @@ func APISubmitShieldTx(c *gin.Context) {
 		return
 	}
 
-	capse := "0xd6Ca2DF787C5619F55102EBCCFe67164FEf45Fc4"
-	if ok, err := VerifyCaptcha(req.Captcha, capse); !ok {
-		if err != nil {
-			log.Println("VerifyCaptcha", err)
-			c.JSON(200, gin.H{"Error": err})
+	if config.CaptchaSecret != "" {
+		if ok, err := VerifyCaptcha(req.Captcha, config.CaptchaSecret); !ok {
+			if err != nil {
+				log.Println("VerifyCaptcha", err)
+				c.JSON(200, gin.H{"Error": err})
+				return
+			}
+			c.JSON(200, gin.H{"Error": errors.New("invalid captcha")})
 			return
 		}
-		c.JSON(200, gin.H{"Error": errors.New("invalid captcha")})
-		return
+
 	}
 
 	if req.Txhash == "" {
 		c.JSON(200, gin.H{"Error": errors.New("invalid params").Error()})
 		return
 	}
-	err = submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID)
+	status, err := submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID)
 	if err != nil {
 		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"Result": "ok"})
+	c.JSON(200, gin.H{"Result": status})
 }
 
 func getTxDetails(txhash string) (*TransactionDetail, error) {

@@ -92,10 +92,11 @@ func retryFailedTask() {
 func watchSubmittedTx(delivery rmq.Delivery) {
 	payload := delivery.Payload()
 	log.Println("start consume task...")
-	task := WatchProofTask{}
+	task := WatchShieldProofTask{}
 	err := json.Unmarshal([]byte(payload), &task)
 	if err != nil {
 		rejectDelivery(delivery, payload)
+		return
 	}
 
 	incClient.GetRawMemPool()
@@ -105,11 +106,27 @@ func watchSubmittedTx(delivery rmq.Delivery) {
 	}
 
 	if isInBlock {
-		status, err := incClient.CheckShieldStatus(task.IncTx)
-		if err != nil {
-			log.Println("CheckShieldStatus err", err)
-			rejectDelivery(delivery, payload)
+		var status int
+		if task.IsPunified {
+			statusShield, err := incClient.CheckUnifiedShieldStatus(task.IncTx)
+			if err != nil {
+				log.Println("CheckShieldStatus err", err)
+				rejectDelivery(delivery, payload)
+				return
+			}
+			if statusShield.Status == 0 {
+				status = 3
+			} else {
+				status = 2
+			}
+		} else {
+			status, err = incClient.CheckShieldStatus(task.IncTx)
+			if err != nil {
+				log.Println("CheckShieldStatus err", err)
+				rejectDelivery(delivery, payload)
+			}
 		}
+
 		switch status {
 		case 1:
 			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusPending)
@@ -124,6 +141,7 @@ func watchSubmittedTx(delivery rmq.Delivery) {
 				rejectDelivery(delivery, payload)
 			}
 			ackDelivery(delivery, payload)
+			faucetPRV(task.PaymentAddress)
 			return
 		case 3:
 			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusRejected)
@@ -131,6 +149,8 @@ func watchSubmittedTx(delivery rmq.Delivery) {
 				log.Println("error123:", err)
 				rejectDelivery(delivery, payload)
 			}
+			ackDelivery(delivery, payload)
+			return
 		}
 		delivery.Push()
 	} else {

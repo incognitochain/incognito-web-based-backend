@@ -225,6 +225,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 	if err != nil {
 		return "", "", err
 	}
+	contractID = strings.ToLower(contractID)
 	if contractID == EthAddrStr {
 		for _, token := range tokenList {
 			if token.IsBridge && token.Verified && token.NetworkID == networkID {
@@ -248,8 +249,8 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 		}
 	} else {
 		for _, token := range tokenList {
-			if token.IsBridge {
-				if token.ContractID == contractID && token.NetworkID == networkID { //non-punified
+			if token.IsBridge && token.Verified {
+				if token.ContractID == contractID && token.NetworkID == networkID && !token.MovedUnifiedToken { //non-punified
 					pUtokenID = token.TokenID
 					linkedTokenID = token.TokenID
 					break

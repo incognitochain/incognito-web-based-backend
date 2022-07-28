@@ -386,6 +386,16 @@ func ackDelivery(delivery rmq.Delivery, payload string) {
 
 func faucetPRV(paymentaddress string) {
 	if config.FaucetService != "" && paymentaddress != "" {
-
+		req := struct {
+			PaymentAddress string `json:"paymentaddress"`
+		}{PaymentAddress: paymentaddress}
+		_, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").SetBody(req).
+			Post(config.FaucetService)
+		if err != nil {
+			log.Println("faucetPRV err:", err)
+			return
+		}
 	}
 }

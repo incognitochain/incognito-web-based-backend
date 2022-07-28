@@ -84,3 +84,15 @@ func APIGetStatusByIncTx(c *gin.Context) {
 	_ = txHash
 	_ = shieldType
 }
+
+func APIGetFailedShieldTx(c *gin.Context) {
+
+}
+
+func APIGetShieldStatus(c *gin.Context) {
+
+}
+
+func APIGetUnshieldStatus(c *gin.Context) {
+
+}

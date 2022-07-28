@@ -48,6 +48,11 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitswaptx", APISubmitSwapTx)
 
+	adminGroup := r.Group("/admin")
+	adminGroup.GET("/failedshieldtx")
+	adminGroup.GET("/shieldstatus")
+	adminGroup.GET("/unshieldstatus")
+
 	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {
 		panic(err)

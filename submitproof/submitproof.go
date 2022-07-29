@@ -17,14 +17,14 @@ var incClient *incclient.IncClient
 var keyList []string
 
 func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string, string, string, uint, error) {
-	_, blockHash, txIdx, proof, contractID, paymentAddr, err := getETHDepositProof(incClient, networkID, txhash)
+	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, err := getETHDepositProof(incClient, networkID, txhash)
 	if err != nil {
 		return nil, "", "", blockHash, txIdx, err
 	}
 	if len(proof) == 0 {
 		return nil, "", "", blockHash, txIdx, fmt.Errorf("invalid proof or tx not found")
 	}
-	result := incclient.NewETHDepositProof(0, common.HexToHash(blockHash), txIdx, proof)
+	result := incclient.NewETHDepositProof(uint(blockNumber.Int64()), common.HexToHash(blockHash), txIdx, proof)
 	return result, contractID, paymentAddr, blockHash, txIdx, nil
 }
 
@@ -87,6 +87,8 @@ retry:
 	result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID, key)
 	if err != nil {
 		log.Println("error:", err)
+		fmt.Println("linkedTokenID, tokenID", linkedTokenID, tokenID)
+		fmt.Println("incTx", result)
 		finalErr = "submitProof " + err.Error()
 		goto retry
 	}
@@ -100,6 +102,14 @@ retry:
 }
 
 func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int, key string) (string, error) {
+	if tokenID == pUTokenID {
+		result, err := incClient.CreateAndSendIssuingEVMRequestTransaction(key, tokenID, *proof, networkID-1)
+		if err != nil {
+			return result, err
+		}
+		return result, nil
+	}
+
 	result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *proof, networkID)
 	if err != nil {
 		return result, err

@@ -42,12 +42,10 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	Network           string
-	BurningAmount     uint64
-	FromToken         string // IncTokenID
-	ToToken           string // ReceiveToken
-	RedepositReceiver string
-	WithdrawAddress   string
+	Network       string
+	BurningAmount uint64
+	FromToken     string // IncTokenID
+	ToToken       string // ReceiveToken
 }
 
 type EstimateSwapRespone struct {
@@ -253,4 +251,12 @@ type TransactionDetail struct {
 	IsInBlock   bool `json:"IsInBlock"`
 
 	Info string `json:"Info"`
+}
+
+type GetStatusByIncTxsRequest struct {
+	TxList []string
+}
+
+type SubmitSwapTxRequest struct {
+	TxRaw string
 }

@@ -96,3 +96,7 @@ func APIGetShieldStatus(c *gin.Context) {
 func APIGetUnshieldStatus(c *gin.Context) {
 
 }
+
+func APIGetStatusByIncTxs(c *gin.Context) {
+
+}

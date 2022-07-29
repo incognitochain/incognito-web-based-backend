@@ -33,21 +33,24 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/genunshieldaddress", APIGenUnshieldAddress)
 
-	r.POST("/genshieldaddress", APIGenShieldAddress)
+	// r.POST("/genshieldaddress", APIGenShieldAddress)
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
 	r.POST("/submitshieldtx", APISubmitShieldTx)
 
-	r.GET("/statusbyinctx", APIGetStatusByIncTx)
+	// r.GET("/statusbyinctx", APIGetStatusByIncTx)
 
-	r.GET("/statusbyservice", APIGetStatusByShieldService)
+	// r.GET("/statusbyservice", APIGetStatusByShieldService)
+
+	r.POST("/statusbyinctxs", APIGetStatusByIncTxs)
 
 	//papps
 	r.POST("/estimateswapfee", APIEstimateSwapFee)
 
 	r.POST("/submitswaptx", APISubmitSwapTx)
 
+	//admin
 	adminGroup := r.Group("/admin")
 	adminGroup.GET("/failedshieldtx")
 	adminGroup.GET("/shieldstatus")

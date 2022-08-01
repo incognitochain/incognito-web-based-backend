@@ -12,6 +12,10 @@ type Config struct {
 	FaucetService  string
 	NetworkID      string
 	CaptchaSecret  string
+	// papps submit proof out-chain
+	FeeKey     string
+	FeeAddress string
+	FeeOTA     string
 }
 type TokenInfo struct {
 	TokenID            string

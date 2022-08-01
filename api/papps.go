@@ -39,7 +39,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		}
 	}
 	if tx.TokenVersion2 != nil {
-
+		tx.TokenVersion2.GetMetadataType() == 
 	}
 	if tx.Version2 != nil {
 	}

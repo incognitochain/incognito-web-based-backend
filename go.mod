@@ -88,7 +88,7 @@ require (
 	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50 // indirect
 	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20210126072501-9870234752e4 // indirect
-	github.com/incognitochain/incognito-chain v0.0.0-20220606232446-adc936ef7226 // indirect
+	github.com/incognitochain/incognito-chain v0.0.0-20220729040850-5698947289f7 // indirect
 	github.com/ipfs/go-cid v0.0.7 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-log v1.0.4 // indirect
@@ -229,7 +229,7 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
+	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.7 // indirect

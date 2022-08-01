@@ -25,3 +25,5 @@ func checkFee() error {
 func getFee(network string) error {
 	return nil
 }
+
+func saveFeeTable()

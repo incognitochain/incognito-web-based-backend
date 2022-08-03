@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
 )
 
@@ -38,14 +40,21 @@ func APISubmitSwapTx(c *gin.Context) {
 		}
 	}
 	if tx.TokenVersion2 != nil {
-		// tx.TokenVersion2.GetMetadataType() ==
+		if tx.TokenVersion2.GetMetadataType() != metadata.BurnForCallRequestMeta {
+			md := tx.TokenVersion2.GetMetadata().(*bridge.BurnForCallRequest)
+			_ = md
+		}
 	}
 	if tx.Version2 != nil {
+		if tx.Version2.GetMetadataType() != metadata.BurnForCallRequestMeta {
+			md := tx.Version2.GetMetadata().(*bridge.BurnForCallRequest)
+			_ = md
+		}
 	}
 
 }
 
-func checkValidTxSwap() {}
+func checkValidTxSwap(md *bridge.BurnForCallRequest) {}
 
 func APIGetVaultState(c *gin.Context) {
 	var responseBodyData APIRespond
@@ -59,4 +68,19 @@ func APIGetVaultState(c *gin.Context) {
 		return
 	}
 	c.JSON(200, responseBodyData)
+}
+
+func sendSwapTxAndStoreDB(txhash string, txRaw string, isTokenTx bool) error {
+	if isTokenTx {
+		err := incClient.SendRawTokenTx([]byte(txRaw))
+		if err != nil {
+			return err
+		}
+	} else {
+		err := incClient.SendRawTx([]byte(txRaw))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

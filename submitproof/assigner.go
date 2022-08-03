@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/pkg/errors"
 )
 
@@ -38,12 +39,12 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 		return "", errors.New("unsported network")
 	}
 
-	currentStatus, err := getShieldTxStatus(txhash, networkID)
+	currentStatus, err := database.DBGetShieldTxStatusByExternalTx(txhash, networkID)
 	if err != nil {
 		return "", err
 	}
-	if currentStatus != ShieldStatusUnknown {
-		return ShieldStatusMap[currentStatus], nil
+	if currentStatus != "" {
+		return currentStatus, nil
 	}
 
 	task := SubmitProofShieldTask{

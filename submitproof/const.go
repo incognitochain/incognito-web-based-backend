@@ -26,24 +26,6 @@ const (
 )
 
 const (
-	ShieldStatusUnknown = iota
-	ShieldStatusSubmitting
-	ShieldStatusSubmitFailed
-	ShieldStatusPending
-	ShieldStatusRejected
-	ShieldStatusAccepted
-)
-
-var ShieldStatusMap = map[int]string{
-	ShieldStatusUnknown:      "unknown",
-	ShieldStatusSubmitting:   "submitting",
-	ShieldStatusSubmitFailed: "submit_failed",
-	ShieldStatusPending:      "pending",
-	ShieldStatusRejected:     "rejected",
-	ShieldStatusAccepted:     "accepted",
-}
-
-const (
 	ShieldErrorPrefix  = "error-shield-"
 	ShieldStatusPrefix = "status-shield-"
 )

@@ -19,4 +19,4 @@ COPY devenv/service/run.sh /app/run.sh
 COPY --from=build /app/incognito-web-based-backend /app/webservice
 
 RUN chmod +x /app/run.sh /app/webservice
-CMD [ "/app/run.sh" ]
+ENTRYPOINT [ "/app/run.sh" ]

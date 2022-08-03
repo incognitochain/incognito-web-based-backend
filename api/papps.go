@@ -26,7 +26,6 @@ func APISubmitSwapTx(c *gin.Context) {
 		return
 	}
 
-	transaction.DeserializeTransactionJSON()
 	// Unmarshal from json data to object tx))
 	tx, err := transaction.DeserializeTransactionJSON(rawTxBytes)
 	// var tx transaction.Tx
@@ -39,7 +38,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		}
 	}
 	if tx.TokenVersion2 != nil {
-		tx.TokenVersion2.GetMetadataType() == 
+		// tx.TokenVersion2.GetMetadataType() ==
 	}
 	if tx.Version2 != nil {
 	}
@@ -47,3 +46,17 @@ func APISubmitSwapTx(c *gin.Context) {
 }
 
 func checkValidTxSwap() {}
+
+func APIGetVaultState(c *gin.Context) {
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).
+		Get(config.CoinserviceURL + "/bridge/aggregatestate")
+	if err != nil {
+		c.JSON(400, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(200, responseBodyData)
+}

@@ -1,7 +1,7 @@
 #!/bin/sh
-REDISHOST="$(getent hosts redisstack | awk '{ print $1 }')"
+MONGOHOST="$(getent hosts mongo | awk '{ print $1 }')"
 
-JSON='{"Port":'"$Port"',"NetworkID": "'"$NetworkID"'","Mode":"'"$MODE"'","DatabaseURLs":["'"$REDISHOST"':6379"],"DBUSER":"'"$DBUser"'","DBPASS":"'"$DBPass"'","CoinserviceURL":"'"$CoinserviceURL"'","FullnodeURL":"'"$FullnodeURL"'","ShieldService":"'"$ShieldService"'","CaptchaSecret":"'"$CaptchaSecret"'"}'
+JSON='{"Port":'"$Port"',"NetworkID": "'"$NetworkID"'","Mode":"'"$MODE"'","Mongo":"mongodb://'"${MONGO_USERNAME}"':'"${MONGO_PASSWORD}"'@'"$MONGOHOST"':27017","Mongodb":"data","CoinserviceURL":"'"$CoinserviceURL"'","FullnodeURL":"'"$FullnodeURL"'","ShieldService":"'"$ShieldService"'","CaptchaSecret":"'"$CaptchaSecret"'"}'
 echo $JSON
 echo $JSON > cfg.json
 ./webservice

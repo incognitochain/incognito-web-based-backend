@@ -28,11 +28,11 @@ func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string,
 	return result, contractID, paymentAddr, blockHash, txIdx, nil
 }
 
-func submitProof(txhash, tokenID string, networkID int, key string) (string, string, error) {
+func submitProof(txhash, tokenID string, networkID int, key string) (string, string, string, string, error) {
 	err := updateShieldTxStatus(txhash, networkID, ShieldStatusSubmitting)
 	if err != nil {
 		log.Println("error:", err)
-		return "", "", err
+		return "", "", "", "", err
 	}
 	var linkedTokenID string
 	if tokenID != "" {
@@ -46,14 +46,14 @@ retry:
 		err = updateShieldTxStatus(txhash, networkID, ShieldStatusSubmitting)
 		if err != nil {
 			log.Println("updateShieldTxStatus error:", err)
-			return "", "", err
+			return "", "", "", "", err
 		}
 		err = setShieldTxStatusError(txhash, networkID, finalErr)
 		if err != nil {
 			log.Println("setShieldTxStatusError error:", err)
-			return "", "", err
+			return "", "", "", "", err
 		}
-		return "", "", errors.New(finalErr)
+		return "", "", "", "", errors.New(finalErr)
 	}
 	if i > 0 {
 		time.Sleep(1 * time.Second)
@@ -73,9 +73,9 @@ retry:
 		err = updateShieldTxStatus(txhash, networkID, ShieldStatusAccepted)
 		if err != nil {
 			log.Println("error123:", err)
-			return "", "", err
+			return "", "", "", "", err
 		}
-		return "", "", errors.New(ProofAlreadySubmitError)
+		return "", "", "", "", errors.New(ProofAlreadySubmitError)
 	}
 	if linkedTokenID == "" && tokenID == "" {
 		tokenID, linkedTokenID, err = findTokenByContractID(contractID, networkID)
@@ -84,21 +84,17 @@ retry:
 			goto retry
 		}
 	}
-	result, err := submitProofTx(proof, linkedTokenID, tokenID, networkID, key)
+	incTx, err := submitProofTx(proof, linkedTokenID, tokenID, networkID, key)
 	if err != nil {
 		log.Println("error:", err)
 		fmt.Println("linkedTokenID, tokenID", linkedTokenID, tokenID)
-		fmt.Println("incTx", result)
+		fmt.Println("incTx", incTx)
 		finalErr = "submitProof " + err.Error()
 		goto retry
 	}
-	fmt.Println("done submit proof", result)
-	err = updateShieldTxStatus(txhash, networkID, ShieldStatusPending)
-	if err != nil {
-		log.Println("error123:", err)
-		return "", "", err
-	}
-	return result, paymentAddr, nil
+	fmt.Println("done submit proof", incTx)
+
+	return incTx, paymentAddr, tokenID, linkedTokenID, nil
 }
 
 func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int, key string) (string, error) {

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/api"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
 
@@ -21,6 +22,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = database.ConnectDB(config.Mongo, config.Mongodb)
+	if err != nil {
+		panic(err)
+	}
+
 	switch config.Mode {
 	case common.MODE_TXSUBMITWATCHER:
 		if err := submitproof.StartWatcher(config, serviceID); err != nil {

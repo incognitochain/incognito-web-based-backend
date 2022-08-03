@@ -1,21 +1,24 @@
 package common
 
+import "github.com/kamva/mgm/v3"
+
 type Config struct {
 	Port           int
 	Mode           string
-	DatabaseURLs   []string
-	DBUSER         string
-	DBPASS         string
+	Mongo          string
+	Mongodb        string
 	CoinserviceURL string
 	FullnodeURL    string
 	ShieldService  string
 	FaucetService  string
 	NetworkID      string
 	CaptchaSecret  string
-	// papps submit proof out-chain
-	FeeKey     string
-	FeeAddress string
-	FeeOTA     string
+	// papps submit proof
+	IncKey string
+	EVMKey string
+
+	GGCProject string
+	GGCAuth    string
 }
 type TokenInfo struct {
 	TokenID            string
@@ -55,4 +58,15 @@ type TokenInfo struct {
 	NetworkID         int
 	MovedUnifiedToken bool
 	ParentUnifiedID   int
+}
+
+type ShieldTxData struct {
+	mgm.DefaultModel `bson:",inline"`
+	Status           string `json:"status" bson:"status"`
+	ExternalTx       string `json:"externaltx" bson:"externaltx"`
+	NetworkID        int    `json:"networkid" bson:"networkid"`
+	TokenID          string `json:"tokenid" bson:"tokenid"`
+	UTokenID         string `json:"utokenid" bson:"utokenid"`
+	IncTx            string `json:"inctx" bson:"inctx"`
+	Error            string `json:"error" bson:"error"`
 }

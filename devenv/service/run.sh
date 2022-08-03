@@ -8,7 +8,7 @@ CONFIG_JSON=$(cat <<EOF
   "Port": $PORT,
   "NetworkID": "$NETWORK_ID",
   "Mode": "$MODE",
-  "Database":["$REDIS_HOST:$REDIS_PORT"],
+  "DatabaseURLs":["$REDIS_HOST:$REDIS_PORT"],
   "DBUSER":"$DB_USER",
   "DBPASS":"$DB_PASSWORD",
   "CoinserviceURL": "$COIN_SERVICE_URL",

@@ -1,9 +1,12 @@
 package submitproof
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/pkg/errors"
@@ -12,15 +15,21 @@ import (
 func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 	config = cfg
 
-	err := connectDB(cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
+	err := startPubsubClient(cfg.GGCProject, cfg.GGCAuth)
 	if err != nil {
 		return err
 	}
 
-	err = connectMQ(serviceID, cfg.DatabaseURLs, cfg.DBUSER, cfg.DBPASS)
+	shieldTxTopic, err = startPubsubTopic(SHIELD_TX_TOPIC)
 	if err != nil {
-		return err
+		panic(err)
 	}
+
+	swapTxTopic, err = startPubsubTopic(SWAP_TX_TOPIC)
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
@@ -46,15 +55,20 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	}
 	taskBytes, _ := json.Marshal(task)
 
-	taskQueue, err := rdmq.OpenQueue(MqSubmitTx)
+	ctx := context.Background()
+	msg := &pubsub.Message{
+		Attributes: map[string]string{
+			"txhash": txhash,
+		},
+		Data: taskBytes,
+	}
+	msgID, err := shieldTxTopic.Publish(ctx, msg).Get(ctx)
 	if err != nil {
 		return nil, err
 	}
+	log.Println("publish msgID:", msgID)
 
-	err = taskQueue.PublishBytes(taskBytes)
-	if err != nil {
-		return nil, err
-	}
-	// go submitProof(txhash, tokenID, networkID)
 	return "submitting", nil
 }
+
+func SubmitSwapTx()

@@ -46,19 +46,24 @@ services:
     depends_on:
       - query
       - redisstack
-
-  redisstack:
-    image: redis/redis-stack
-    restart: always
-    environment:
-      REDIS_ARGS: "--aclfile /config/users.acl"
-    ports:
-      # - 6379:6379 
-      - 8002:8001
-    volumes:
-      - ./data/redis:/data
-      - ./redis/:/config
       
+  mongo:
+    image: mongo
+    restart: always
+    volumes:
+      - ./data/mongodb:/data/db
+      - ./data/mongodb_config:/data/configdb
+    env_file:
+      - service.env
+  mongo-express:
+    image: mongo-express
+    restart: always
+    env_file:
+      - service.env
+    ports:
+      - 4000:8081
+
+
   # pancakeswapep:
   #   image: 0xbahamoot/pancakeswapep
   #   restart: always

@@ -8,6 +8,12 @@ const (
 )
 
 const (
+	SHIELD_TX_TOPIC   = "shieldtx_topic"
+	UNSHIELD_TX_TOPIC = "shieldtx_topic"
+	SWAP_TX_TOPIC     = "swaptx_topic"
+)
+
+const (
 	INC_NetworkID = iota
 	ETH_NetworkID = 1
 	BSC_NetworkID = 2
@@ -31,7 +37,7 @@ const (
 var ShieldStatusMap = map[int]string{
 	ShieldStatusUnknown:      "unknown",
 	ShieldStatusSubmitting:   "submitting",
-	ShieldStatusSubmitFailed: "submit failed",
+	ShieldStatusSubmitFailed: "submit_failed",
 	ShieldStatusPending:      "pending",
 	ShieldStatusRejected:     "rejected",
 	ShieldStatusAccepted:     "accepted",

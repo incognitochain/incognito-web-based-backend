@@ -50,6 +50,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitswaptx", APISubmitSwapTx)
 
+	r.GET("/getvaultstate", APIGetVaultState)
+
 	//admin
 	adminGroup := r.Group("/admin")
 	adminGroup.GET("/failedshieldtx")

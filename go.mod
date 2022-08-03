@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/pubsub v1.10.0
 	github.com/RichardKnop/machinery v1.10.6
 	github.com/adjust/rmq/v4 v4.0.5
 	github.com/ethereum/go-ethereum v1.10.7
@@ -19,13 +20,15 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.2.0
 	github.com/incognitochain/coin-service v1.8.0
+	github.com/kamva/mgm/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/rueian/rueidis v0.0.60
+	go.mongodb.org/mongo-driver v1.9.0
+	google.golang.org/api v0.39.0
 )
 
 require (
 	cloud.google.com/go v0.76.0 // indirect
-	cloud.google.com/go/pubsub v1.10.0 // indirect
 	github.com/0xBahamoot/go-bigcompressor v1.0.5 // indirect
 	github.com/0xkumi/incognito-dev-framework v0.0.0-20220405020416-1e7e56d53697 // indirect
 	github.com/0xsirrush/color v1.7.0 // indirect
@@ -88,7 +91,6 @@ require (
 	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50 // indirect
 	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20210126072501-9870234752e4 // indirect
-	github.com/incognitochain/incognito-chain v0.0.0-20220729040850-5698947289f7 // indirect
 	github.com/ipfs/go-cid v0.0.7 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-log v1.0.4 // indirect
@@ -104,7 +106,6 @@ require (
 	github.com/jrick/logrotate v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
-	github.com/kamva/mgm/v3 v3.1.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/kleash/gin-hcaptcha v0.0.0-20220313155823-6bd6a856a74b // indirect
@@ -218,7 +219,6 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	github.com/zondax/hid v0.9.0 // indirect
 	github.com/zondax/ledger-go v0.9.0 // indirect
-	go.mongodb.org/mongo-driver v1.9.0 // indirect
 	go.opencensus.io v0.22.6 // indirect
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
@@ -234,7 +234,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/api v0.39.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210207032614-bba0dbe2a9ea // indirect
 	google.golang.org/grpc v1.45.0 // indirect

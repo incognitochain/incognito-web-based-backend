@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/incognitochain/coin-service/shared"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/kamva/mgm/v3"
 	"github.com/kamva/mgm/v3/operator"
@@ -27,7 +26,7 @@ func DBRetrievePendingShieldTxs(offset, limit int64) ([]common.ShieldTxData, err
 		limit = int64(10000)
 	}
 	filter := bson.M{"status": bson.M{operator.Eq: common.ShieldStatusPending}}
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*shared.DB_OPERATION_TIMEOUT)
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ShieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,
 		Limit: &limit,
@@ -46,7 +45,7 @@ func DBRetrieveFailedShieldTxs(offset, limit int64) ([]common.ShieldTxData, erro
 		limit = int64(10000)
 	}
 	filter := bson.M{"status": bson.M{operator.Eq: common.ShieldStatusSubmitFailed}}
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*shared.DB_OPERATION_TIMEOUT)
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ShieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,
 		Limit: &limit,
@@ -65,7 +64,7 @@ func DBRetrieveRejectedShieldTxs(offset, limit int64) ([]common.ShieldTxData, er
 		limit = int64(10000)
 	}
 	filter := bson.M{"status": bson.M{operator.Eq: common.ShieldStatusRejected}}
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*shared.DB_OPERATION_TIMEOUT)
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ShieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,
 		Limit: &limit,

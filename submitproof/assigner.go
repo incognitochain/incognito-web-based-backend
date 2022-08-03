@@ -72,4 +72,6 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	return "submitting", nil
 }
 
-func SubmitSwapTx()
+func SubmitSwapTx() {
+
+}

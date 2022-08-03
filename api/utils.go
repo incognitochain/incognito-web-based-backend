@@ -1,8 +1,13 @@
 package api
 
 import (
+	"errors"
+
+	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/mongodb/mongo-tools/common/json"
 )
+
+var incClient *incclient.IncClient
 
 func genRPCBody(method string, params []interface{}) interface{} {
 	type RPC struct {
@@ -45,4 +50,22 @@ func VerifyCaptcha(clientCaptcha string, secret string) (bool, error) {
 	}
 
 	return responseBodyData.Success, nil
+}
+
+func initIncClient(network string) error {
+	var err error
+	switch network {
+	case "mainnet":
+		incClient, err = incclient.NewMainNetClient()
+	case "testnet-2": // testnet2
+		incClient, err = incclient.NewTestNetClient()
+	case "testnet-1":
+		incClient, err = incclient.NewTestNet1Client()
+	case "devnet":
+		return errors.New("unsupported network")
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }

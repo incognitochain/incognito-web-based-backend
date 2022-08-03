@@ -1,118 +1,53 @@
 package submitproof
 
 import (
-	"encoding/json"
 	"log"
 	"time"
 
-	"github.com/adjust/rmq/v4"
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/pkg/errors"
 )
 
 func StartWatcher(cfg common.Config, serviceID uuid.UUID) error {
 	config = cfg
-	network := cfg.NetworkID
+	// network := cfg.NetworkID
+	watchPendingTx()
 
-	err := startPubsubClient(cfg.GGCProject, cfg.GGCAuth)
-	if err != nil {
-		return err
-	}
-
-	err = initIncClient(network)
-	if err != nil {
-		return err
-	}
-
-	// taskQueue, err := rdmq.OpenQueue(MqWatchTx)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = taskQueue.StartConsuming(10, time.Second)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// for i := 0; i < 10; i++ {
-	// 	_, err = taskQueue.AddConsumerFunc(fmt.Sprintf("submitwatcher-%v", i), watchSubmittedTx)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	// go watchUnackTask()
-	// go retryFailedTask()
 	return nil
 }
 
-// func watchUnackTask() {
-// 	cleaner := rmq.NewCleaner(rdmq)
-// 	for range time.Tick(60 * time.Second) {
-// 		returned, err := cleaner.Clean()
-// 		if err != nil {
-// 			log.Printf("failed to clean: %s", err)
-// 			continue
-// 		}
-// 		log.Printf("cleaned %d", returned)
-// 	}
-// }
-
-// func retryFailedTask() {
-// 	for range time.Tick(30 * time.Second) {
-// 		queue, err := rdmq.OpenQueue(MqSubmitTx)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		returned, err := queue.ReturnRejected(math.MaxInt64)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		log.Printf("queue MqSubmitTx returner returned %d rejected deliveries", returned)
-
-// 		queue, err = rdmq.OpenQueue(MqWatchTx)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		returned, err = queue.ReturnRejected(math.MaxInt64)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		log.Printf("queue MqWatchTx returner returned %d rejected deliveries", returned)
-// 	}
-// }
-
 func watchPendingTx() {
 	for {
-
+		txList, err := database.DBRetrievePendingShieldTxs(0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingShieldTxs err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingShieldTxs(txdata)
+			if err != nil {
+				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+			}
+		}
 		time.Sleep(10 * time.Second)
 	}
 }
 
-func watchSubmittedTx(delivery rmq.Delivery) {
-	payload := delivery.Payload()
-	log.Println("start consume task...")
-	task := WatchShieldProofTask{}
-	err := json.Unmarshal([]byte(payload), &task)
+func processPendingShieldTxs(txdata common.ShieldTxData) error {
+	isInBlock, err := incClient.CheckTxInBlock(txdata.IncTx)
 	if err != nil {
-		rejectDelivery(delivery, payload)
-		return
-	}
-
-	incClient.GetRawMemPool()
-	isInBlock, err := incClient.CheckTxInBlock(task.IncTx)
-	if err != nil {
-		rejectDelivery(delivery, payload)
+		log.Println("CheckTxInBlock err:", err)
+		return err
 	}
 
 	if isInBlock {
 		var status int
-		if task.IsPunified {
-			statusShield, err := incClient.CheckUnifiedShieldStatus(task.IncTx)
+		if txdata.TokenID == txdata.UTokenID {
+			statusShield, err := incClient.CheckUnifiedShieldStatus(txdata.IncTx)
 			if err != nil {
 				log.Println("CheckShieldStatus err", err)
-				rejectDelivery(delivery, payload)
-				return
+				return err
 			}
 			if statusShield.Status == 0 {
 				status = 3
@@ -120,40 +55,36 @@ func watchSubmittedTx(delivery rmq.Delivery) {
 				status = 2
 			}
 		} else {
-			status, err = incClient.CheckShieldStatus(task.IncTx)
+			status, err = incClient.CheckShieldStatus(txdata.IncTx)
 			if err != nil {
 				log.Println("CheckShieldStatus err", err)
-				rejectDelivery(delivery, payload)
+				return err
 			}
 		}
 
 		switch status {
 		case 1:
-			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusPending)
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, common.ShieldStatusPending, "")
 			if err != nil {
-				log.Println("error123:", err)
-				rejectDelivery(delivery, payload)
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
 			}
 		case 2:
-			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusAccepted)
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, common.ShieldStatusAccepted, "")
 			if err != nil {
-				log.Println("error123:", err)
-				rejectDelivery(delivery, payload)
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
 			}
-			ackDelivery(delivery, payload)
-			faucetPRV(task.PaymentAddress)
-			return
+			faucetPRV(txdata.PaymentAddress)
+			return nil
 		case 3:
-			err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusRejected)
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, common.ShieldStatusRejected, "rejected by chain")
 			if err != nil {
-				log.Println("error123:", err)
-				rejectDelivery(delivery, payload)
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
 			}
-			ackDelivery(delivery, payload)
-			return
+			return nil
 		}
-		delivery.Push()
-	} else {
-		rejectDelivery(delivery, payload)
 	}
+	return errors.New("tx not finalized")
 }

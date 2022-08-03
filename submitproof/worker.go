@@ -11,6 +11,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/pkg/errors"
 )
 
@@ -102,9 +103,9 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	}
 
 	if time.Since(task.Time) > time.Hour {
-		err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusSubmitFailed)
+		errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusSubmitFailed, "timeout")
 		if err != nil {
-			log.Println("updateShieldTxStatus error:", err)
+			log.Println("DBUpdateShieldTxStatus error:", errdb)
 			return
 		}
 		m.Ack()
@@ -114,130 +115,38 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	t := time.Now().Unix()
 	key := keyList[t%int64(len(keyList))]
 	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, key)
+
+	if tokenID != "" && linkedTokenID != "" {
+		err = database.DBUpdateShieldOnChainTxInfo(task.Txhash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
+		if err != nil {
+			log.Println("DBUpdateShieldOnChainTxInfo error:", err)
+			return
+		}
+	}
+
 	if err != nil {
 		if err.Error() == ProofAlreadySubmitError {
+			errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusSubmitFailed, err.Error())
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus error:", errdb)
+				return
+			}
 			m.Ack()
 			return
 		}
-
 		log.Println("submitProof error:", err) //
 		return
 	}
 
-	err = updateShieldTxStatus(txhash, networkID, ShieldStatusPending)
+	err = database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusPending, "")
 	if err != nil {
-		log.Println("error123:", err)
-		return "", "", "", "", err
+		log.Println("DBUpdateShieldTxStatus err:", err)
+		return
 	}
 
 	m.Ack()
-	// if incTx != "" {
-	// 	watchQueue, err := rdmq.OpenQueue(MqWatchTx)
-	// 	if err != nil {
-	// 		log.Printf("rejected %s", payload)
-	// 		return
-	// 	}
-
-	// 	task := WatchShieldProofTask{
-	// 		PaymentAddress: paymentAddr,
-	// 		Txhash:         task.Txhash,
-	// 		IncTx:          incTx,
-	// 		TokenID:        task.TokenID,
-	// 		NetworkID:      task.NetworkID,
-	// 		Time:           time.Now(),
-	// 	}
-	// 	taskBytes, _ := json.Marshal(task)
-
-	// 	err = watchQueue.PublishBytes(taskBytes)
-	// 	if err != nil {
-	// 		log.Printf("PublishBytes %s", payload)
-	// 		return
-	// 	}
-	// }
-
 }
 
 func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
-
+	//TODO
 }
-
-// func createConsumer(keylist []string) error {
-// 	taskQueue, err := rdmq.OpenQueue(MqSubmitTx)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	err = taskQueue.StartConsuming(10, time.Second)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	for i := 0; i < len(keylist); i++ {
-// 		name := fmt.Sprintf("consumer %d", i)
-// 		if _, err := taskQueue.AddConsumer(name, NewSubmitProofConsumer(keylist[i], INC_NetworkID)); err != nil {
-// 			panic(err)
-// 		}
-// 	}
-
-// 	return nil
-// }
-
-// func NewSubmitProofConsumer(key string, network int) *SubmitProofConsumer {
-// 	return &SubmitProofConsumer{
-// 		UseKey:    key,
-// 		NetworkID: network,
-// 	}
-// }
-
-// func (consumer *SubmitProofConsumer) Consume(delivery rmq.Delivery) {
-// 	payload := delivery.Payload()
-// 	log.Println("start consume task...")
-// 	task := SubmitProofShieldTask{}
-// 	err := json.Unmarshal([]byte(payload), &task)
-// 	if err != nil {
-// 		rejectDelivery(delivery, payload)
-// 	}
-
-// 	if time.Since(task.Time) > time.Hour {
-// 		err = updateShieldTxStatus(task.Txhash, task.NetworkID, ShieldStatusSubmitFailed)
-// 		if err != nil {
-// 			log.Println("updateShieldTxStatus error:", err)
-// 			return
-// 		}
-// 		ackDelivery(delivery, payload)
-// 		return
-// 	}
-// 	incTx, paymentAddr, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, consumer.UseKey)
-// 	if err != nil {
-// 		if err.Error() == ProofAlreadySubmitError {
-// 			ackDelivery(delivery, payload)
-// 			return
-// 		}
-// 		rejectDelivery(delivery, payload)
-// 		return
-// 	}
-
-// 	ackDelivery(delivery, payload)
-// 	if incTx != "" {
-// 		watchQueue, err := rdmq.OpenQueue(MqWatchTx)
-// 		if err != nil {
-// 			log.Printf("rejected %s", payload)
-// 			return
-// 		}
-
-// 		task := WatchShieldProofTask{
-// 			PaymentAddress: paymentAddr,
-// 			Txhash:         task.Txhash,
-// 			IncTx:          incTx,
-// 			TokenID:        task.TokenID,
-// 			NetworkID:      task.NetworkID,
-// 			Time:           time.Now(),
-// 		}
-// 		taskBytes, _ := json.Marshal(task)
-
-// 		err = watchQueue.PublishBytes(taskBytes)
-// 		if err != nil {
-// 			log.Printf("PublishBytes %s", payload)
-// 			return
-// 		}
-// 	}
-// }

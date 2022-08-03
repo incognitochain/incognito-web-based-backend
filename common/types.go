@@ -67,6 +67,7 @@ type ShieldTxData struct {
 	NetworkID        int    `json:"networkid" bson:"networkid"`
 	TokenID          string `json:"tokenid" bson:"tokenid"`
 	UTokenID         string `json:"utokenid" bson:"utokenid"`
+	PaymentAddress   string `json:"paymentaddress" bson:"paymentaddress"`
 	IncTx            string `json:"inctx" bson:"inctx"`
 	Error            string `json:"error" bson:"error"`
 }

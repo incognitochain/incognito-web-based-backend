@@ -15,3 +15,18 @@ const (
 	MODE_FEEESTIMATOR    = "feeestimator"
 	MODE_UNSHIELDWATCHER = "unshieldwatcher"
 )
+
+// const (
+// 	BurnForCallConfirmMeta      = 158
+// 	BurnForCallRequestMeta      = 348
+// 	BurnForCallResponseMeta     = 349
+// 	IssuingReshieldResponseMeta = 350
+// )
+
+const (
+	ShieldStatusSubmitting   = "submitting"
+	ShieldStatusSubmitFailed = "submit_failed"
+	ShieldStatusPending      = "pending"
+	ShieldStatusRejected     = "rejected"
+	ShieldStatusAccepted     = "accepted"
+)

@@ -29,11 +29,6 @@ func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string,
 }
 
 func submitProof(txhash, tokenID string, networkID int, key string) (string, string, string, string, error) {
-	err := updateShieldTxStatus(txhash, networkID, ShieldStatusSubmitting)
-	if err != nil {
-		log.Println("error:", err)
-		return "", "", "", "", err
-	}
 	var linkedTokenID string
 	if tokenID != "" {
 		linkedTokenID = getLinkedTokenID(tokenID, networkID)
@@ -43,16 +38,6 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, str
 	var finalErr string
 retry:
 	if i == 10 {
-		err = updateShieldTxStatus(txhash, networkID, ShieldStatusSubmitting)
-		if err != nil {
-			log.Println("updateShieldTxStatus error:", err)
-			return "", "", "", "", err
-		}
-		err = setShieldTxStatusError(txhash, networkID, finalErr)
-		if err != nil {
-			log.Println("setShieldTxStatusError error:", err)
-			return "", "", "", "", err
-		}
 		return "", "", "", "", errors.New(finalErr)
 	}
 	if i > 0 {
@@ -70,11 +55,6 @@ retry:
 		log.Println("checkProofSubmitted error:", err)
 	}
 	if isSubmitted {
-		err = updateShieldTxStatus(txhash, networkID, ShieldStatusAccepted)
-		if err != nil {
-			log.Println("error123:", err)
-			return "", "", "", "", err
-		}
 		return "", "", "", "", errors.New(ProofAlreadySubmitError)
 	}
 	if linkedTokenID == "" && tokenID == "" {

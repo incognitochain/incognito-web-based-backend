@@ -18,6 +18,12 @@ func StartAPIservice(cfg common.Config) {
 	log.Println("initiating api-service...")
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
+	network := config.NetworkID
+
+	err := initIncClient(network)
+	if err != nil {
+		panic(err)
+	}
 
 	r := gin.Default()
 
@@ -33,15 +39,9 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/genunshieldaddress", APIGenUnshieldAddress)
 
-	// r.POST("/genshieldaddress", APIGenShieldAddress)
-
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
 	r.POST("/submitshieldtx", APISubmitShieldTx)
-
-	// r.GET("/statusbyinctx", APIGetStatusByIncTx)
-
-	// r.GET("/statusbyservice", APIGetStatusByShieldService)
 
 	r.POST("/statusbyinctxs", APIGetStatusByIncTxs)
 
@@ -57,8 +57,9 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/failedshieldtx")
 	adminGroup.GET("/shieldstatus")
 	adminGroup.GET("/unshieldstatus")
+	adminGroup.GET("/retryshield")
 
-	err := r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
+	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {
 		panic(err)
 	}

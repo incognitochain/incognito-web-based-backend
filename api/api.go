@@ -43,20 +43,23 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitshieldtx", APISubmitShieldTx)
 
-	r.POST("/statusbyinctxs", APIGetStatusByIncTxs)
+	r.POST("/shieldstatus", APIGetShieldStatus)
 
 	//papps
-	r.POST("/estimateswapfee", APIEstimateSwapFee)
+	pAppsGroup := r.Group("/papps")
 
-	r.POST("/submitswaptx", APISubmitSwapTx)
+	pAppsGroup.POST("/estimateswapfee", APIEstimateSwapFee)
 
-	r.GET("/getvaultstate", APIGetVaultState)
+	pAppsGroup.POST("/submitswaptx", APISubmitSwapTx)
+
+	pAppsGroup.POST("/swapstatus", APIGetSwapTxStatus)
+
+	pAppsGroup.GET("/getvaultstate", APIGetVaultState)
 
 	//admin
 	adminGroup := r.Group("/admin")
-	adminGroup.GET("/failedshieldtx")
-	adminGroup.GET("/shieldstatus")
-	adminGroup.GET("/unshieldstatus")
+	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)
+	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
 	adminGroup.GET("/retryshield")
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))

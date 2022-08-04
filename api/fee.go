@@ -14,6 +14,15 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(400, gin.H{"Error": err.Error()})
 		return
 	}
+
+	// var result EstimateSwapRespond
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
+
+	c.JSON(200, response)
+
 }
 
 func APIEstimateReward(c *gin.Context) {

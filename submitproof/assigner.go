@@ -11,6 +11,7 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
@@ -41,7 +42,9 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 
 	currentStatus, err := database.DBGetShieldTxStatusByExternalTx(txhash, networkID)
 	if err != nil {
-		return "", err
+		if err != mongo.ErrNoDocuments {
+			return "", err
+		}
 	}
 	if currentStatus != "" {
 		return currentStatus, nil

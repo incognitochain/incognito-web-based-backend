@@ -8,7 +8,7 @@ CONFIG_JSON=$(cat <<EOF
   "Port": $PORT,
   "NetworkID": "$NETWORK_ID",
   "Mode": "$MODE",
-  "Mongo": "mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@$MONGOHOST:$MONGO_PORT",
+  "Mongo": "mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@$MONGO_HOST:$MONGO_PORT",
   "Mongodb": "$MONGO_DBNAME",
   "CoinserviceURL": "$COIN_SERVICE_URL",
   "FullnodeURL": "$FULLNODE_URL",
@@ -17,6 +17,8 @@ CONFIG_JSON=$(cat <<EOF
   "CaptchaSecret":"$CAPTCHA_SECRET",
   "IncKey": "$INC_KEY",
   "EVMKey": "$EVM_KEY",
+  "GGCProject": "$GOOGLE_CLOUD_PROJECT",
+  "GGCAuth":"$GOOGLE_CLOUD_ACC"
 }
 EOF
 )

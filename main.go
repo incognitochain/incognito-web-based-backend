@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	err = database.ConnectDB(config.Mongo, config.Mongodb)
+	err = database.ConnectDB(config.Mongodb, config.Mongo)
 	if err != nil {
 		panic(err)
 	}

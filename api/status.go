@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -78,18 +79,11 @@ retry:
 	c.JSON(200, resp)
 }
 
-func APIGetStatusByIncTx(c *gin.Context) {
-	txHash := c.Query("txhash")
-	shieldType := c.Query("type")
-	_ = txHash
-	_ = shieldType
-}
-
 func APIGetFailedShieldTx(c *gin.Context) {
 
 }
 
-func APIGetShieldStatus(c *gin.Context) {
+func APIGetPendingShieldTx(c *gin.Context) {
 
 }
 
@@ -97,6 +91,20 @@ func APIGetUnshieldStatus(c *gin.Context) {
 
 }
 
-func APIGetStatusByIncTxs(c *gin.Context) {
+func APIGetShieldStatus(c *gin.Context) {
+	var req SubmitTxListRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+}
 
+func APIGetSwapTxStatus(c *gin.Context) {
+	var req SubmitTxListRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
 }

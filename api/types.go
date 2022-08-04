@@ -42,17 +42,14 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	Network       string
-	BurningAmount uint64
-	FromToken     string // IncTokenID
-	ToToken       string // ReceiveToken
+	Network   string
+	Amount    uint64
+	FromToken string // IncTokenID
+	ToToken   string // ReceiveToken
 }
 
-type EstimateSwapRespone struct {
-	Quote      QuoteDataResp
-	ExpiredAt  time.Time
-	Fee        uint64
-	FeeAddress uint64
+type EstimateSwapRespond struct {
+	Papps map[string]QuoteDataResp
 }
 
 type QuoteDataResp struct {
@@ -62,6 +59,7 @@ type QuoteDataResp struct {
 	AmountInRaw  string
 	AmountOut    string
 	AmountOutRaw string
+	Fee          map[string]uint64
 }
 
 type SubmitSwapTx struct {
@@ -253,10 +251,16 @@ type TransactionDetail struct {
 	Info string `json:"Info"`
 }
 
-type GetStatusByIncTxsRequest struct {
+type SubmitTxListRequest struct {
 	TxList []string
 }
 
 type SubmitSwapTxRequest struct {
 	TxRaw string
+}
+
+type TxStatusRespond struct {
+	TxHash string
+	Status string
+	Error  string
 }

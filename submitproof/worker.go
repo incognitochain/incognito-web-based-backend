@@ -67,7 +67,7 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 
 	var swapSub *pubsub.Subscription
 	swapSub, err = psclient.CreateSubscription(context.Background(), serviceID.String()+"_swap",
-		pubsub.SubscriptionConfig{Topic: shieldTxTopic})
+		pubsub.SubscriptionConfig{Topic: swapTxTopic})
 	if err != nil {
 		swapSub = psclient.Subscription(serviceID.String() + "_swap")
 	}
@@ -104,7 +104,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 
 	if time.Since(task.Time) > time.Hour {
 		errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusSubmitFailed, "timeout")
-		if err != nil {
+		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
 			return
 		}
@@ -127,7 +127,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	if err != nil {
 		if err.Error() == ProofAlreadySubmitError {
 			errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusSubmitFailed, err.Error())
-			if err != nil {
+			if errdb != nil {
 				log.Println("DBUpdateShieldTxStatus error:", errdb)
 				return
 			}

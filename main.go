@@ -7,6 +7,7 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/api"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/feeestimator"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
 
@@ -29,6 +30,10 @@ func main() {
 	}
 
 	switch config.Mode {
+	case common.MODE_FEEESTIMATOR:
+		if err := feeestimator.StartService(config, pappsCfg); err != nil {
+			log.Fatalln(err)
+		}
 	case common.MODE_TXSUBMITWATCHER:
 		if err := submitproof.StartWatcher(config, serviceID); err != nil {
 			log.Fatalln(err)
@@ -44,12 +49,16 @@ func main() {
 			}
 		}()
 	case common.MODE_API:
+		pappsCfg, err := loadpAppsConfig()
+		if err != nil {
+			panic(err)
+		}
 		go func() {
 			if err := submitproof.StartAssigner(config, serviceID); err != nil {
 				log.Fatalln(err)
 			}
 		}()
-		go api.StartAPIservice(config)
+		go api.StartAPIservice(config, pappsCfg)
 	}
 	select {}
 }

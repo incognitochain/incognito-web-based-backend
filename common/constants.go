@@ -30,3 +30,10 @@ const (
 	ShieldStatusRejected     = "rejected"
 	ShieldStatusAccepted     = "accepted"
 )
+
+const (
+	NETWORK_ETH = "eth"
+	NETWORK_BSC = "bsc"
+	NETWORK_PLG = "plg"
+	NETWORK_FTM = "ftm"
+)

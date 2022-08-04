@@ -2,6 +2,9 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"math"
+	"math/big"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/mongodb/mongo-tools/common/json"
@@ -68,4 +71,33 @@ func initIncClient(network string) error {
 		return err
 	}
 	return nil
+}
+
+// convert nano coin to nano token: ex: 2000000000000000 (nano eth) => 2000000 (nano pETH)
+func ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountTk uint64, decimal, pDecimals int64) uint64 {
+	if decimal == pDecimals {
+		return amountTk
+	}
+
+	amount := new(big.Int).SetUint64(amountTk)
+
+	pTokenAmount := new(big.Int).Mul(amount, big.NewInt(int64(math.Pow10(int(pDecimals)))))
+	tokenAmount := new(big.Int).Div(pTokenAmount, big.NewInt(int64(math.Pow10(int(decimal)))))
+
+	return tokenAmount.Uint64()
+}
+
+func ConvertNanoIncogTokenToOutChainToken(amountTk uint64, decimal, pDecimals int64) uint64 {
+	if decimal == pDecimals {
+		return amountTk
+	}
+
+	amount := new(big.Int).SetUint64(amountTk)
+
+	pTokenAmount := new(big.Int).Mul(amount, big.NewInt(int64(math.Pow10(int(decimal)))))
+	fmt.Println("* decimal: ", pTokenAmount.String())
+
+	tokenAmount := new(big.Int).Div(pTokenAmount, big.NewInt(int64(math.Pow10(int(pDecimals)))))
+	fmt.Println("* pdecimal: ", tokenAmount.String())
+	return tokenAmount.Uint64()
 }

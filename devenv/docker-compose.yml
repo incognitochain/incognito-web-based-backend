@@ -28,6 +28,19 @@ services:
     depends_on:
       - mongo
 
+  feeestimator:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    volumes:
+      - ./ggc.json:/home/ggc.json
+    env_file:
+      - service.env
+    environment:
+      MODE: "feeestimator"
+    depends_on:
+      - mongo
+
   api:
     image: servicebe
     working_dir: /home

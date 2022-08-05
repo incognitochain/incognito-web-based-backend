@@ -24,3 +24,9 @@ type PAppsEndpointData struct {
 	Network          string            `json:"network" bson:"network"`
 	ExchangeApps     map[string]string `json:"excapps" bson:"excapps"`
 }
+
+type BridgeNetworkData struct {
+	mgm.DefaultModel `bson:",inline"`
+	Network          string   `json:"network" bson:"network"`
+	Endpoints        []string `json:"endpoints" bson:"endpoints"`
+}

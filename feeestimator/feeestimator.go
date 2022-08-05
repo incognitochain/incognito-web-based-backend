@@ -1,9 +1,14 @@
 package feeestimator
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"log"
+	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 )
@@ -12,37 +17,81 @@ const (
 	checkFeeInterval = 15 * time.Second
 )
 
-// 						 network	app		 endpoint
-var pAppsList = make(map[string]map[string][]string)
-
-func StartService(cfg common.Config, papps map[string]map[string][]string) error {
+func StartService(cfg common.Config) error {
 	return checkFee()
 }
 
 func checkFee() error {
-	for range time.Tick(checkFeeInterval) {
+	ticker := time.NewTicker(checkFeeInterval)
+	for range ticker.C {
+		networkList, err := retrieveNetwork()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 		feeList := make(map[string]interface{})
-		for network, _ := range pAppsList {
-			getFee(network)
+		for network, endpoints := range networkList {
+			fee, err := getFee(network, endpoints)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			feeList[network] = fee
 		}
 
-		saveFeeData(feeList)
+		err = saveFeeData(feeList)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 	return nil
 }
 
-func getFee(network string) error {
+func retrieveNetwork() (map[string][]string, error) {
+	result := make(map[string][]string)
+	networks, err := database.DBGetBridgeNetworkInfo()
+	for _, network := range networks {
+		result[network.Network] = network.Endpoints
+	}
+	return result, err
+}
 
+func getFee(network string, endpoints []string) (uint64, error) {
+	epCount := len(endpoints)
+	i := 0
+retry:
+	if i == epCount {
+		return 0, fmt.Errorf("can't find endpoints for network %v", network)
+	}
+	evmClient, err := ethclient.Dial(endpoints[i])
+	if err != nil {
+		return 0, err
+	}
+	var errFee error
+	var fee *big.Int
+	log.Printf("get fee for network %v using endpoint %v \n", network, endpoints[i])
 	switch network {
 	case common.NETWORK_ETH:
+		fee, errFee = getEthTradeFee(evmClient)
 	case common.NETWORK_BSC:
+		fee, errFee = getBscTradeFee(evmClient)
 	case common.NETWORK_PLG:
+		fee, errFee = getPlgTradeFee(evmClient)
 	case common.NETWORK_FTM:
+		fee, errFee = getFtmTradeFee(evmClient)
 	default:
-		return errors.New("unsupported network")
+		return 0, errors.New("unsupported network")
+	}
+	if errFee != nil {
+		log.Println("getFee", errFee)
+		i++
+		goto retry
+	}
+	if fee == nil {
+		return 0, nil
 	}
 
-	return nil
+	return fee.Uint64(), nil
 }
 
 func saveFeeData(data map[string]interface{}) error {
@@ -50,4 +99,73 @@ func saveFeeData(data map[string]interface{}) error {
 	feeData.Creating()
 	feeData.Fees = data
 	return database.DBSaveFeetTable(feeData)
+}
+
+func getEthTradeFee(c *ethclient.Client) (*big.Int, error) {
+	return nil, nil
+}
+
+func getBscTradeFee(c *ethclient.Client) (*big.Int, error) {
+	// todo: get from network:
+	gasPrice, err := SuggestGasPrice(c)
+	if err != nil {
+		return nil, err
+	}
+	fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
+
+	fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
+
+	fee = fee.Mul(fee, big.NewInt(3))
+
+	fmt.Println("fee est bsc x3: ", fee)
+
+	return fee, nil
+}
+
+func getPlgTradeFee(c *ethclient.Client) (*big.Int, error) {
+	// todo: get from network:
+	gasPrice, err := SuggestGasPrice(c)
+	if err != nil {
+		return nil, err
+	}
+
+	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
+
+	fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
+
+	fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
+
+	fee = fee.Mul(fee, big.NewInt(3))
+
+	fmt.Println("fee est bsc x3: ", fee)
+
+	return fee, nil
+}
+
+func getFtmTradeFee(c *ethclient.Client) (*big.Int, error) {
+	return nil, nil
+}
+
+func SuggestGasPrice(client *ethclient.Client) (*big.Int, error) {
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	chainID, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("gas from SuggestGasPrice from chain ID: ", chainID, gasPrice)
+
+	// hardcode for polygon:
+	if chainID.Uint64() == 137 || chainID.Uint64() == 80001 {
+		// increase x1.5:
+		gasPrice = new(big.Int).Mul(big.NewInt(int64(15)), gasPrice)
+		gasPrice = new(big.Int).Div(gasPrice, big.NewInt(int64(10)))
+
+		fmt.Println("gas x1.5 from SuggestGasPrice: ", gasPrice)
+	}
+	return gasPrice, nil
 }

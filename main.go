@@ -31,7 +31,7 @@ func main() {
 
 	switch config.Mode {
 	case common.MODE_FEEESTIMATOR:
-		if err := feeestimator.StartService(config, pappsCfg); err != nil {
+		if err := feeestimator.StartService(config); err != nil {
 			log.Fatalln(err)
 		}
 	case common.MODE_TXSUBMITWATCHER:
@@ -49,16 +49,12 @@ func main() {
 			}
 		}()
 	case common.MODE_API:
-		pappsCfg, err := loadpAppsConfig()
-		if err != nil {
-			panic(err)
-		}
 		go func() {
 			if err := submitproof.StartAssigner(config, serviceID); err != nil {
 				log.Fatalln(err)
 			}
 		}()
-		go api.StartAPIservice(config, pappsCfg)
+		go api.StartAPIservice(config)
 	}
 	select {}
 }

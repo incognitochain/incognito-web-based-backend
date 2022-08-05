@@ -20,6 +20,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		Result interface{}
 		Error  interface{}
 	}
+	_ = result
 	// ConvertNanoIncogTokenToOutChainToken
 
 	// feeInc := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString
@@ -99,4 +100,6 @@ func APIEstimateUnshield(c *gin.Context) {
 	c.JSON(200, responseBodyData)
 }
 
-func getQuote()
+func getQuote() {
+
+}

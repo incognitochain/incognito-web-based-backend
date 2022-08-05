@@ -25,5 +25,13 @@ func ConnectDB(dbName string, mongoAddr string) error {
 	if err != nil {
 		return err
 	}
+	err = DBCreateFeeIndex()
+	if err != nil {
+		return err
+	}
+	err = DBCreateNetworkIndex()
+	if err != nil {
+		return err
+	}
 	return nil
 }

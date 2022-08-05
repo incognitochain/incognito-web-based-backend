@@ -14,7 +14,7 @@ import (
 
 var config common.Config
 
-func StartAPIservice(cfg common.Config, papps map[string]map[string][]string) {
+func StartAPIservice(cfg common.Config) {
 	log.Println("initiating api-service...")
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)

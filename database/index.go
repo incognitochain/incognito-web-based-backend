@@ -20,10 +20,43 @@ func DBCreateShieldTxIndex() error {
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}},
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "created_at", Value: bsonx.Int32(1)}},
 		},
 	}
 	_, err := mgm.Coll(&common.ShieldTxData{}).Indexes().CreateMany(context.Background(), shieldTxModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}
+
+func DBCreateFeeIndex() error {
+	startTime := time.Now()
+	feeModel := []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{Key: "created_at", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.ExternalNetworksFeeData{}).Indexes().CreateMany(context.Background(), feeModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}
+
+func DBCreateNetworkIndex() error {
+	startTime := time.Now()
+	networkInfoModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "network", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.BridgeNetworkData{}).Indexes().CreateMany(context.Background(), networkInfoModel)
 	if err != nil {
 		log.Printf("failed to index coins in %v", time.Since(startTime))
 		return err

@@ -29,7 +29,7 @@ func checkFee() error {
 			log.Println(err)
 			continue
 		}
-		feeList := make(map[string]interface{})
+		feeList := make(map[string]uint64)
 		for network, endpoints := range networkList {
 			fee, err := getFee(network, endpoints)
 			if err != nil {
@@ -94,7 +94,7 @@ retry:
 	return fee.Uint64(), nil
 }
 
-func saveFeeData(data map[string]interface{}) error {
+func saveFeeData(data map[string]uint64) error {
 	var feeData common.ExternalNetworksFeeData
 	feeData.Creating()
 	feeData.Fees = data

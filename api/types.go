@@ -43,9 +43,9 @@ type RewardModel struct {
 
 type EstimateSwapRequest struct {
 	Network   string
-	Amount    uint64
+	Amount    string
 	FromToken string // IncTokenID
-	ToToken   string // ReceiveToken
+	ToToken   string // IncTokenID
 }
 
 type EstimateSwapRespond struct {
@@ -53,13 +53,12 @@ type EstimateSwapRespond struct {
 }
 
 type QuoteDataResp struct {
-	TokenIn      string
-	TokenOut     string
 	AmountIn     string
 	AmountInRaw  string
 	AmountOut    string
 	AmountOutRaw string
 	Fee          map[string]uint64
+	Route        interface{}
 }
 
 type SubmitSwapTx struct {
@@ -263,4 +262,34 @@ type TxStatusRespond struct {
 	TxHash string
 	Status string
 	Error  string
+}
+
+type PappSupportedTokenData struct {
+	ID                string
+	ContractID        string
+	ContractIDGetRate string
+	Name              string
+	Symbol            string
+	Decimals          int
+	PDecimals         int
+	Protocol          string
+	Verify            bool
+	IsPopular         bool
+	Priority          int
+	DappID            int
+	CurrencyType      int
+	NetworkID         int
+	MovedUnifiedToken bool
+	NetworkName       string
+}
+
+type UniswapQuote struct {
+	Data struct {
+		AmountIn         string      `json:"amountIn"`
+		AmountOut        string      `json:"amountOut"`
+		AmountOutRaw     string      `json:"amountOutRaw"`
+		Route            interface{} `json:"route"`
+		EstimatedGasUsed string      `json:"estimatedGasUsed"`
+	} `json:"data"`
+	Message string `json:"message"`
 }

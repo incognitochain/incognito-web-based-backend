@@ -37,3 +37,10 @@ const (
 	NETWORK_PLG = "plg"
 	NETWORK_FTM = "ftm"
 )
+
+const (
+	NativeCurrencyTypeETH = 1
+	NativeCurrencyTypeBSC = 7
+	NativeCurrencyTypePLG = 19
+	NativeCurrencyTypeFTM = 21
+)

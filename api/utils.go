@@ -101,3 +101,63 @@ func ConvertNanoIncogTokenToOutChainToken(amountTk uint64, decimal, pDecimals in
 	fmt.Println("* pdecimal: ", tokenAmount.String())
 	return tokenAmount.Uint64()
 }
+
+func getpTokenContractID(tokenID string, networkID int, supportedTokenList []PappSupportedTokenData) (*PappSupportedTokenData, error) {
+	for _, v := range supportedTokenList {
+		if v.ID == tokenID && v.NetworkID == networkID {
+			return &v, nil
+		}
+	}
+	return nil, errors.New("can't find contractID for token " + tokenID)
+}
+
+func getPappSupportedTokenList() ([]PappSupportedTokenData, error) {
+	re, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		Get(config.ShieldService + "/trade/supported-tokens")
+	if err != nil {
+		return nil, err
+	}
+	var responseBodyData struct {
+		Result []PappSupportedTokenData
+		Error  *struct {
+			Code    int
+			Message string
+		} `json:"Error"`
+	}
+	err = json.Unmarshal(re.Body(), &responseBodyData)
+	if err != nil {
+		return nil, err
+	}
+
+	if responseBodyData.Error != nil {
+		return nil, errors.New(responseBodyData.Error.Message)
+	}
+
+	return responseBodyData.Result, nil
+}
+
+func uniswapDataExtractor(data []byte) (*UniswapQuote, error) {
+	if len(data) == 0 {
+		return nil, errors.New("can't extract data from empty byte array")
+	}
+	result := UniswapQuote{}
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, err
+	}
+	if result.Message != "ok" {
+		return nil, errors.New(result.Message)
+	}
+	return &result, nil
+}
+
+func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyType int) (*PappSupportedTokenData, error) {
+	for _, token := range tokenList {
+		if token.CurrencyType == nativeTokenCurrencyType {
+			return &token, nil
+		}
+	}
+	return nil, errors.New("token not found")
+}

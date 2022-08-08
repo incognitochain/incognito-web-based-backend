@@ -86,7 +86,15 @@ services:
   pancakeswapep:
     image: 0xbahamoot/pancakeswapep
     restart: always
+    ports:
+      - 3001:3000
+    environment:
+      JSON_RPC_PROVIDER_POLYGON: "https://matic-mumbai.chainstacklabs.com"
 
   uniswapep:
     image: 0xbahamoot/uniswapep
     restart: always
+    ports:
+      - 3002:3000
+    environment:
+      JSON_RPC_PROVIDER_POLYGON: "https://matic-mumbai.chainstacklabs.com"

@@ -64,3 +64,20 @@ func DBCreateNetworkIndex() error {
 
 	return nil
 }
+
+func DBCreatePappsIndex() error {
+	startTime := time.Now()
+	pappsModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "network", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.PAppsEndpointData{}).Indexes().CreateMany(context.Background(), pappsModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}

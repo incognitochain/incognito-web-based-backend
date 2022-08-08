@@ -16,7 +16,7 @@ type ShieldTxData struct {
 
 type ExternalNetworksFeeData struct {
 	mgm.DefaultModel `bson:",inline"`
-	Fees             map[string]interface{} `json:"fees" bson:"fees"`
+	Fees             map[string]uint64 `json:"fees" bson:"fees"`
 }
 
 type PAppsEndpointData struct {
@@ -28,5 +28,6 @@ type PAppsEndpointData struct {
 type BridgeNetworkData struct {
 	mgm.DefaultModel `bson:",inline"`
 	Network          string   `json:"network" bson:"network"`
+	ChainID          string   `json:"chainid" bson:"chainid"`
 	Endpoints        []string `json:"endpoints" bson:"endpoints"`
 }

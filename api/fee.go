@@ -44,6 +44,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 	var result EstimateSwapRespond
+	result.Papps = make(map[string]QuoteDataResp)
 	var response struct {
 		Result interface{}
 		Error  interface{}

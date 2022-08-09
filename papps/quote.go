@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+func PancakeQuote(tokenIn, tokenOut, amount, chainId string, exactIn bool, endpoint string) ([]byte, error) {
+
+}
+
 func UniswapQuote(tokenIn, tokenOut, amount, chainId string, exactIn bool, endpoint string) ([]byte, error) {
 	url := "http://" + endpoint + "/api/quote"
 	method := "POST"
@@ -61,3 +65,7 @@ func UniswapQuote(tokenIn, tokenOut, amount, chainId string, exactIn bool, endpo
 
 	return body, nil
 }
+
+// func CurveQuote(tokenIn, tokenOut, amount, chainId string, exactIn bool, endpoint string) ([]byte, error) {
+
+// }

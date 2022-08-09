@@ -31,3 +31,16 @@ type BridgeNetworkData struct {
 	ChainID          string   `json:"chainid" bson:"chainid"`
 	Endpoints        []string `json:"endpoints" bson:"endpoints"`
 }
+
+type PappSupportedTokenData struct {
+	mgm.DefaultModel  `bson:",inline"`
+	TokenID           string `json:"tokenid" bson:"tokenid"`
+	ContractID        string `json:"contractid" bson:"contractid"`
+	ContractIDGetRate string `json:"contractid_getrate" bson:"contractid_getrate"`
+	Protocol          string `json:"protocol" bson:"protocol"`
+	Verify            bool   `json:"verify" bson:"verify"`
+	IsPopular         bool   `json:"ispopular" bson:"ispopular"`
+	Priority          int    `json:"priority" bson:"priority"`
+	DappID            int    `json:"dappid" bson:"dappid"`
+	NetworkID         int    `json:"networkid" bson:"networkid"`
+}

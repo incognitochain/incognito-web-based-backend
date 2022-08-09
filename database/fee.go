@@ -27,7 +27,7 @@ func DBRetrieveFeeTable() (*common.ExternalNetworksFeeData, error) {
 	limit := int64(1)
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(10)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ExternalNetworksFeeData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
-		Sort:  bson.D{{"created_at", 1}},
+		Sort:  bson.D{{"created_at", -1}},
 		Limit: &limit,
 	})
 	if err != nil {

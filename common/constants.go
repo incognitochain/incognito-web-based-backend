@@ -32,6 +32,7 @@ const (
 )
 
 const (
+	NETWORK_INC = "inc"
 	NETWORK_ETH = "eth"
 	NETWORK_BSC = "bsc"
 	NETWORK_PLG = "plg"
@@ -39,8 +40,10 @@ const (
 )
 
 const (
+	NativeCurrencyTypePRV = 0
 	NativeCurrencyTypeETH = 1
 	NativeCurrencyTypeBSC = 7
 	NativeCurrencyTypePLG = 19
 	NativeCurrencyTypeFTM = 21
+	UnifiedCurrencyType   = 25
 )

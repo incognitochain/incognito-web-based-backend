@@ -4,10 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func APIGetSupportedToken(c *gin.Context) {
-
-}
-
 func APIGetTokenList(c *gin.Context) {
 	var responseBodyData APIRespond
 	_, err := restyClient.R().

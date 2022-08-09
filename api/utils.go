@@ -111,33 +111,6 @@ func getpTokenContractID(tokenID string, networkID int, supportedTokenList []Pap
 	return nil, errors.New("can't find contractID for token " + tokenID)
 }
 
-func getPappSupportedTokenList() ([]PappSupportedTokenData, error) {
-	re, err := restyClient.R().
-		EnableTrace().
-		SetHeader("Content-Type", "application/json").
-		Get(config.ShieldService + "/trade/supported-tokens")
-	if err != nil {
-		return nil, err
-	}
-	var responseBodyData struct {
-		Result []PappSupportedTokenData
-		Error  *struct {
-			Code    int
-			Message string
-		} `json:"Error"`
-	}
-	err = json.Unmarshal(re.Body(), &responseBodyData)
-	if err != nil {
-		return nil, err
-	}
-
-	if responseBodyData.Error != nil {
-		return nil, errors.New(responseBodyData.Error.Message)
-	}
-
-	return responseBodyData.Result, nil
-}
-
 func uniswapDataExtractor(data []byte) (*UniswapQuote, error) {
 	if len(data) == 0 {
 		return nil, errors.New("can't extract data from empty byte array")
@@ -160,4 +133,47 @@ func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyT
 		}
 	}
 	return nil, errors.New("token not found")
+}
+
+func checkEnoughVault(unifiedTokenID string, tokenID string, amount uint64) (bool, error) {
+	methodRPC := "bridgeaggEstimateFeeByExpectedAmount"
+
+	reqRPC := genRPCBody(methodRPC, []interface{}{
+		map[string]interface{}{
+			"UnifiedTokenID": unifiedTokenID,
+			"TokenID":        tokenID,
+			"ExpectedAmount": amount,
+		},
+	})
+
+	var responseBodyData struct {
+		ID     int `json:"Id"`
+		Result *struct {
+			ReceivedAmount uint64 `json:"ReceivedAmount"`
+			BurntAmount    uint64 `json:"BurntAmount"`
+			Fee            uint64 `json:"Fee"`
+			MaxFee         uint64 `json:"MaxFee"`
+			MaxBurntAmount uint64 `json:"MaxBurntAmount"`
+		} `json:"Result"`
+		Error *struct {
+			Code       int    `json:"Code"`
+			Message    string `json:"Message"`
+			StackTrace string `json:"StackTrace"`
+		} `json:"Error"`
+	}
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqRPC).
+		Post(config.FullnodeURL)
+	if err != nil {
+		return false, err
+	}
+	if responseBodyData.Error != nil {
+		return false, errors.New(responseBodyData.Error.Message)
+	}
+	if responseBodyData.Result.Fee > 0 {
+		return false, nil
+	}
+	return true, nil
 }

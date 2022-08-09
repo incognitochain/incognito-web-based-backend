@@ -72,13 +72,13 @@ retry:
 	log.Printf("get fee for network %v using endpoint %v \n", network, endpoints[i])
 	switch network {
 	case common.NETWORK_ETH:
-		fee, errFee = getEthTradeFee(evmClient)
+		fee, errFee = getEthGasPrice(evmClient)
 	case common.NETWORK_BSC:
-		fee, errFee = getBscTradeFee(evmClient)
+		fee, errFee = getBscGasPrice(evmClient)
 	case common.NETWORK_PLG:
-		fee, errFee = getPlgTradeFee(evmClient)
+		fee, errFee = getPlgGasPrice(evmClient)
 	case common.NETWORK_FTM:
-		fee, errFee = getFtmTradeFee(evmClient)
+		fee, errFee = getFtmGasPrice(evmClient)
 	default:
 		return 0, errors.New("unsupported network")
 	}
@@ -101,49 +101,59 @@ func saveFeeData(data map[string]uint64) error {
 	return database.DBSaveFeetTable(feeData)
 }
 
-func getEthTradeFee(c *ethclient.Client) (*big.Int, error) {
-	return nil, nil
-}
-
-func getBscTradeFee(c *ethclient.Client) (*big.Int, error) {
-	// todo: get from network:
-	gasPrice, err := SuggestGasPrice(c)
-	if err != nil {
-		return nil, err
-	}
-	fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
-
-	fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
-
-	fee = fee.Mul(fee, big.NewInt(3))
-
-	fmt.Println("fee est bsc x3: ", fee)
-
-	return fee, nil
-}
-
-func getPlgTradeFee(c *ethclient.Client) (*big.Int, error) {
-	// todo: get from network:
+func getEthGasPrice(c *ethclient.Client) (*big.Int, error) {
 	gasPrice, err := SuggestGasPrice(c)
 	if err != nil {
 		return nil, err
 	}
 
+	return gasPrice, nil
+}
+
+func getBscGasPrice(c *ethclient.Client) (*big.Int, error) {
+	// todo: get from network:
+	gasPrice, err := SuggestGasPrice(c)
+	if err != nil {
+		return nil, err
+	}
+	// fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
+
+	// fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
+
+	// fee = fee.Mul(fee, big.NewInt(3))
+
+	// fmt.Println("fee est bsc x3: ", fee)
+
+	return gasPrice, nil
+}
+
+func getPlgGasPrice(c *ethclient.Client) (*big.Int, error) {
+	// todo: get from network:
+	gasPrice, err := SuggestGasPrice(c)
+	if err != nil {
+		return nil, err
+	}
+	// speed up
 	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
 
-	fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
+	// fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
 
-	fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
+	// fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
 
-	fee = fee.Mul(fee, big.NewInt(3))
+	// fee = fee.Mul(fee, big.NewInt(3))
 
-	fmt.Println("fee est bsc x3: ", fee)
+	// fmt.Println("fee est bsc x3: ", fee)
 
-	return fee, nil
+	return gasPrice, nil
 }
 
-func getFtmTradeFee(c *ethclient.Client) (*big.Int, error) {
-	return nil, nil
+func getFtmGasPrice(c *ethclient.Client) (*big.Int, error) {
+	gasPrice, err := SuggestGasPrice(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return gasPrice, nil
 }
 
 func SuggestGasPrice(client *ethclient.Client) (*big.Int, error) {

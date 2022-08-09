@@ -49,7 +49,7 @@ type EstimateSwapRequest struct {
 }
 
 type EstimateSwapRespond struct {
-	Papps map[string]QuoteDataResp
+	Networks map[string]map[string]QuoteDataResp
 }
 
 type QuoteDataResp struct {
@@ -270,6 +270,7 @@ type PappSupportedTokenData struct {
 	ContractIDGetRate string
 	Name              string
 	Symbol            string
+	PricePrv          float64
 	Decimals          int
 	PDecimals         int
 	Protocol          string

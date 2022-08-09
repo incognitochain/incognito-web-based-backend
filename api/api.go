@@ -25,6 +25,9 @@ func StartAPIservice(cfg common.Config) {
 		panic(err)
 	}
 
+	go cacheVaultState()
+	go cacheSupportedPappsTokens()
+
 	r := gin.Default()
 
 	r.Use(cors.Default())
@@ -55,6 +58,8 @@ func StartAPIservice(cfg common.Config) {
 	pAppsGroup.POST("/swapstatus", APIGetSwapTxStatus)
 
 	pAppsGroup.GET("/getvaultstate", APIGetVaultState)
+
+	pAppsGroup.GET("/getsupportedtokens", APIGetSupportedToken)
 
 	//admin
 	adminGroup := r.Group("/admin")

@@ -76,24 +76,63 @@ func APIGetVaultState(c *gin.Context) {
 		SetResult(&responseBodyData).
 		Get(config.CoinserviceURL + "/bridge/aggregatestate")
 	if err != nil {
-		c.JSON(400, gin.H{"Error": err.Error()})
+		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(200, responseBodyData)
 }
 
-func APIGetSupportedToken(c *gin.Context) {
+func retrieveTokenList() ([]wcommon.TokenInfo, error) {
+	type APIRespond struct {
+		Result []wcommon.TokenInfo
+		Error  *string
+	}
+
 	var responseBodyData APIRespond
 	_, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").
 		SetResult(&responseBodyData).
-		Get(config.ShieldService + "/trade/supported-tokens")
+		Get(config.CoinserviceURL + "/coins/tokenlist")
 	if err != nil {
-		c.JSON(400, gin.H{"Error": err.Error()})
+		return nil, err
+	}
+	return responseBodyData.Result, nil
+}
+
+func APIGetSupportedToken(c *gin.Context) {
+	pappTokens, err := getPappSupportedTokenList()
+	if err != nil {
+		c.JSON(200, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(200, responseBodyData)
+
+	tokenList, err := retrieveTokenList()
+	if err != nil {
+		c.JSON(200, gin.H{"Error": err.Error()})
+		return
+	}
+	var result []wcommon.TokenInfo
+	dupChecker := make(map[string]struct{})
+
+	for _, tk := range pappTokens {
+		for _, v := range tokenList {
+			if tk.ID == v.TokenID {
+				if _, exist := dupChecker[v.TokenID]; !exist {
+					result = append(result, v)
+					dupChecker[v.TokenID] = struct{}{}
+				}
+			}
+		}
+	}
+
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
+	response.Result = result
+
+	c.JSON(200, response)
 }
 
 func APIEstimateSwapFee(c *gin.Context) {

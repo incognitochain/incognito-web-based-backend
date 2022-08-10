@@ -66,6 +66,7 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)
 	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
 	adminGroup.GET("/retryshield")
+	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

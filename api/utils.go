@@ -30,7 +30,6 @@ func genRPCBody(method string, params []interface{}) interface{} {
 }
 
 func VerifyCaptcha(clientCaptcha string, secret string) (bool, error) {
-
 	data := make(map[string]string)
 	data["response"] = clientCaptcha
 	data["secret"] = secret

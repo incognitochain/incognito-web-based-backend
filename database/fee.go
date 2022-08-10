@@ -38,3 +38,23 @@ func DBRetrieveFeeTable() (*common.ExternalNetworksFeeData, error) {
 	}
 	return &result[0], nil
 }
+
+func DBRetrieveFeesTable(limit int64) ([]common.ExternalNetworksFeeData, error) {
+	var result []common.ExternalNetworksFeeData
+	filter := bson.M{}
+	if limit == 0 {
+		limit = 1
+	}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(10)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.ExternalNetworksFeeData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Sort:  bson.D{{"created_at", -1}},
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(result) == 0 {
+		return nil, errors.New("fee table not found")
+	}
+	return result, nil
+}

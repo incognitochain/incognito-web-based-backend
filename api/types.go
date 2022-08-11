@@ -49,7 +49,7 @@ type EstimateSwapRequest struct {
 }
 
 type EstimateSwapRespond struct {
-	Networks map[string]map[string]QuoteDataResp
+	Networks map[string]interface{}
 }
 
 type QuoteDataResp struct {
@@ -290,7 +290,17 @@ type UniswapQuote struct {
 		AmountOut        string      `json:"amountOut"`
 		AmountOutRaw     string      `json:"amountOutRaw"`
 		Route            interface{} `json:"route"`
+		Impact           float64     `json:"impact"`
 		EstimatedGasUsed string      `json:"estimatedGasUsed"`
+	} `json:"data"`
+	Message string `json:"message"`
+}
+
+type PancakeQuote struct {
+	Data struct {
+		Outputs []string    `json:"outputs"`
+		Route   interface{} `json:"paths"`
+		Impact  float64     `json:"impactAmount"`
 	} `json:"data"`
 	Message string `json:"message"`
 }

@@ -125,6 +125,21 @@ func uniswapDataExtractor(data []byte) (*UniswapQuote, error) {
 	return &result, nil
 }
 
+func pancakeDataExtractor(data []byte) (*PancakeQuote, error) {
+	if len(data) == 0 {
+		return nil, errors.New("can't extract data from empty byte array")
+	}
+	result := PancakeQuote{}
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, err
+	}
+	if result.Message != "ok" {
+		return nil, errors.New(result.Message)
+	}
+	return &result, nil
+}
+
 func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyType int) (*PappSupportedTokenData, error) {
 	for _, token := range tokenList {
 		if token.CurrencyType == nativeTokenCurrencyType {

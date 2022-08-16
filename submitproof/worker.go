@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
+	"github.com/incognitochain/incognito-web-based-backend/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/pkg/errors"
@@ -149,4 +151,25 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 
 func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
 	//TODO
+}
+
+func createOutChainSubmitProofTx(network int, data interface{}) (interface{}, error) {
+	var result interface{}
+
+	networkName := common.GetNetworkName(network)
+
+	networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, endpoint := range networkInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			return 0, err
+		}
+		_ = evmClient
+	}
+
+	return result, nil
 }

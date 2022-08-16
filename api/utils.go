@@ -73,12 +73,14 @@ func initIncClient(network string) error {
 }
 
 // convert nano coin to nano token: ex: 2000000000000000 (nano eth) => 2000000 (nano pETH)
-func ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountTk uint64, decimal, pDecimals int64) uint64 {
-	if decimal == pDecimals {
-		return amountTk
+func ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountStr string, decimal, pDecimals int64) uint64 {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return 0
 	}
-
-	amount := new(big.Int).SetUint64(amountTk)
+	if decimal == pDecimals {
+		return amount.Uint64()
+	}
 
 	pTokenAmount := new(big.Int).Mul(amount, big.NewInt(int64(math.Pow10(int(pDecimals)))))
 	tokenAmount := new(big.Int).Div(pTokenAmount, big.NewInt(int64(math.Pow10(int(decimal)))))
@@ -86,12 +88,14 @@ func ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountTk uint64, 
 	return tokenAmount.Uint64()
 }
 
-func ConvertNanoIncogTokenToOutChainToken(amountTk uint64, decimal, pDecimals int64) uint64 {
-	if decimal == pDecimals {
-		return amountTk
+func ConvertNanoIncogTokenToOutChainToken(amountStr string, decimal, pDecimals int64) uint64 {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return 0
 	}
-
-	amount := new(big.Int).SetUint64(amountTk)
+	if decimal == pDecimals {
+		return amount.Uint64()
+	}
 
 	pTokenAmount := new(big.Int).Mul(amount, big.NewInt(int64(math.Pow10(int(decimal)))))
 	fmt.Println("* decimal: ", pTokenAmount.String())

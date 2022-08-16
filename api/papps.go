@@ -82,24 +82,6 @@ func APIGetVaultState(c *gin.Context) {
 	c.JSON(200, responseBodyData)
 }
 
-func retrieveTokenList() ([]wcommon.TokenInfo, error) {
-	type APIRespond struct {
-		Result []wcommon.TokenInfo
-		Error  *string
-	}
-
-	var responseBodyData APIRespond
-	_, err := restyClient.R().
-		EnableTrace().
-		SetHeader("Content-Type", "application/json").
-		SetResult(&responseBodyData).
-		Get(config.CoinserviceURL + "/coins/tokenlist")
-	if err != nil {
-		return nil, err
-	}
-	return responseBodyData.Result, nil
-}
-
 func APIGetSupportedToken(c *gin.Context) {
 	pappTokens, err := getPappSupportedTokenList()
 	if err != nil {
@@ -205,7 +187,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			c.JSON(200, gin.H{"Error": "The amount exceeds the swap limit. Please retry with another token or switch to other pApps"})
 			return
 		}
-		fmt.Println("pass check vault")
+		fmt.Println("pass check vault", "supportedOutNetworks", supportedOutNetworks)
 
 		tkToInfo, err := getTokenInfo(req.ToToken)
 		if err != nil {
@@ -270,7 +252,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 
-	networksInfo, err := database.DBGetBridgeNetworkInfo()
+	networksInfo, err := database.DBGetBridgeNetworkInfos()
 	if err != nil {
 		c.JSON(200, gin.H{"Error": err.Error()})
 		return
@@ -308,7 +290,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 }
 
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo) (interface{}, error) {
-	result := make(map[string]QuoteDataResp)
+	result := []QuoteDataResp{}
 
 	networkName := wcommon.GetNetworkName(networkID)
 	pappList, err := database.DBRetrievePAppsByNetwork(networkName)
@@ -368,7 +350,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if err != nil {
 				return nil, err
 			}
-			feeMap := make(map[string]uint64)
+			fees := []PappNetworkFee{}
 
 			estGasUsedStr := quote.Data.EstimatedGasUsed
 			estGasUsed, err := strconv.ParseUint(estGasUsedStr, 10, 64)
@@ -377,23 +359,35 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			}
 			estGasUsed += 200000
 			if isUnifiedNativeToken {
-				feeMap[nativeToken.ID] = ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(estGasUsed*gasPrice, int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
+				fees = append(fees, PappNetworkFee{
+					Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+					FeeAddress: nativeToken.ID,
+				})
+			} else {
+				if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType || pTokenContract1.MovedUnifiedToken {
+					fees = append(fees, PappNetworkFee{
+						Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv/pTokenContract1.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+						FeeAddress: pTokenContract1.ID,
+					})
+				} else {
+					fees = append(fees, PappNetworkFee{
+						Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+						FeeAddress: common.PRVCoinID.String(),
+					})
+				}
+
 			}
-			feeMap[common.PRVCoinID.String()] = ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(uint64(float64(estGasUsed*gasPrice)*pTokenContract1.PricePrv), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
 
-			feeMap["estGasUsed"] = estGasUsed
-			feeMap["gasPrice"] = gasPrice
-			feeMap["nativeToken.Decimals"] = uint64(nativeToken.Decimals)
-			feeMap["nativeToken.PDecimals"] = uint64(nativeToken.PDecimals)
-
-			result[appName] = QuoteDataResp{
+			result = append(result, QuoteDataResp{
+				AppName:      appName,
 				AmountIn:     amount,
 				AmountOut:    quote.Data.AmountOut,
 				AmountOutRaw: quote.Data.AmountOutRaw,
 				Route:        quote.Data.Route,
-				Fee:          feeMap,
-			}
+				Fee:          fees,
+			})
 		case "pancake":
+			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			data, err := papps.PancakeQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, amount, networkChainId, pTokenContract1.Symbol, pTokenContract2.Symbol, pTokenContract1.Decimals, pTokenContract2.Decimals, true, endpoint)
 			if err != nil {
 				return nil, err
@@ -402,8 +396,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if err != nil {
 				return nil, err
 			}
-			feeMap := make(map[string]uint64)
-
+			fees := []PappNetworkFee{}
 			// estGasUsedStr := quote.Data.EstimatedGasUsed
 			// estGasUsed, err := strconv.ParseUint(estGasUsedStr, 10, 64)
 			// if err != nil {
@@ -411,28 +404,33 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			// }
 			estGasUsed := uint64(600000)
 			if isUnifiedNativeToken {
-				feeMap[nativeToken.ID] = ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(estGasUsed*gasPrice, int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
+				fees = append(fees, PappNetworkFee{
+					Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+					FeeAddress: nativeToken.ID,
+				})
+			} else {
+				if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType || pTokenContract1.MovedUnifiedToken {
+					fees = append(fees, PappNetworkFee{
+						Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv/pTokenContract1.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+						FeeAddress: pTokenContract1.ID,
+					})
+				} else {
+					fees = append(fees, PappNetworkFee{
+						Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+						FeeAddress: common.PRVCoinID.String(),
+					})
+				}
 			}
-			feeMap[common.PRVCoinID.String()] = ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(uint64(float64(estGasUsed*gasPrice)*pTokenContract1.PricePrv), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
 
-			feeMap["estGasUsed"] = estGasUsed
-			feeMap["gasPrice"] = gasPrice
-			feeMap["nativeToken.Decimals"] = uint64(nativeToken.Decimals)
-			feeMap["nativeToken.PDecimals"] = uint64(nativeToken.PDecimals)
-
-			a1, err := strconv.ParseUint(quote.Data.Outputs[1], 10, 64)
-			if err != nil {
-				return nil, err
-			}
-
-			amountOut := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(a1, int64(pTokenContract2.Decimals), int64(pTokenContract2.PDecimals))
-			result[appName] = QuoteDataResp{
+			amountOut := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(quote.Data.Outputs[1], int64(pTokenContract2.Decimals), int64(pTokenContract2.PDecimals))
+			result = append(result, QuoteDataResp{
+				AppName:      appName,
 				AmountIn:     amount,
 				AmountOut:    fmt.Sprintf("%v", amountOut),
 				AmountOutRaw: quote.Data.Outputs[1],
 				Route:        quote.Data.Route,
-				Fee:          feeMap,
-			}
+				Fee:          fees,
+			})
 		case "curve":
 		}
 	}
@@ -479,6 +477,58 @@ func cacheSupportedPappsTokens() {
 		}
 		time.Sleep(15 * time.Second)
 	}
+}
+
+func cacheTokenList() {
+	for {
+		type APIRespond struct {
+			Result []wcommon.TokenInfo
+			Error  *string
+		}
+
+		var responseBodyData APIRespond
+		_, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").
+			SetResult(&responseBodyData).
+			Get(config.CoinserviceURL + "/coins/tokenlist")
+		if err != nil {
+			log.Println("cacheTokenList", err.Error())
+			return
+		}
+		err = cacheStoreCustom(cacheTokenListKey, responseBodyData, 30*time.Second)
+		if err != nil {
+			log.Println(err)
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func retrieveTokenList() ([]wcommon.TokenInfo, error) {
+	type APIRespond struct {
+		Result []wcommon.TokenInfo
+		Error  *string
+	}
+
+	var responseBodyData APIRespond
+
+	err := cacheGet(cacheTokenListKey, &responseBodyData)
+	if err != nil {
+		_, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").
+			SetResult(&responseBodyData).
+			Get(config.CoinserviceURL + "/coins/tokenlist")
+		if err != nil {
+			return nil, err
+		}
+		if responseBodyData.Error != nil {
+			return nil, errors.New(*responseBodyData.Error)
+		}
+		return responseBodyData.Result, nil
+	}
+
+	return responseBodyData.Result, nil
 }
 
 func getPappSupportedTokenList() ([]PappSupportedTokenData, error) {

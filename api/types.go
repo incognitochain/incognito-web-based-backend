@@ -53,11 +53,12 @@ type EstimateSwapRespond struct {
 }
 
 type QuoteDataResp struct {
+	AppName      string
 	AmountIn     string
 	AmountInRaw  string
 	AmountOut    string
 	AmountOutRaw string
-	Fee          map[string]uint64
+	Fee          []PappNetworkFee
 	Route        interface{}
 }
 
@@ -303,4 +304,9 @@ type PancakeQuote struct {
 		Impact  float64     `json:"impactAmount"`
 	} `json:"data"`
 	Message string `json:"message"`
+}
+
+type PappNetworkFee struct {
+	FeeAddress string `json:"feeAddress"`
+	Amount     uint64 `json:"amount"`
 }

@@ -49,7 +49,7 @@ func checkFee() error {
 
 func retrieveNetwork() (map[string][]string, error) {
 	result := make(map[string][]string)
-	networks, err := database.DBGetBridgeNetworkInfo()
+	networks, err := database.DBGetBridgeNetworkInfos()
 	for _, network := range networks {
 		result[network.Network] = network.Endpoints
 	}
@@ -152,7 +152,6 @@ func getFtmGasPrice(c *ethclient.Client) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return gasPrice, nil
 }
 

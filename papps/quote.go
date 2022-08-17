@@ -7,26 +7,32 @@ import (
 	"strings"
 )
 
-func PancakeQuote(tokenIn, tokenOut, amount, chainId, tokenInSymbol, tokenOutSymbol string, tokenInDecimal, tokenOutDecimal int, exactIn bool, endpoint string) ([]byte, error) {
+func PancakeQuote(tokenIn, tokenOut, amount, chainId, tokenInSymbol, tokenOutSymbol string, tokenInDecimal, tokenOutDecimal int, exactIn bool, endpoint string, tokenList string) ([]byte, error) {
 	url := "http://" + endpoint + "/api/pancake/get-best-rate"
 	method := "POST"
 
-	payload := strings.NewReader(fmt.Sprintf(`{
-		"sourceToken": {
-			"contractIdGetRate":"%v",
-			"decimals":"%v",
-			"symbol":"%v"
-		},
-		"destToken":{
-			"contractIdGetRate":"%v",
-			"decimals":"%v",
-			"symbol":"%v"
-		},
-		"isSwapFromBuyToSell": false,
-		"amount": "%v",
-		"chainId": "%v",
-		"listDecimals":{}
-	}`, tokenIn, tokenInDecimal, tokenInSymbol, tokenOut, tokenOutDecimal, tokenOutSymbol, amount, chainId))
+	payloadText := fmt.Sprintf(`{
+	"sourceToken": {
+		"contractIdGetRate":"%v",
+		"decimals":%v,
+		"symbol":"%v"
+	},
+	"destToken":{
+		"contractIdGetRate":"%v",
+		"decimals":%v,
+		"symbol":"%v"
+	},
+	"isSwapFromBuyToSell": %v,
+	"amount": "%v",
+	"chainId": "%v",
+	"listDecimals":%v
+}`, strings.ToLower(tokenIn), tokenInDecimal, tokenInSymbol, strings.ToLower(tokenOut), tokenOutDecimal, tokenOutSymbol, exactIn, amount, chainId, tokenList)
+
+	payload := strings.NewReader(payloadText)
+
+	fmt.Println()
+	fmt.Println("payload", payloadText)
+	fmt.Println()
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)

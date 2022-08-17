@@ -310,3 +310,8 @@ type PappNetworkFee struct {
 	FeeAddress string `json:"feeAddress"`
 	Amount     uint64 `json:"amount"`
 }
+
+type PancakeTokenMapItem struct {
+	Decimals int    `json:"decimals"`
+	Symbol   string `json:"symbol"`
+}

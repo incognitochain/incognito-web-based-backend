@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"math"
@@ -407,7 +408,15 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			})
 		case "pancake":
 			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
-			data, err := papps.PancakeQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, amount, networkChainId, pTokenContract1.Symbol, pTokenContract2.Symbol, pTokenContract1.Decimals, pTokenContract2.Decimals, true, endpoint)
+
+			tokenMap, err := buildPancakeTokenMap()
+			if err != nil {
+				return nil, err
+			}
+			tokenMapBytes, err := json.Marshal(tokenMap)
+
+			log.Println("tokenMapBytes", string(tokenMapBytes))
+			data, err := papps.PancakeQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, amount, networkChainId, pTokenContract1.Symbol, pTokenContract2.Symbol, pTokenContract1.Decimals, pTokenContract2.Decimals, false, endpoint, string(tokenMapBytes))
 			if err != nil {
 				return nil, err
 			}
@@ -601,4 +610,23 @@ func sendSwapTxAndStoreDB(txhash string, txRaw string, isTokenTx bool) error {
 		}
 	}
 	return nil
+}
+
+func buildPancakeTokenMap() (map[string]PancakeTokenMapItem, error) {
+	result := make(map[string]PancakeTokenMapItem)
+	tokenList, err := getPappSupportedTokenList()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, token := range tokenList {
+		if token.Protocol == "pancake" {
+			result[strings.ToLower(token.ContractIDGetRate)] = PancakeTokenMapItem{
+				Decimals: token.Decimals,
+				Symbol:   token.Symbol,
+			}
+		}
+	}
+
+	return result, nil
 }

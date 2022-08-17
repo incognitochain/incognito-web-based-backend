@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/mongodb/mongo-tools/common/json"
 )
 
@@ -194,4 +195,12 @@ func checkEnoughVault(unifiedTokenID string, tokenID string, amount uint64) (boo
 		return false, nil
 	}
 	return true, nil
+}
+
+func getNetworkIDFromCurrencyType(currencyType int) (int, error) {
+	netID, ok := common.NetworkCurrencyMap[currencyType]
+	if !ok {
+		return 0, errors.New("unsupported network")
+	}
+	return netID, nil
 }

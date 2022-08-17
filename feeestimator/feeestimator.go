@@ -65,7 +65,8 @@ retry:
 	}
 	evmClient, err := ethclient.Dial(endpoints[i])
 	if err != nil {
-		return 0, err
+		i++
+		goto retry
 	}
 	var errFee error
 	var fee *big.Int

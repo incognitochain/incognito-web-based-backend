@@ -19,17 +19,17 @@ func GetNativeNetworkCurrencyType(network string) int {
 func GetNetworkID(network string) int {
 	switch network {
 	case "inc":
-		return 0
+		return NETWORK_INC_ID
 	case "eth":
-		return 1
+		return NETWORK_ETH_ID
 	case "bsc":
-		return 2
+		return NETWORK_BSC_ID
 	case "plg":
-		return 3
+		return NETWORK_PLG_ID
 	case "ftm":
-		return 4
+		return NETWORK_FTM_ID
 	}
-	return 0
+	return -1
 }
 
 func GetNetworkName(network int) string {

@@ -133,6 +133,11 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 	networkID := wcommon.GetNetworkID(req.Network)
 
+	if networkID == -1 {
+		c.JSON(200, gin.H{"error": "invalid network"})
+		return
+	}
+
 	var result EstimateSwapRespond
 	result.Networks = make(map[string]interface{})
 
@@ -140,6 +145,20 @@ func APIEstimateSwapFee(c *gin.Context) {
 	if err != nil {
 		c.JSON(200, gin.H{"Error": err.Error()})
 		return
+	}
+
+	tkToInfo, err := getTokenInfo(req.ToToken)
+	if err != nil {
+		c.JSON(200, gin.H{"Error": err.Error()})
+		return
+	}
+	tkToNetworkID := 0
+	if tkToInfo.CurrencyType != wcommon.UnifiedCurrencyType {
+		tkToNetworkID, err = getNetworkIDFromCurrencyType(tkToInfo.CurrencyType)
+		if err != nil {
+			c.JSON(200, gin.H{"Error": err.Error()})
+			return
+		}
 	}
 
 	supportedNetworks := []int{}
@@ -154,14 +173,11 @@ func APIEstimateSwapFee(c *gin.Context) {
 		dm := new(big.Float)
 		dm.SetFloat64(math.Pow10(tkFromInfo.PDecimals))
 		amountUint64, _ := amount.Mul(amount, dm).Uint64()
-		tkFromInfo, err := getTokenInfo(req.FromToken)
-		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
-			return
-		}
+
 		supportedOutNetworks := []int{}
 		for _, v := range tkFromInfo.ListUnifiedToken {
 			if networkID == 0 {
+				//check all vaults
 				isEnoughVault, err := checkEnoughVault(req.FromToken, v.TokenID, amountUint64)
 				if err != nil {
 					c.JSON(200, gin.H{"Error": err.Error()})
@@ -171,6 +187,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 					supportedOutNetworks = append(supportedOutNetworks, v.NetworkID)
 				}
 			} else {
+				//check 1 vault only
 				if networkID == v.NetworkID {
 					isEnoughVault, err := checkEnoughVault(req.FromToken, v.TokenID, amountUint64)
 					if err != nil {
@@ -189,12 +206,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 		fmt.Println("pass check vault", "supportedOutNetworks", supportedOutNetworks)
 
-		tkToInfo, err := getTokenInfo(req.ToToken)
-		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
-			return
-		}
-
 		// check supported to token
 		for _, spNetID := range supportedOutNetworks {
 			if tkToInfo.CurrencyType == wcommon.UnifiedCurrencyType {
@@ -204,34 +215,29 @@ func APIEstimateSwapFee(c *gin.Context) {
 					}
 				}
 			} else {
-				if tkToInfo.NetworkID == spNetID {
+				if tkToNetworkID == spNetID {
 					supportedNetworks = append(supportedNetworks, spNetID)
 				}
 			}
 		}
-		if len(supportedNetworks) == 0 {
-			c.JSON(200, gin.H{"Error": "No compatible network found"})
-			return
-		}
 	} else {
 		supportedOutNetworks := []int{}
-		if networkID == tkFromInfo.NetworkID {
-			supportedOutNetworks = append(supportedOutNetworks, tkFromInfo.NetworkID)
+		tkFromNetworkID, err := getNetworkIDFromCurrencyType(tkFromInfo.CurrencyType)
+		if err != nil {
+			c.JSON(200, gin.H{"Error": err.Error()})
+			return
+		}
+		if networkID == tkFromNetworkID {
+			supportedOutNetworks = append(supportedOutNetworks, tkFromNetworkID)
 		} else {
 			if networkID == 0 {
-				supportedOutNetworks = append(supportedOutNetworks, tkFromInfo.NetworkID)
+				supportedOutNetworks = append(supportedOutNetworks, tkFromNetworkID)
 			} else {
 				c.JSON(200, gin.H{"Error": "No supported networks found"})
 				return
 			}
 		}
 
-		tkToInfo, err := getTokenInfo(req.ToToken)
-		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
-			return
-		}
-
 		// check supported to token
 		for _, spNetID := range supportedOutNetworks {
 			if tkToInfo.CurrencyType == wcommon.UnifiedCurrencyType {
@@ -241,15 +247,15 @@ func APIEstimateSwapFee(c *gin.Context) {
 					}
 				}
 			} else {
-				if tkToInfo.NetworkID == spNetID {
+				if tkToNetworkID == spNetID {
 					supportedNetworks = append(supportedNetworks, spNetID)
 				}
 			}
 		}
-		if len(supportedNetworks) == 0 {
-			c.JSON(200, gin.H{"Error": "No compatible network found"})
-			return
-		}
+	}
+	if len(supportedNetworks) == 0 {
+		c.JSON(200, gin.H{"Error": "No compatible network found"})
+		return
 	}
 
 	networksInfo, err := database.DBGetBridgeNetworkInfos()
@@ -273,7 +279,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	for _, network := range supportedNetworks {
 		data, err := estimateSwapFee(req.FromToken, req.ToToken, req.Amount, network, spTkList, networksInfo, networkFees, tkFromInfo)
 		if err != nil {
-			result.Networks[wcommon.GetNetworkName(network)] = err
+			result.Networks[wcommon.GetNetworkName(network)] = err.Error()
 		} else {
 			result.Networks[wcommon.GetNetworkName(network)] = data
 		}
@@ -292,22 +298,27 @@ func APIEstimateSwapFee(c *gin.Context) {
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo) (interface{}, error) {
 	result := []QuoteDataResp{}
 
+	log.Println("estimateSwapFee for", fromToken, toToken, amount, networkID)
 	networkName := wcommon.GetNetworkName(networkID)
 	pappList, err := database.DBRetrievePAppsByNetwork(networkName)
 	if err != nil {
+		fmt.Println("DBRetrievePAppsByNetwork", err)
 		return nil, err
 	}
 
 	pTokenContract1, err := getpTokenContractID(fromToken, networkID, spTkList)
 	if err != nil {
+		log.Println("err get pTokenContract1")
 		return nil, err
 	}
 
 	pTokenContract2, err := getpTokenContractID(toToken, networkID, spTkList)
 	if err != nil {
+		log.Println("err get pTokenContract2")
 		return nil, err
 	}
 
+	log.Println("done get pTokenContract1")
 	networkChainId := ""
 	for _, v := range networksInfo {
 		if networkName == v.Network {
@@ -339,9 +350,17 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		}
 	}
 
+	log.Println("len(pappList.ExchangeApps)", len(pappList.ExchangeApps), pappList.ExchangeApps)
+
+	if len(pappList.ExchangeApps) == 0 {
+		log.Println("len(pappList.ExchangeApps) == 0")
+		return nil, errors.New("no ExchangeApps found")
+	}
+
 	for appName, endpoint := range pappList.ExchangeApps {
 		switch appName {
 		case "uniswap":
+			fmt.Println("uniswap", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			data, err := papps.UniswapQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, amount, networkChainId, true, endpoint)
 			if err != nil {
 				return nil, err
@@ -433,6 +452,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			})
 		case "curve":
 		}
+	}
+	if len(result) == 0 {
+		return nil, errors.New("no data")
 	}
 	return result, nil
 }

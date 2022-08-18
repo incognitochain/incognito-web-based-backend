@@ -44,3 +44,24 @@ type PappSupportedTokenData struct {
 	DappID            int    `json:"dappid" bson:"dappid"`
 	NetworkID         int    `json:"networkid" bson:"networkid"`
 }
+
+type ExternalTxStatus struct {
+	mgm.DefaultModel `bson:",inline"`
+	Txhash           string `json:"txhash" bson:"txhash"`
+	Network          string `json:"network" bson:"network"`
+	Status           string `json:"status" bson:"status"`
+	Type             string `json:"type" bson:"type"`
+}
+
+type PappTxData struct {
+	mgm.DefaultModel `bson:",inline"`
+	IncTxHash        string `json:"inctxhash" bson:"inctxhash"`
+	ExternalTxhash   string `json:"externaltxhash" bson:"externaltxhash"`
+	Network          string `json:"network" bson:"network"`
+	Type             string `json:"type" bson:"type"`
+	IncTxData        string `json:"inctxdata" bson:"inctxdata"`
+	ExternalTxData   string `json:"externaltxdata" bson:"externaltxdata"`
+	FeeToken         string `json:"feetoken" bson:"feetoken"`
+	FeeAmount        uint64 `json:"feeamount" bson:"feeamount"`
+	Status           string `json:"status" bson:"status"`
+}

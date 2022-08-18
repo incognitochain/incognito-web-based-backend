@@ -34,6 +34,11 @@ func ConnectDB(dbName string, mongoAddr string) error {
 		return err
 	}
 
+	err = DBCreateIndex()
+	if err != nil {
+		return err
+	}
+
 	err = DBCreatePappsIndex()
 	if err != nil {
 		return err

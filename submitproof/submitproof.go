@@ -117,3 +117,7 @@ func checkProofSubmitted(blockHash string, txIdx uint, networkID int) (bool, err
 	}
 	return result, nil
 }
+
+func submitProofExternalChain(proof interface{}, chainId int, incTxHash string) {
+
+}

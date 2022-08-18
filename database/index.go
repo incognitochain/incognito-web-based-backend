@@ -81,3 +81,23 @@ func DBCreatePappsIndex() error {
 
 	return nil
 }
+
+func DBCreateIndex() error {
+	startTime := time.Now()
+	pappsModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "txhash", Value: bsonx.Int32(1)}, {Key: "networkid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "networkid", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).Indexes().CreateMany(context.Background(), pappsModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}

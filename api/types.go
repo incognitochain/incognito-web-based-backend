@@ -42,10 +42,11 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	Network   string
-	Amount    string
-	FromToken string // IncTokenID
-	ToToken   string // IncTokenID
+	FeeAddress string
+	Network    string
+	Amount     string
+	FromToken  string // IncTokenID
+	ToToken    string // IncTokenID
 }
 
 type EstimateSwapRespond struct {

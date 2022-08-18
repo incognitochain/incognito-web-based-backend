@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
@@ -24,22 +25,23 @@ import (
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/papps"
+	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
 
 func APISubmitSwapTx(c *gin.Context) {
 	var req SubmitSwapTxRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
 	}
 	if req.TxRaw == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
 		return
 	}
 	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
 		return
 	}
 
@@ -50,23 +52,63 @@ func APISubmitSwapTx(c *gin.Context) {
 	if err != nil {
 		tx, err = transaction.DeserializeTransactionJSON(rawTxBytes)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 			return
 		}
 	}
+	var md *bridge.BurnForCallRequest
+	var ok bool
+	var isPRVTx bool
+	var feeToken string
+	var feeAmount uint64
+	var outCoins []coin.Coin
+
+	txHash := ""
 	if tx.TokenVersion2 != nil {
-		if tx.TokenVersion2.GetMetadataType() != metadata.BurnForCallRequestMeta {
-			md := tx.TokenVersion2.GetMetadata().(*bridge.BurnForCallRequest)
-			_ = md
+		txHash = tx.TokenVersion2.Hash().String()
+		if tx.TokenVersion2.GetMetadataType() == metadata.BurnForCallRequestMeta {
+			md, ok = tx.TokenVersion2.GetMetadata().(*bridge.BurnForCallRequest)
+			if !ok {
+				c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+				return
+			}
 		}
 	}
 	if tx.Version2 != nil {
-		if tx.Version2.GetMetadataType() != metadata.BurnForCallRequestMeta {
-			md := tx.Version2.GetMetadata().(*bridge.BurnForCallRequest)
-			_ = md
+		isPRVTx = true
+		txHash = tx.TokenVersion2.Hash().String()
+		feeToken = common.PRVCoinID.String()
+		if tx.Version2.GetMetadataType() == metadata.BurnForCallRequestMeta {
+			md, ok = tx.Version2.GetMetadata().(*bridge.BurnForCallRequest)
+			if !ok {
+				c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+				return
+			}
+			tx.Version2.GetProof().GetOutputCoins()
+
 		}
 	}
 
+	if md == nil {
+		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+
+	valid, err := checkValidTxSwap(md, feeToken, feeAmount, outCoins)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
+		return
+	}
+	if valid {
+		status, err := submitproof.SubmitSwapTx(txHash, rawTxBytes, isPRVTx, feeToken, feeAmount)
+		if err != nil {
+			c.JSON(200, gin.H{"Error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"Result": status})
+	}
+
+	c.JSON(200, gin.H{"Error": "invalid tx swap"})
 }
 
 func APIGetVaultState(c *gin.Context) {
@@ -259,7 +301,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
-	networksInfo, err := database.DBGetBridgeNetworkInfos()
+	networksInfo, err := getBridgeNetworkInfos()
 	if err != nil {
 		c.JSON(200, gin.H{"Error": err.Error()})
 		return
@@ -296,7 +338,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 }
 
-func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo) (interface{}, error) {
+func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo) ([]QuoteDataResp, error) {
 	result := []QuoteDataResp{}
 
 	log.Println("estimateSwapFee for", fromToken, toToken, amount, networkID)
@@ -395,8 +437,15 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 						FeeAddress: common.PRVCoinID.String(),
 					})
 				}
-
 			}
+			fees = append(fees, PappNetworkFee{
+				Amount:     estGasUsed,
+				FeeAddress: "estGasUsed",
+			})
+			fees = append(fees, PappNetworkFee{
+				Amount:     gasPrice,
+				FeeAddress: "gasPrice",
+			})
 
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
@@ -478,12 +527,28 @@ func cacheVaultState() {
 			Get(config.CoinserviceURL + "/bridge/aggregatestate")
 		if err != nil {
 			log.Println("cacheVaultState", err.Error())
-			return
+			continue
 		}
 
 		err = cacheStoreCustom(cacheVaultStateKey, responseBodyData, 30*time.Second)
 		if err != nil {
 			log.Println(err)
+		}
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func cacheBridgeNetworkInfos() {
+	for {
+		networkInfo, err := database.DBGetBridgeNetworkInfos()
+		if err != nil {
+			log.Println("cacheBridgeNetworkInfos", err.Error())
+			continue
+		} else {
+			err = cacheStoreCustom(cacheNetworkInfosKey, networkInfo, 30*time.Second)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 		time.Sleep(15 * time.Second)
 	}
@@ -499,13 +564,14 @@ func cacheSupportedPappsTokens() {
 			Get(config.ShieldService + "/trade/supported-tokens")
 		if err != nil {
 			log.Println("cacheSupportedPappsTokens", err.Error())
-			return
+			continue
+		} else {
+			err = cacheStoreCustom(cacheSupportedPappsTokensKey, responseBodyData, 30*time.Second)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 
-		err = cacheStoreCustom(cacheSupportedPappsTokensKey, responseBodyData, 30*time.Second)
-		if err != nil {
-			log.Println(err)
-		}
 		time.Sleep(15 * time.Second)
 	}
 }
@@ -525,13 +591,14 @@ func cacheTokenList() {
 			Get(config.CoinserviceURL + "/coins/tokenlist")
 		if err != nil {
 			log.Println("cacheTokenList", err.Error())
-			return
+			continue
+		} else {
+			err = cacheStoreCustom(cacheTokenListKey, responseBodyData, 30*time.Second)
+			if err != nil {
+				log.Println(err)
+			}
 		}
-		err = cacheStoreCustom(cacheTokenListKey, responseBodyData, 30*time.Second)
-		if err != nil {
-			log.Println(err)
-		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 }
 
@@ -595,7 +662,50 @@ func getPappSupportedTokenList() ([]PappSupportedTokenData, error) {
 	return responseBodyData.Result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest) {}
+func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
+	var result []wcommon.BridgeNetworkData
+	err := cacheGet(cacheNetworkInfosKey, &result)
+	if err != nil {
+		networkInfo, err := database.DBGetBridgeNetworkInfos()
+		if err != nil {
+			return nil, err
+		}
+		return networkInfo, nil
+	}
+	return result, nil
+}
+
+func checkValidTxSwap(md *bridge.BurnForCallRequest, feeToken string, feeAmount uint64, outCoins []coin.Coin) (bool, error) {
+	var result bool
+	spTkList, err := getPappSupportedTokenList()
+	if err != nil {
+		return result, err
+	}
+	networkInfo, err := getBridgeNetworkInfos()
+	if err != nil {
+		return result, err
+	}
+	networkFees, err := database.DBRetrieveFeeTable()
+	if err != nil {
+		return result, err
+	}
+	tokenInfo, err := getTokenInfo(md.BurnTokenID.String())
+	if err != nil {
+		return result, err
+	}
+
+	for _, v := range md.Data {
+		receiveTokenID, err := getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList)
+		if err != nil {
+			return result, err
+		}
+		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
+		burnAmountStr := fmt.Sprintf("%v", burnAmountFloat)
+		quoteData, err := estimateSwapFee(v.IncTokenID.String(), receiveTokenID, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo)
+		_ = quoteData
+	}
+	return result, nil
+}
 
 func sendSwapTxAndStoreDB(txhash string, txRaw string, isTokenTx bool) error {
 	if isTokenTx {

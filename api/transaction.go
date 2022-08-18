@@ -200,7 +200,6 @@ func extractUnshieldInfoField(txdetail *TransactionDetail) (ID int, PaymentAddre
 }
 
 func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
-
 	type APIRespond struct {
 		Result []common.TokenInfo
 		Error  *string

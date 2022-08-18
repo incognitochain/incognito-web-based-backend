@@ -84,16 +84,36 @@ func DBCreatePappsIndex() error {
 
 func DBCreateIndex() error {
 	startTime := time.Now()
-	pappsModel := []mongo.IndexModel{
+	externalTxModel := []mongo.IndexModel{
 		{
-			Keys:    bsonx.Doc{{Key: "txhash", Value: bsonx.Int32(1)}, {Key: "networkid", Value: bsonx.Int32(1)}},
+			Keys:    bsonx.Doc{{Key: "txhash", Value: bsonx.Int32(1)}, {Key: "network", Value: bsonx.Int32(1)}},
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "networkid", Value: bsonx.Int32(1)}},
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "network", Value: bsonx.Int32(1)}},
 		},
 	}
-	_, err := mgm.Coll(&common.ExternalTxStatus{}).Indexes().CreateMany(context.Background(), pappsModel)
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).Indexes().CreateMany(context.Background(), externalTxModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	pappsModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "inctxhash", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+
+		{
+			Keys: bsonx.Doc{{Key: "externaltxhash", Value: bsonx.Int32(1)}},
+			// Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "network", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err = mgm.Coll(&common.PappTxData{}).Indexes().CreateMany(context.Background(), pappsModel)
 	if err != nil {
 		log.Printf("failed to index coins in %v", time.Since(startTime))
 		return err

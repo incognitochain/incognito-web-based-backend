@@ -28,6 +28,7 @@ func StartAPIservice(cfg common.Config) {
 	go cacheVaultState()
 	go cacheSupportedPappsTokens()
 	go cacheTokenList()
+	go cacheBridgeNetworkInfos()
 
 	r := gin.Default()
 

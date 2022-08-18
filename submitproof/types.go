@@ -3,10 +3,19 @@ package submitproof
 import "time"
 
 type SubmitProofShieldTask struct {
-	Txhash    string
+	TxHash    string
 	NetworkID int
 	TokenID   string
 	Metatype  string
+	Time      time.Time
+}
+
+type SubmitPappSwapTask struct {
+	TxHash    string
+	TxRawData []byte
+	IsPRVTx   bool
+	FeeToken  string
+	FeeAmount uint64
 	Time      time.Time
 }
 

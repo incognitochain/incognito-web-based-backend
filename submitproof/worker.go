@@ -15,6 +15,7 @@ import (
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) error {
@@ -94,7 +95,6 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 }
 
 func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
-
 	task := SubmitProofShieldTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
@@ -105,9 +105,10 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	}
 
 	if time.Since(task.Time) > time.Hour {
-		errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.StatusSubmitFailed, "timeout")
+		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, "timeout")
 		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
+			m.Nack()
 			return
 		}
 		m.Ack()
@@ -116,21 +117,23 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 
 	t := time.Now().Unix()
 	key := keyList[t%int64(len(keyList))]
-	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.Txhash, task.TokenID, task.NetworkID, key)
+	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.TxHash, task.TokenID, task.NetworkID, key)
 
 	if tokenID != "" && linkedTokenID != "" {
-		err = database.DBUpdateShieldOnChainTxInfo(task.Txhash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
+		err = database.DBUpdateShieldOnChainTxInfo(task.TxHash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
 		if err != nil {
 			log.Println("DBUpdateShieldOnChainTxInfo error:", err)
+			m.Nack()
 			return
 		}
 	}
 
 	if err != nil {
 		if err.Error() == ProofAlreadySubmitError {
-			errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
+			errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
 			if errdb != nil {
 				log.Println("DBUpdateShieldTxStatus error:", errdb)
+				m.Nack()
 				return
 			}
 			m.Ack()
@@ -140,9 +143,10 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 		return
 	}
 
-	err = database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.StatusPending, "")
+	err = database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusPending, "")
 	if err != nil {
 		log.Println("DBUpdateShieldTxStatus err:", err)
+		m.Nack()
 		return
 	}
 
@@ -150,7 +154,61 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 }
 
 func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
-	//TODO
+	task := SubmitPappSwapTask{}
+	err := json.Unmarshal(m.Data, &task)
+	if err != nil {
+		errdb := database.DBUpdatePappTxStatus(m.Attributes["txhash"], wcommon.StatusSubmitFailed, err.Error())
+		if err != nil {
+			log.Println("DBUpdatePappTxStatus err", errdb)
+		}
+		log.Println("ProcessShieldRequest error decoding message", err)
+		m.Ack()
+		return
+	}
+
+	var errSubmit error
+
+	if task.IsPRVTx {
+		errSubmit = incClient.SendRawTx(task.TxRawData)
+	} else {
+		errSubmit = incClient.SendRawTokenTx(task.TxRawData)
+	}
+
+	data := wcommon.PappTxData{
+		IncTxHash: task.TxHash,
+		IncTxData: string(task.TxRawData),
+		Type:      wcommon.PappTypeSwap,
+		Status:    wcommon.StatusSubmitting,
+		FeeToken:  task.FeeToken,
+		FeeAmount: task.FeeAmount,
+	}
+	err = database.DBAddPappTxData(data)
+	if err != nil {
+		writeErr, ok := err.(mongo.WriteException)
+		if !ok {
+			log.Println("DBAddPappTxData err", err)
+			m.Ack()
+			return
+		}
+		if !writeErr.HasErrorCode(11000) {
+			log.Println("DBAddPappTxData err", err)
+			m.Ack()
+			return
+		}
+	}
+
+	if errSubmit != nil {
+		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusSubmitFailed, errSubmit.Error())
+		if err != nil {
+			log.Println(err)
+			m.Nack()
+			return
+		}
+		m.Ack()
+		return
+	}
+
+	m.Ack()
 }
 
 func createOutChainSubmitProofTx(network int, data interface{}) (interface{}, error) {
@@ -163,6 +221,8 @@ func createOutChainSubmitProofTx(network int, data interface{}) (interface{}, er
 		return nil, err
 	}
 
+	networkChainId := networkInfo.ChainID
+	_ = networkChainId
 	for _, endpoint := range networkInfo.Endpoints {
 		evmClient, err := ethclient.Dial(endpoint)
 		if err != nil {

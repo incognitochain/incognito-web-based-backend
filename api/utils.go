@@ -115,6 +115,15 @@ func getpTokenContractID(tokenID string, networkID int, supportedTokenList []Pap
 	return nil, errors.New("can't find contractID for token " + tokenID)
 }
 
+func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData) (string, error) {
+	for _, v := range supportedTokenList {
+		if v.ContractIDGetRate == contractID && v.NetworkID == networkID {
+			return v.ID, nil
+		}
+	}
+	return "", errors.New("can't find tokenID for contract " + contractID)
+}
+
 func uniswapDataExtractor(data []byte) (*UniswapQuote, error) {
 	if len(data) == 0 {
 		return nil, errors.New("can't extract data from empty byte array")
@@ -203,4 +212,10 @@ func getNetworkIDFromCurrencyType(currencyType int) (int, error) {
 		return 0, errors.New("unsupported network")
 	}
 	return netID, nil
+}
+
+func getCoinAmount() uint64 {
+	var result uint64
+
+	return result
 }

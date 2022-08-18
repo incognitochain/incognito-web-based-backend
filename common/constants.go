@@ -105,3 +105,8 @@ var (
 		FTM_ERC20: NETWORK_FTM_ID,
 	}
 )
+
+const (
+	PappTypeUnknown = iota
+	PappTypeSwap
+)

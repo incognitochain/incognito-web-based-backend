@@ -32,18 +32,18 @@ type BridgeNetworkData struct {
 	Endpoints        []string `json:"endpoints" bson:"endpoints"`
 }
 
-type PappSupportedTokenData struct {
-	mgm.DefaultModel  `bson:",inline"`
-	TokenID           string `json:"tokenid" bson:"tokenid"`
-	ContractID        string `json:"contractid" bson:"contractid"`
-	ContractIDGetRate string `json:"contractid_getrate" bson:"contractid_getrate"`
-	Protocol          string `json:"protocol" bson:"protocol"`
-	Verify            bool   `json:"verify" bson:"verify"`
-	IsPopular         bool   `json:"ispopular" bson:"ispopular"`
-	Priority          int    `json:"priority" bson:"priority"`
-	DappID            int    `json:"dappid" bson:"dappid"`
-	NetworkID         int    `json:"networkid" bson:"networkid"`
-}
+// type PappSupportedTokenData struct {
+// 	mgm.DefaultModel  `bson:",inline"`
+// 	TokenID           string `json:"tokenid" bson:"tokenid"`
+// 	ContractID        string `json:"contractid" bson:"contractid"`
+// 	ContractIDGetRate string `json:"contractid_getrate" bson:"contractid_getrate"`
+// 	Protocol          string `json:"protocol" bson:"protocol"`
+// 	Verify            bool   `json:"verify" bson:"verify"`
+// 	IsPopular         bool   `json:"ispopular" bson:"ispopular"`
+// 	Priority          int    `json:"priority" bson:"priority"`
+// 	DappID            int    `json:"dappid" bson:"dappid"`
+// 	NetworkID         int    `json:"networkid" bson:"networkid"`
+// }
 
 type ExternalTxStatus struct {
 	mgm.DefaultModel `bson:",inline"`
@@ -51,6 +51,7 @@ type ExternalTxStatus struct {
 	Network          string `json:"network" bson:"network"`
 	Status           string `json:"status" bson:"status"`
 	Type             string `json:"type" bson:"type"`
+	Error            string `json:"error" bson:"error"`
 }
 
 type PappTxData struct {
@@ -58,7 +59,7 @@ type PappTxData struct {
 	IncTxHash        string `json:"inctxhash" bson:"inctxhash"`
 	ExternalTxhash   string `json:"externaltxhash" bson:"externaltxhash"`
 	Network          string `json:"network" bson:"network"`
-	Type             string `json:"type" bson:"type"`
+	Type             int    `json:"type" bson:"type"`
 	IncTxData        string `json:"inctxdata" bson:"inctxdata"`
 	ExternalTxData   string `json:"externaltxdata" bson:"externaltxdata"`
 	FeeToken         string `json:"feetoken" bson:"feetoken"`

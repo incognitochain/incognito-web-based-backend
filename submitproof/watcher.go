@@ -50,6 +50,22 @@ func watchPendingExternalTx() {
 }
 
 func watchPendingIncTx() {
+	go func() {
+		for {
+			txList, err := database.DBRetrievePendingShieldTxs(0, 0)
+			if err != nil {
+				log.Println("DBRetrievePendingShieldTxs err:", err)
+			}
+			for _, txdata := range txList {
+				err := processPendingShieldTxs(txdata)
+				if err != nil {
+					log.Println("processPendingShieldTxs err:", txdata.IncTx)
+				}
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	for {
 		txList, err := database.DBRetrievePendingShieldTxs(0, 0)
 		if err != nil {
@@ -138,4 +154,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		return nil
 	}
 	return errors.New("no endpoints reachable")
+}
+
+func processPendingSwapTx(tx wcommon.PappTxData) error {
+	return nil
 }

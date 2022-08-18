@@ -31,7 +31,7 @@ func DBRetrievePendingShieldTxs(offset, limit int64) ([]common.ShieldTxData, err
 	if limit == 0 {
 		limit = int64(10000)
 	}
-	filter := bson.M{"status": bson.M{operator.Eq: common.ShieldStatusPending}}
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ShieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,
@@ -50,7 +50,7 @@ func DBRetrieveFailedShieldTxs(offset, limit int64) ([]common.ShieldTxData, erro
 	if limit == 0 {
 		limit = int64(10000)
 	}
-	filter := bson.M{"status": bson.M{operator.Eq: common.ShieldStatusSubmitFailed}}
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusSubmitFailed}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ShieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,
@@ -69,7 +69,7 @@ func DBRetrieveRejectedShieldTxs(offset, limit int64) ([]common.ShieldTxData, er
 	if limit == 0 {
 		limit = int64(10000)
 	}
-	filter := bson.M{"status": bson.M{operator.Eq: common.ShieldStatusRejected}}
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusRejected}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.ShieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,

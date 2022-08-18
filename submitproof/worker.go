@@ -105,7 +105,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	}
 
 	if time.Since(task.Time) > time.Hour {
-		errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusSubmitFailed, "timeout")
+		errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.StatusSubmitFailed, "timeout")
 		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
 			return
@@ -128,7 +128,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 
 	if err != nil {
 		if err.Error() == ProofAlreadySubmitError {
-			errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusSubmitFailed, err.Error())
+			errdb := database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
 			if errdb != nil {
 				log.Println("DBUpdateShieldTxStatus error:", errdb)
 				return
@@ -140,7 +140,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 		return
 	}
 
-	err = database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.ShieldStatusPending, "")
+	err = database.DBUpdateShieldTxStatus(task.Txhash, task.NetworkID, wcommon.StatusPending, "")
 	if err != nil {
 		log.Println("DBUpdateShieldTxStatus err:", err)
 		return
@@ -169,6 +169,7 @@ func createOutChainSubmitProofTx(network int, data interface{}) (interface{}, er
 			return 0, err
 		}
 		_ = evmClient
+		//TODO
 	}
 
 	return result, nil

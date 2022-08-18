@@ -24,11 +24,11 @@ const (
 // )
 
 const (
-	ShieldStatusSubmitting   = "submitting"
-	ShieldStatusSubmitFailed = "submit_failed"
-	ShieldStatusPending      = "pending"
-	ShieldStatusRejected     = "rejected"
-	ShieldStatusAccepted     = "accepted"
+	StatusSubmitting   = "submitting"
+	StatusSubmitFailed = "submit_failed"
+	StatusPending      = "pending"
+	StatusRejected     = "rejected"
+	StatusAccepted     = "accepted"
 )
 
 const (

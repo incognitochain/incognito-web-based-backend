@@ -2,6 +2,7 @@ package submitproof
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
@@ -398,4 +400,20 @@ func faucetPRV(paymentaddress string) {
 			return
 		}
 	}
+}
+
+func getEVMBlockHeight(endpoints []string) (uint64, error) {
+	for _, endpoint := range endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			return 0, err
+		}
+		result, err := evmClient.BlockNumber(context.Background())
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		return result, nil
+	}
+	return 0, errors.New("failed to get EVM block height")
 }

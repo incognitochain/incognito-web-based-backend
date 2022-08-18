@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -51,7 +52,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	}
 
 	task := SubmitProofShieldTask{
-		Txhash:    txhash,
+		TxHash:    txhash,
 		NetworkID: networkID,
 		TokenID:   tokenID,
 		Metatype:  TxTypeShielding,
@@ -62,7 +63,8 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	ctx := context.Background()
 	msg := &pubsub.Message{
 		Attributes: map[string]string{
-			"txhash": txhash,
+			"txhash":    txhash,
+			"networkid": strconv.Itoa(networkID),
 		},
 		Data: taskBytes,
 	}
@@ -75,6 +77,39 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	return "submitting", nil
 }
 
-func SubmitSwapTx() {
+func SubmitSwapTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64) (interface{}, error) {
+	currentStatus, err := database.DBGetPappTxStatus(txhash)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			return "", err
+		}
+	}
+	if currentStatus != "" {
+		return currentStatus, nil
+	}
 
+	task := SubmitPappSwapTask{
+		TxHash:    txhash,
+		TxRawData: rawTxData,
+		IsPRVTx:   isPRVTx,
+		FeeToken:  feeToken,
+		FeeAmount: feeAmount,
+		Time:      time.Now(),
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	ctx := context.Background()
+	msg := &pubsub.Message{
+		Attributes: map[string]string{
+			"txhash": txhash,
+		},
+		Data: taskBytes,
+	}
+	msgID, err := swapTxTopic.Publish(ctx, msg).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("publish msgID:", msgID)
+
+	return "submitting", nil
 }

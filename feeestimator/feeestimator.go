@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	checkFeeInterval = 15 * time.Second
+	checkFeeInterval = 5 * time.Second
 )
 
 func StartService(cfg common.Config) error {

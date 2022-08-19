@@ -24,11 +24,15 @@ const (
 // )
 
 const (
-	StatusSubmitting   = "submitting"
-	StatusSubmitFailed = "submit_failed"
-	StatusPending      = "pending"
-	StatusRejected     = "rejected"
-	StatusAccepted     = "accepted"
+	StatusSubmitting            = "submitting"
+	StatusSubmitFailed          = "submit_failed"
+	StatusPending               = "pending"
+	StatusRejected              = "rejected"
+	StatusAccepted              = "accepted"
+	StatusSubmittingOutchain    = "outchain_submitting"
+	StatusPendingOutchain       = "outchain_pending"
+	StatusSubmitOutchainFailed  = "outchain_submit_failed"
+	StatusSubmitOutchainSuccess = "outchain_submit_success"
 )
 
 const (

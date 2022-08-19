@@ -1,13 +1,18 @@
 package submitproof
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/pkg/errors"
@@ -150,6 +155,77 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		}
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
 			// todo update status
+
+			// check sc re-deposit event
+			valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
+			defer encodeBufferPool.Put(valueBuf)
+
+			vaultABI, err := abi.JSON(strings.NewReader(vault.VaultABI))
+			if err != nil {
+				fmt.Println("abi.JSON", err.Error())
+				return err
+			}
+
+			// erc20ABI, err := abi.JSON(strings.NewReader(IERC20ABI))
+			// if err != nil {
+			// 	fmt.Println("erc20ABI", err.Error())
+			// 	return nil, "", 0, nil, "", err
+			// }
+			// erc20ABINoIndex, err := abi.JSON(strings.NewReader(Erc20ABINoIndex))
+			// if err != nil {
+			// 	fmt.Println("erc20ABINoIndex", err.Error())
+			// 	return nil, "", 0, nil, "", err
+			// }
+
+			for _, d := range txReceipt.Logs {
+				switch len(d.Data) {
+				// case 32:
+				// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
+				// 	if err != nil {
+				// 		fmt.Println("Unpack", err)
+				// 		continue
+				// 	}
+				// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
+				// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
+				// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
+				// 		fmt.Println("len(unpackResult)", err)
+				// 		continue
+				// 	}
+				// 	fmt.Println("32", d.Address.String())
+				// case 96:
+				// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
+				// 	if err != nil {
+				// 		fmt.Println("Unpack2", err)
+				// 		continue
+				// 	}
+				// 	if len(unpackResult) < 3 {
+				// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+				// 		fmt.Println("len(unpackResult)2", err)
+				// 		continue
+				// 	}
+				// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
+				// event indexed both from and to
+				case 256, 288:
+					unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
+					if err != nil {
+						log.Println("unpackResult err", err)
+						continue
+					}
+					if len(unpackResult) < 3 {
+						err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+						log.Println("len(unpackResult) err", err)
+						continue
+					}
+					fmt.Println("unpackResult", unpackResult)
+					// contractID = unpackResult[0].(common.Address).String()
+					// paymentaddress = unpackResult[1].(string)
+				default:
+					// log.Println("invalid event index")
+				}
+			}
+			// txReceipt.CumulativeGasUsed
+			// txReceipt.Logs
+			// vault.VaultABI
 		}
 		return nil
 	}

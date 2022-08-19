@@ -4,16 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/big"
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
-	"github.com/incognitochain/incognito-web-based-backend/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/evmproof"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -175,12 +180,13 @@ func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
 	}
 
 	data := wcommon.PappTxData{
-		IncTxHash: task.TxHash,
-		IncTxData: string(task.TxRawData),
-		Type:      wcommon.PappTypeSwap,
-		Status:    wcommon.StatusSubmitting,
-		FeeToken:  task.FeeToken,
-		FeeAmount: task.FeeAmount,
+		IncTxHash:      task.TxHash,
+		IncTxData:      string(task.TxRawData),
+		Type:           wcommon.PappTypeSwap,
+		Status:         wcommon.StatusSubmitting,
+		IsUnifiedToken: task.IsUnifiedToken,
+		FeeToken:       task.FeeToken,
+		FeeAmount:      task.FeeAmount,
 	}
 	err = database.DBAddPappTxData(data)
 	if err != nil {
@@ -211,26 +217,92 @@ func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
 	m.Ack()
 }
 
-func createOutChainSubmitProofTx(network int, data interface{}) (interface{}, error) {
-	var result interface{}
+func createOutChainSwapTx(network int, incTxHash string, isUnifiedToken bool) (*wcommon.ExternalTxStatus, error) {
+	var result wcommon.ExternalTxStatus
 
-	networkName := common.GetNetworkName(network)
+	networkName := wcommon.GetNetworkName(network)
 
 	networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
 	if err != nil {
 		return nil, err
 	}
 
+	pappAddress, err := database.DBGetPappContractData(networkName, wcommon.PappTypeSwap)
+	if err != nil {
+		return nil, err
+	}
+
 	networkChainId := networkInfo.ChainID
-	_ = networkChainId
+
+	networkChainIdInt := new(big.Int)
+	networkChainIdInt.SetString(networkChainId, 10)
+
+	var proof *evmproof.DecodedProof
+	if isUnifiedToken {
+		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0, uint(network))
+	} else {
+		proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	privKey, _ := crypto.HexToECDSA(config.EVMKey)
+
 	for _, endpoint := range networkInfo.Endpoints {
 		evmClient, err := ethclient.Dial(endpoint)
 		if err != nil {
-			return 0, err
+			log.Println(err)
+			continue
 		}
-		_ = evmClient
-		//TODO
+
+		c, err := vault.NewVault(common.HexToAddress(pappAddress.ContractAddress), evmClient)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		gasPrice, err := evmClient.SuggestGasPrice(context.Background())
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		// nonce, err := getNonceByPrivateKey(evmClient, config.EVMKey)
+		// if err != nil {
+		// 	log.Println(err)
+		// 	continue
+		// }
+
+		auth, err := bind.NewKeyedTransactorWithChainID(privKey, networkChainIdInt)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		auth.GasPrice = gasPrice
+
+		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		result.Txhash = tx.Hash().String()
+		result.Status = wcommon.StatusPendingOutchain
+		result.Type = wcommon.PappTypeSwap
+		result.Network = networkName
+		result.IncRequestTx = incTxHash
+		break
 	}
 
-	return result, nil
+	if result.Txhash == "" {
+		return nil, errors.New("submit tx outchain failed")
+	}
+
+	return &result, nil
+}
+
+func speedupOutChainSwapTx(network int, evmTxHash string) error {
+	//TODO
+	return nil
 }

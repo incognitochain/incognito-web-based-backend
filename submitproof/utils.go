@@ -3,6 +3,7 @@ package submitproof
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -416,4 +418,21 @@ func getEVMBlockHeight(endpoints []string) (uint64, error) {
 		return result, nil
 	}
 	return 0, errors.New("failed to get EVM block height")
+}
+
+func getNonceByPrivateKey(c *ethclient.Client, senderPrivKey string) (uint64, error) {
+	privateKey, err := crypto.HexToECDSA(senderPrivKey)
+	if err != nil {
+		return 0, errors.Wrap(err, "crypto.HexToECDSA")
+	}
+	publicKey := privateKey.Public()
+	publicKeyECDSA, _ := publicKey.(*ecdsa.PublicKey)
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	nonce, err := c.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return 0, errors.Wrap(err, "s.ethClient.PendingNonceAt")
+	}
+
+	return nonce, nil
 }

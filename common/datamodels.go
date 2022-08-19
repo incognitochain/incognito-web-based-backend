@@ -48,9 +48,10 @@ type BridgeNetworkData struct {
 type ExternalTxStatus struct {
 	mgm.DefaultModel `bson:",inline"`
 	Txhash           string `json:"txhash" bson:"txhash"`
+	IncRequestTx     string `json:"increquesttx" bson:"increquesttx"`
 	Network          string `json:"network" bson:"network"`
 	Status           string `json:"status" bson:"status"`
-	Type             string `json:"type" bson:"type"`
+	Type             int    `json:"type" bson:"type"`
 	Error            string `json:"error" bson:"error"`
 }
 
@@ -65,4 +66,12 @@ type PappTxData struct {
 	FeeToken         string `json:"feetoken" bson:"feetoken"`
 	FeeAmount        uint64 `json:"feeamount" bson:"feeamount"`
 	Status           string `json:"status" bson:"status"`
+	IsUnifiedToken   bool   `json:"isunifiedtoken" bson:"isunifiedtoken"`
+}
+
+type PappContractData struct {
+	mgm.DefaultModel `bson:",inline"`
+	Network          string `json:"network" bson:"network"`
+	Type             int    `json:"type" bson:"type"`
+	ContractAddress  string `json:"contactaddress" bson:"contactaddress"`
 }

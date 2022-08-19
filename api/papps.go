@@ -499,11 +499,14 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				}
 			}
 
-			amountOut := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(quote.Data.Outputs[1], int64(pTokenContract2.Decimals), int64(pTokenContract2.PDecimals))
+			amountOut, _ := new(big.Float).SetString(quote.Data.Outputs[1])
+
+			pTokenAmount := new(big.Float).Mul(amountOut, big.NewFloat(math.Pow10(-pTokenContract2.Decimals)))
+
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
 				AmountIn:     amount,
-				AmountOut:    fmt.Sprintf("%v", amountOut),
+				AmountOut:    pTokenAmount.String(),
 				AmountOutRaw: quote.Data.Outputs[1],
 				Route:        quote.Data.Route,
 				Fee:          fees,

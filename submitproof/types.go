@@ -11,12 +11,13 @@ type SubmitProofShieldTask struct {
 }
 
 type SubmitPappSwapTask struct {
-	TxHash    string
-	TxRawData []byte
-	IsPRVTx   bool
-	FeeToken  string
-	FeeAmount uint64
-	Time      time.Time
+	TxHash         string
+	TxRawData      []byte
+	IsPRVTx        bool
+	IsUnifiedToken bool
+	FeeToken       string
+	FeeAmount      uint64
+	Time           time.Time
 }
 
 type WatchShieldProofTask struct {

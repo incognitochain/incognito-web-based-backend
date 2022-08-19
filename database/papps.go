@@ -113,3 +113,21 @@ func DBGetPappTxStatus(incTx string) (string, error) {
 
 	return result.Status, nil
 }
+
+func DBGetPappContractData(network string, pappType int) (*common.PappContractData, error) {
+	var result common.PappContractData
+
+	filter := bson.M{"network": bson.M{operator.Eq: network}, "type": bson.M{operator.Eq: pappType}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.PappContractData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+
+}

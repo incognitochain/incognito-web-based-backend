@@ -3,6 +3,7 @@ module github.com/incognitochain/incognito-web-based-backend
 go 1.18
 
 require (
+	github.com/ethereum/go-ethereum v1.10.7
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
@@ -15,10 +16,10 @@ require (
 	cloud.google.com/go/pubsub v1.10.0
 	github.com/RichardKnop/machinery v1.10.6
 	github.com/adjust/rmq/v4 v4.0.5
-	github.com/ethereum/go-ethereum v1.10.7
 	github.com/gin-contrib/cors v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.2.0
+	github.com/incognitochain/bridge-eth v0.0.0-20220819071555-5e6af10a2dab
 	github.com/incognitochain/coin-service v1.8.0
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
@@ -44,11 +45,11 @@ require (
 	github.com/binance-chain/ledger-cosmos-go v0.9.9-binance.1 // indirect
 	github.com/blockcypher/gobcy v1.3.1 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b // indirect
-	github.com/btcsuite/btcd v0.20.1-beta // indirect
+	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
 	github.com/btcsuite/btcutil v1.0.2 // indirect
-	github.com/btcsuite/goleveldb v0.0.0-20160330041536-7834afc9e8cd // indirect
-	github.com/btcsuite/snappy-go v0.0.0-20151229074030-0bdef8d06723 // indirect
+	github.com/btcsuite/goleveldb v1.0.0 // indirect
+	github.com/btcsuite/snappy-go v1.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d // indirect
@@ -59,12 +60,14 @@ require (
 	github.com/dgryski/go-identicon v0.0.0-20140725220403-371855927d74 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/ebfe/keccak v0.0.0-20150115210727-5cc570678d1b // indirect
+	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
 	github.com/etcd-io/bbolt v1.3.3 // indirect
 	github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-kit/kit v0.8.0 // indirect
+	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -184,6 +187,7 @@ require (
 	github.com/prometheus/procfs v0.0.2 // indirect
 	github.com/prometheus/tsdb v0.9.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
+	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/rs/zerolog v1.26.1 // indirect
@@ -196,6 +200,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/spf13/viper v1.3.2 // indirect
+	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48 // indirect
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570 // indirect
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/streadway/amqp v1.0.0 // indirect

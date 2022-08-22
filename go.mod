@@ -14,12 +14,11 @@ require (
 
 require (
 	cloud.google.com/go/pubsub v1.10.0
-	github.com/RichardKnop/machinery v1.10.6
 	github.com/adjust/rmq/v4 v4.0.5
 	github.com/gin-contrib/cors v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.2.0
-	github.com/incognitochain/bridge-eth v0.0.0-20220819071555-5e6af10a2dab
+	github.com/incognitochain/bridge-eth v0.0.0-20220822091718-f61748701f87
 	github.com/incognitochain/coin-service v1.8.0
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/pkg/errors v0.9.1

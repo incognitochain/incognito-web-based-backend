@@ -512,11 +512,41 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				Fee:          fees,
 			})
 		case "curve":
-			curvePoolIndex, err := getCurvePoolIndex()
+			poolList, err := getCurvePoolIndex()
+			if err != nil {
+				return nil, err
+			}
+			token1PoolIndex, err := getTokenCurvePoolIndex(pTokenContract1.ContractIDGetRate, poolList)
+			if err != nil {
+				return nil, err
+			}
+			token2PoolIndex, err := getTokenCurvePoolIndex(pTokenContract2.ContractIDGetRate, poolList)
 			if err != nil {
 				return nil, err
 			}
 
+			amountFloat := new(big.Float)
+			amountFloat, ok := amountFloat.SetString(amount)
+			if !ok {
+				return nil, fmt.Errorf("amount is not a number")
+			}
+			amountBigFloat := ConvertToNanoIncognitoToken(amountFloat, int64(pTokenContract1.Decimals)) //amount *big.Float, decimal int64, return *big.Float
+			log.Println("amountBigFloat: ", amountBigFloat.String())
+
+			// convert float to bigin:
+			amountBigInt, _ := amountBigFloat.Int(nil)
+
+			log.Println("amountBigInt: ", amountBigInt)
+
+			if amountBigInt == nil {
+				return nil, errors.New("invalid amount")
+			}
+
+			i := big.NewInt(int64(token1PoolIndex))
+			j := big.NewInt(int64(token2PoolIndex))
+
+			_ = i
+			_ = j
 		}
 	}
 	if len(result) == 0 {
@@ -807,4 +837,13 @@ func getCurvePoolIndex() ([]CurvePoolIndex, error) {
 
 	return responseBodyData.Result, nil
 
+}
+
+func getTokenCurvePoolIndex(contractID string, poolList []CurvePoolIndex) (int, error) {
+	for _, v := range poolList {
+		if v.DappTokenAddress == contractID {
+			return v.CurveTokenIndex, nil
+		}
+	}
+	return -1, errors.New("pool not found")
 }

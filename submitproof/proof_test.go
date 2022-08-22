@@ -41,7 +41,7 @@ func TestGetProof(t *testing.T) {
 
 	// proof, err := bridgeeth.GetAndDecodeBurnProofV2(fullnode, incTxHash, "getburnplgprooffordeposittosc")
 
-	proof, err := evmproof.GetAndDecodeBurnProofUnifiedToken(fullnode, incTxHash, 0, uint(2))
+	proof, err := evmproof.GetAndDecodeBurnProofUnifiedToken(fullnode, incTxHash, 0, uint(3))
 	t.Log(err)
 
 	t.Log(proof)

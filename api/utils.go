@@ -106,6 +106,12 @@ func ConvertNanoIncogTokenToOutChainToken(amountStr string, decimal, pDecimals i
 	return tokenAmount.Uint64()
 }
 
+// convert coin amount to incognito nano token amount: ex: 002(ETH)*1e9=2000000 nano pETH
+func ConvertToNanoIncognitoToken(coinAmount *big.Float, pdecimal int64) *big.Float {
+	value := big.NewFloat(math.Pow10(int(pdecimal)))
+	return new(big.Float).Mul(coinAmount, value)
+}
+
 func getpTokenContractID(tokenID string, networkID int, supportedTokenList []PappSupportedTokenData) (*PappSupportedTokenData, error) {
 	for _, v := range supportedTokenList {
 		if v.ID == tokenID && v.NetworkID == networkID {

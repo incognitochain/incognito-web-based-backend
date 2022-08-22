@@ -316,3 +316,10 @@ type PancakeTokenMapItem struct {
 	Decimals int    `json:"decimals"`
 	Symbol   string `json:"symbol"`
 }
+
+type CurvePoolIndex struct {
+	CurveTokenIndex  int
+	CurvePoolAddress string
+	DappTokenAddress string
+	DappTokenSymbol  string
+}

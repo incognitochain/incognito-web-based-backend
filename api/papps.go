@@ -512,6 +512,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				Fee:          fees,
 			})
 		case "curve":
+			curvePoolIndex, err := getCurvePoolIndex()
+			if err != nil {
+				return nil, err
+			}
+
 		}
 	}
 	if len(result) == 0 {
@@ -742,4 +747,64 @@ func buildPancakeTokenMap() (map[string]PancakeTokenMapItem, error) {
 	}
 
 	return result, nil
+}
+
+func cacheCurvePoolIndex() {
+	for {
+		var responseBodyData struct {
+			Result []CurvePoolIndex
+			Error  *struct {
+				Code    int
+				Message string
+			} `json:"Error"`
+		}
+		_, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").SetResult(&responseBodyData).
+			Get(config.ShieldService + "/trade/supported-tokens")
+		if err != nil {
+			log.Println("cacheCurvePoolIndex", err.Error())
+			continue
+		}
+
+		err = cacheStoreCustom(cacheCurvePoolIndexKey, responseBodyData, 30*time.Second)
+		if err != nil {
+			log.Println(err)
+		}
+
+		time.Sleep(60 * time.Second)
+	}
+}
+
+func getCurvePoolIndex() ([]CurvePoolIndex, error) {
+	var responseBodyData struct {
+		Result []CurvePoolIndex
+		Error  *struct {
+			Code    int
+			Message string
+		} `json:"Error"`
+	}
+
+	err := cacheGet(cacheSupportedPappsTokensKey, &responseBodyData)
+	if err != nil {
+		re, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").
+			Get(config.ShieldService + "/trade/supported-tokens")
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(re.Body(), &responseBodyData)
+		if err != nil {
+			return nil, err
+		}
+
+		if responseBodyData.Error != nil {
+			return nil, errors.New(responseBodyData.Error.Message)
+		}
+		return responseBodyData.Result, nil
+	}
+
+	return responseBodyData.Result, nil
+
 }

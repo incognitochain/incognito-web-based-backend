@@ -9,50 +9,42 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/incognitochain/bridge-eth/bridge/incognito_proxy"
-	"github.com/incognitochain/bridge-eth/bridge/vault"
-	"github.com/incognitochain/bridge-eth/bridge/vaultproxy"
 	"github.com/incognitochain/bridge-eth/common/base58"
 	"github.com/incognitochain/bridge-eth/consensus/signatureschemes/bridgesig"
-	"github.com/incognitochain/bridge-eth/erc20"
-	"github.com/incognitochain/bridge-eth/erc20/bnb"
 	"github.com/incognitochain/bridge-eth/jsonresult"
 	"github.com/pkg/errors"
 )
 
-type contracts struct {
-	v         *vault.Vault
-	vp        *vaultproxy.Vaultproxy
-	vAddr     common.Address
-	inc       *incognito_proxy.IncognitoProxy
-	incAddr   common.Address
-	token     *erc20.Erc20
-	tokenAddr common.Address
+// type contracts struct {
+// 	v *vault.Vault
+// 	// vp        *vaultproxy.Vaultproxy
+// 	vAddr     common.Address
+// 	inc       *incognito_proxy.IncognitoProxy
+// 	incAddr   common.Address
+// 	token     *erc20.Erc20
+// 	tokenAddr common.Address
 
-	tokens       map[int]tokenInfo       // mapping from decimal => token
-	customErc20s map[string]*TokenerInfo // mapping from name => token
-}
+// 	tokens       map[int]tokenInfo       // mapping from decimal => token
+// 	customErc20s map[string]*TokenerInfo // mapping from name => token
+// }
 
-type TokenerInfo struct {
-	addr common.Address
-	c    Tokener
-}
+// type TokenerInfo struct {
+// 	addr common.Address
+// 	c    Tokener
+// }
 
-type Tokener interface {
-	BalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
-	Approve(*bind.TransactOpts, common.Address, *big.Int) (*types.Transaction, error)
-}
+// type Tokener interface {
+// 	BalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
+// 	Approve(*bind.TransactOpts, common.Address, *big.Int) (*types.Transaction, error)
+// }
 
-var _ Tokener = (*bnb.Bnb)(nil)
+// var _ Tokener = (*bnb.Bnb)(nil)
 
-type tokenInfo struct {
-	c    *erc20.Erc20
-	addr common.Address
-}
+// type tokenInfo struct {
+// 	c    *erc20.Erc20
+// 	addr common.Address
+// }
 
 type getProofResult struct {
 	Result jsonresult.GetInstructionProof
@@ -77,123 +69,123 @@ type DecodedProof struct {
 	SigSs           [2][][32]byte
 }
 
-func getAndDecodeBurnProof(txID string) (*DecodedProof, error) {
-	body := getBurnProof(txID)
-	if len(body) < 1 {
-		return nil, fmt.Errorf("burn proof not found")
-	}
+// func getAndDecodeBurnProof(txID string) (*DecodedProof, error) {
+// 	body := getBurnProof(txID)
+// 	if len(body) < 1 {
+// 		return nil, fmt.Errorf("burn proof not found")
+// 	}
 
-	r := getProofResult{}
-	err := json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		return nil, err
-	}
-	return decodeProof(&r)
-}
+// 	r := getProofResult{}
+// 	err := json.Unmarshal([]byte(body), &r)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return decodeProof(&r)
+// }
 
-func getAndDecodeBurnProofV2(
-	incBridgeHost string,
-	txID string,
-	rpcMethod string,
-) (*DecodedProof, error) {
-	body, err := getBurnProofV2(incBridgeHost, txID, rpcMethod)
-	if err != nil {
-		return nil, err
-	}
-	if len(body) < 1 {
-		return nil, fmt.Errorf("burn proof for deposit to SC not found")
-	}
+// func getAndDecodeBurnProofV2(
+// 	incBridgeHost string,
+// 	txID string,
+// 	rpcMethod string,
+// ) (*DecodedProof, error) {
+// 	body, err := getBurnProofV2(incBridgeHost, txID, rpcMethod)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if len(body) < 1 {
+// 		return nil, fmt.Errorf("burn proof for deposit to SC not found")
+// 	}
 
-	r := getProofResult{}
-	err = json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		return nil, err
-	}
-	return decodeProof(&r)
-}
+// 	r := getProofResult{}
+// 	err = json.Unmarshal([]byte(body), &r)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return decodeProof(&r)
+// }
 
-func getCommittee(url string) ([]common.Address, []common.Address, error) {
-	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
+// func getCommittee(url string) ([]common.Address, []common.Address, error) {
+// 	payload := strings.NewReader("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getbeaconbeststate\",\n    \"params\": []\n}")
 
-	req, _ := http.NewRequest("POST", url, payload)
+// 	req, _ := http.NewRequest("POST", url, payload)
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, nil, err
-	}
+// 	res, err := http.DefaultClient.Do(req)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+// 	defer res.Body.Close()
+// 	body, _ := ioutil.ReadAll(res.Body)
 
-	type beaconBestStateResult struct {
-		BeaconCommittee []string
-		ShardCommittee  map[string][]string
-	}
+// 	type beaconBestStateResult struct {
+// 		BeaconCommittee []string
+// 		ShardCommittee  map[string][]string
+// 	}
 
-	type getBeaconBestStateResult struct {
-		Result beaconBestStateResult
-		Error  string
-		Id     int
-	}
+// 	type getBeaconBestStateResult struct {
+// 		Result beaconBestStateResult
+// 		Error  string
+// 		Id     int
+// 	}
 
-	r := getBeaconBestStateResult{}
-	err = json.Unmarshal([]byte(body), &r)
-	if err != nil {
-		return nil, nil, err
-	}
+// 	r := getBeaconBestStateResult{}
+// 	err = json.Unmarshal([]byte(body), &r)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	// Genesis committee
-	beaconOld := make([]common.Address, len(r.Result.BeaconCommittee))
-	for i, pk := range r.Result.BeaconCommittee {
-		cpk := &CommitteePublicKey{}
-		cpk.FromString(pk)
-		addr, err := convertPubkeyToAddress(*cpk)
-		if err != nil {
-			return nil, nil, err
-		}
-		beaconOld[i] = addr
-		fmt.Printf("beaconOld: %s\n", addr.Hex())
-	}
+// 	// Genesis committee
+// 	beaconOld := make([]common.Address, len(r.Result.BeaconCommittee))
+// 	for i, pk := range r.Result.BeaconCommittee {
+// 		cpk := &CommitteePublicKey{}
+// 		cpk.FromString(pk)
+// 		addr, err := convertPubkeyToAddress(*cpk)
+// 		if err != nil {
+// 			return nil, nil, err
+// 		}
+// 		beaconOld[i] = addr
+// 		fmt.Printf("beaconOld: %s\n", addr.Hex())
+// 	}
 
-	bridgeOld := make([]common.Address, len(r.Result.ShardCommittee["1"]))
-	for i, pk := range r.Result.ShardCommittee["1"] {
-		cpk := &CommitteePublicKey{}
-		cpk.FromString(pk)
-		addr, err := convertPubkeyToAddress(*cpk)
-		if err != nil {
-			return nil, nil, err
-		}
-		bridgeOld[i] = addr
-		fmt.Printf("bridgeOld: %s\n", addr.Hex())
-	}
+// 	bridgeOld := make([]common.Address, len(r.Result.ShardCommittee["1"]))
+// 	for i, pk := range r.Result.ShardCommittee["1"] {
+// 		cpk := &CommitteePublicKey{}
+// 		cpk.FromString(pk)
+// 		addr, err := convertPubkeyToAddress(*cpk)
+// 		if err != nil {
+// 			return nil, nil, err
+// 		}
+// 		bridgeOld[i] = addr
+// 		fmt.Printf("bridgeOld: %s\n", addr.Hex())
+// 	}
 
-	return beaconOld, bridgeOld, nil
-}
+// 	return beaconOld, bridgeOld, nil
+// }
 
-func getBurnProof(txID string) string {
-	url := "http://127.0.0.1:20100"
-	// url := "https://dev-test-node.incognito.org/"
-	// url := "https://mainnet.incognito.org/fullnode"
+// func getBurnProof(txID string) string {
+// 	url := "http://127.0.0.1:20100"
+// 	// url := "https://dev-test-node.incognito.org/"
+// 	// url := "https://mainnet.incognito.org/fullnode"
 
-	if len(txID) == 0 {
-		txID = "87c89c1c19cec3061eff9cfefdcc531d9456ac48de568b3974c5b0a88d5f3834"
-	}
-	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
+// 	if len(txID) == 0 {
+// 		txID = "87c89c1c19cec3061eff9cfefdcc531d9456ac48de568b3974c5b0a88d5f3834"
+// 	}
+// 	payload := strings.NewReader(fmt.Sprintf("{\n    \"id\": 1,\n    \"jsonrpc\": \"1.0\",\n    \"method\": \"getburnproof\",\n    \"params\": [\n    \t\"%s\"\n    ]\n}", txID))
 
-	req, _ := http.NewRequest("POST", url, payload)
+// 	req, _ := http.NewRequest("POST", url, payload)
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Println("err:", err)
-		return ""
-	}
+// 	res, err := http.DefaultClient.Do(req)
+// 	if err != nil {
+// 		fmt.Println("err:", err)
+// 		return ""
+// 	}
 
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+// 	defer res.Body.Close()
+// 	body, _ := ioutil.ReadAll(res.Body)
 
-	//fmt.Println(string(body))
-	return string(body)
-}
+// 	//fmt.Println(string(body))
+// 	return string(body)
+// }
 
 func getBurnProofV2(
 	incBridgeHost string,
@@ -344,14 +336,14 @@ func keccak256(b ...[]byte) [32]byte {
 	return r
 }
 
-func convertPubkeyToAddress(cKey CommitteePublicKey) (common.Address, error) {
-	pk, err := crypto.DecompressPubkey(cKey.MiningPubKey[BRI_CONSENSUS])
-	if err != nil {
-		return common.Address{}, errors.Wrapf(err, "cKey: %+v", cKey)
-	}
-	address := crypto.PubkeyToAddress(*pk)
-	return address, nil
-}
+// func convertPubkeyToAddress(cKey CommitteePublicKey) (common.Address, error) {
+// 	pk, err := crypto.DecompressPubkey(cKey.MiningPubKey[BRI_CONSENSUS])
+// 	if err != nil {
+// 		return common.Address{}, errors.Wrapf(err, "cKey: %+v", cKey)
+// 	}
+// 	address := crypto.PubkeyToAddress(*pk)
+// 	return address, nil
+// }
 
 var BRI_CONSENSUS = "dsa"
 

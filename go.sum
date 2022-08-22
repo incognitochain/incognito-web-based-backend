@@ -511,6 +511,10 @@ github.com/incognitochain/bridge-eth v0.0.0-20220729042738-f308f2354299 h1:LPYWb
 github.com/incognitochain/bridge-eth v0.0.0-20220729042738-f308f2354299/go.mod h1:q7jSbKsdJpXEATVbmxxI7GDcf99Rk1iuQbjAXMmA/qk=
 github.com/incognitochain/bridge-eth v0.0.0-20220819071555-5e6af10a2dab h1:UkOxw/7/gW/OMYR61O9JkAAo0+mhoHWKVmwd5SC1VUU=
 github.com/incognitochain/bridge-eth v0.0.0-20220819071555-5e6af10a2dab/go.mod h1:q7jSbKsdJpXEATVbmxxI7GDcf99Rk1iuQbjAXMmA/qk=
+github.com/incognitochain/bridge-eth v0.0.0-20220822084255-950d93ff2b28 h1:LlIRhy6tRbnF8SjRWRG4VGX8XQfXb4OSfvc8wHElqjg=
+github.com/incognitochain/bridge-eth v0.0.0-20220822084255-950d93ff2b28/go.mod h1:q7jSbKsdJpXEATVbmxxI7GDcf99Rk1iuQbjAXMmA/qk=
+github.com/incognitochain/bridge-eth v0.0.0-20220822091718-f61748701f87 h1:9B40DFf6glWufkUB4LjSexiVM5tISYtFJ9nqy4m4Nxs=
+github.com/incognitochain/bridge-eth v0.0.0-20220822091718-f61748701f87/go.mod h1:q7jSbKsdJpXEATVbmxxI7GDcf99Rk1iuQbjAXMmA/qk=
 github.com/incognitochain/coin-service v1.0.1-0.20220614023329-7d3ed746d578 h1:2ZS4d7ucrTaRRqs459bq16QMOPqW6pgUw4xmxerwRus=
 github.com/incognitochain/coin-service v1.0.1-0.20220614023329-7d3ed746d578/go.mod h1:R1TA1PfxkHG6MdiM0ttftuIiVhNPzEBqr8klneIT/i4=
 github.com/incognitochain/coin-service v1.1.0 h1:5QXrhjIqFpXkZFwceoO1s/UTY08yd19l9C1z/tH2FsE=

@@ -1,31 +1,74 @@
 package submitproof
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/rpchandler"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/evmproof"
 )
 
 var config wcommon.Config
 var incClient *incclient.IncClient
 var keyList []string
 
-func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string, string, string, uint, error) {
-	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, err := getETHDepositProofNew(incClient, networkID, txhash)
+func getProof(txhash string, networkID int) (*wcommon.EVMProofRecordData, *incclient.EVMDepositProof, error) {
+	networkName := wcommon.GetNetworkName(networkID)
+	networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
 	if err != nil {
-		return nil, "", "", blockHash, txIdx, err
+		return nil, nil, err
 	}
-	if len(proof) == 0 {
-		return nil, "", "", blockHash, txIdx, fmt.Errorf("invalid proof or tx not found")
+
+	for _, endpoint := range networkInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, amount, err := getETHDepositProof(evmClient, txhash)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		if len(proof) == 0 {
+			return nil, nil, fmt.Errorf("invalid proof or tx not found")
+		}
+		depositProof := incclient.NewETHDepositProof(uint(blockNumber.Int64()), common.HexToHash(blockHash), txIdx, proof)
+
+		proofBytes, _ := json.Marshal(proof)
+		if len(proof) == 0 {
+			return nil, nil, fmt.Errorf("invalid proof or tx not found")
+		}
+		result := wcommon.EVMProofRecordData{
+			Proof:       string(proofBytes),
+			BlockNumber: blockNumber.Uint64(),
+			BlockHash:   blockHash,
+			TxIndex:     txIdx,
+			ContractID:  contractID,
+			PaymentAddr: paymentAddr,
+			IsRedeposit: isRedeposit,
+			OTAStr:      otaStr,
+			Amount:      amount,
+			Network:     networkName,
+		}
+
+		return &result, depositProof, nil
 	}
-	result := incclient.NewETHDepositProof(uint(blockNumber.Int64()), common.HexToHash(blockHash), txIdx, proof)
-	return result, contractID, paymentAddr, blockHash, txIdx, nil
+
+	return nil, nil, errors.New("cant retrieve proof")
 }
 
 func submitProof(txhash, tokenID string, networkID int, key string) (string, string, string, string, error) {
@@ -44,13 +87,13 @@ retry:
 		time.Sleep(1 * time.Second)
 	}
 	i++
-	proof, contractID, paymentAddr, blockHash, txIdx, err := getProof(txhash, networkID-1)
+	proofRecord, depositProof, err := getProof(txhash, networkID-1)
 	if err != nil {
 		log.Println("error:", err)
 		finalErr = "getProof " + err.Error()
 		goto retry
 	}
-	isSubmitted, err := checkProofSubmitted(blockHash, txIdx, networkID)
+	isSubmitted, err := checkProofSubmitted(proofRecord.BlockHash, proofRecord.TxIndex, networkID)
 	if err != nil {
 		log.Println("checkProofSubmitted error:", err)
 	}
@@ -58,13 +101,13 @@ retry:
 		return "", "", "", "", errors.New(ProofAlreadySubmitError)
 	}
 	if linkedTokenID == "" && tokenID == "" {
-		tokenID, linkedTokenID, err = findTokenByContractID(contractID, networkID)
+		tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
 		if err != nil {
 			log.Println("error:", err)
 			goto retry
 		}
 	}
-	incTx, err := submitProofTx(proof, linkedTokenID, tokenID, networkID, key)
+	incTx, err := submitProofTx(depositProof, linkedTokenID, tokenID, networkID, key)
 	if err != nil {
 		log.Println("error:", err)
 		fmt.Println("linkedTokenID, tokenID", linkedTokenID, tokenID)
@@ -74,7 +117,10 @@ retry:
 	}
 	fmt.Println("done submit proof", incTx)
 
-	return incTx, paymentAddr, tokenID, linkedTokenID, nil
+	if proofRecord.IsRedeposit {
+		return incTx, proofRecord.OTAStr, tokenID, linkedTokenID, nil
+	}
+	return incTx, proofRecord.PaymentAddr, tokenID, linkedTokenID, nil
 }
 
 func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int, key string) (string, error) {
@@ -118,6 +164,53 @@ func checkProofSubmitted(blockHash string, txIdx uint, networkID int) (bool, err
 	return result, nil
 }
 
-func submitProofExternalChain(proof interface{}, chainId int, incTxHash string) {
+func submitProofExternalChain(networkId int, incTxHash string) (string, error) {
+	proof, err := evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0, uint(networkId))
+	if err != nil {
+		return "", err
+	}
+	networkName := wcommon.GetNetworkName(networkId)
+	networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
+	if err != nil {
+		return "", err
+	}
 
+	pcallContractData, err := database.DBGetPappContractData(networkName, wcommon.PappTypeSwap)
+	if err != nil {
+		return "", err
+	}
+
+	chainID, _ := new(big.Int).SetString(networkInfo.ChainID, 10)
+	privKey, _ := crypto.HexToECDSA(config.EVMKey)
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privKey, chainID)
+	if err != nil {
+		return "", err
+	}
+	for _, endpoint := range networkInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		c, err := vault.NewVault(common.HexToAddress(pcallContractData.ContractAddress), evmClient)
+		if err != nil {
+			return "", err
+		}
+
+		gasPrice, err := evmClient.SuggestGasPrice(context.Background())
+		if err != nil {
+			return "", err
+		}
+		auth.GasPrice = gasPrice
+
+		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
+		if err != nil {
+			return "", err
+		}
+		return tx.Hash().String(), nil
+	}
+
+	return "", errors.New("no usable endpoint found")
 }

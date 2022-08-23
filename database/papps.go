@@ -78,13 +78,13 @@ func DBAddPappTxData(txdata common.PappTxData) error {
 	return nil
 }
 
-func DBRetrievePendingPappTxs(offset, limit int64) ([]common.PappTxData, error) {
+func DBRetrievePendingPappTxs(pappType int, offset, limit int64) ([]common.PappTxData, error) {
 	startTime := time.Now()
 	var result []common.PappTxData
 	if limit == 0 {
-		limit = int64(10000)
+		limit = int64(1000)
 	}
-	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}}
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}, "type": bson.M{operator.Eq: pappType}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,

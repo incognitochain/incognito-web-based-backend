@@ -1,6 +1,10 @@
 package submitproof
 
-import "time"
+import (
+	"time"
+
+	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+)
 
 type SubmitProofShieldTask struct {
 	TxHash    string
@@ -17,6 +21,7 @@ type SubmitPappSwapTask struct {
 	IsUnifiedToken bool
 	FeeToken       string
 	FeeAmount      uint64
+	Networks       []int
 	Time           time.Time
 }
 
@@ -33,4 +38,8 @@ type WatchShieldProofTask struct {
 type SubmitProofConsumer struct {
 	UseKey    string
 	NetworkID int
+}
+
+type EVMProofResult struct {
+	Proof *incclient.EVMDepositProof
 }

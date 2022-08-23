@@ -26,10 +26,11 @@ type PAppsEndpointData struct {
 }
 
 type BridgeNetworkData struct {
-	mgm.DefaultModel `bson:",inline"`
-	Network          string   `json:"network" bson:"network"`
-	ChainID          string   `json:"chainid" bson:"chainid"`
-	Endpoints        []string `json:"endpoints" bson:"endpoints"`
+	mgm.DefaultModel   `bson:",inline"`
+	Network            string   `json:"network" bson:"network"`
+	ChainID            string   `json:"chainid" bson:"chainid"`
+	Endpoints          []string `json:"endpoints" bson:"endpoints"`
+	ConfirmationBlocks int      `json:"confirmationblocks" bson:"confirmationblocks"`
 }
 
 // type PappSupportedTokenData struct {
@@ -57,8 +58,8 @@ type ExternalTxStatus struct {
 
 type PappTxData struct {
 	mgm.DefaultModel `bson:",inline"`
-	IncTxHash        string `json:"inctxhash" bson:"inctxhash"`
-	ExternalTxhash   string `json:"externaltxhash" bson:"externaltxhash"`
+	IncTx            string `json:"inctx" bson:"inctx"`
+	ExternalTx       string `json:"externaltx" bson:"externaltx"`
 	Network          string `json:"network" bson:"network"`
 	Type             int    `json:"type" bson:"type"`
 	IncTxData        string `json:"inctxdata" bson:"inctxdata"`
@@ -74,4 +75,18 @@ type PappContractData struct {
 	Network          string `json:"network" bson:"network"`
 	Type             int    `json:"type" bson:"type"`
 	ContractAddress  string `json:"contactaddress" bson:"contactaddress"`
+}
+
+type EVMProofRecordData struct {
+	mgm.DefaultModel `bson:",inline"`
+	BlockNumber      uint64 `json:"blocknumber" bson:"blocknumber"`
+	BlockHash        string `json:"blockhash" bson:"blockhash"`
+	TxIndex          uint   `json:"txidx" bson:"txidx"`
+	Proof            string `json:"proof" bson:"proof"`
+	ContractID       string `json:"contractid" bson:"contractid"`
+	PaymentAddr      string `json:"paymentaddr" bson:"paymentaddr"`
+	IsRedeposit      bool   `json:"isredeposit" bson:"isredeposit"`
+	OTAStr           string `json:"otaStr" bson:"otaStr"`
+	Amount           uint64 `json:"amount" bson:"amount"`
+	Network          string `json:"network" bson:"network"`
 }

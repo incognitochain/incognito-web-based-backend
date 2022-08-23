@@ -104,12 +104,12 @@ func DBCreateIndex() error {
 
 	pappsModel := []mongo.IndexModel{
 		{
-			Keys:    bsonx.Doc{{Key: "inctxhash", Value: bsonx.Int32(1)}},
+			Keys:    bsonx.Doc{{Key: "inctx", Value: bsonx.Int32(1)}},
 			Options: options.Index().SetUnique(true),
 		},
 
 		{
-			Keys: bsonx.Doc{{Key: "externaltxhash", Value: bsonx.Int32(1)}},
+			Keys: bsonx.Doc{{Key: "externaltx", Value: bsonx.Int32(1)}},
 			// Options: options.Index().SetUnique(true),
 		},
 		{

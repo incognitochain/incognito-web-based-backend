@@ -55,12 +55,15 @@ func TestSubmitProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	maxGasTip, err := evmClient.SuggestGasTipCap(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	gasPrice, err := evmClient.SuggestGasPrice(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = gasPrice
 
 	// nonce, err := getNonceByPrivateKey(evmClient, config.EVMKey)
 	// if err != nil {
@@ -74,12 +77,9 @@ func TestSubmitProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	auth.GasPrice = gasPrice
 
-	// auth.GasPrice = gasPrice.Mul(gasPrice, big.NewInt(10))
-
-	// t.Logf("\n GasPrice: %v \n", auth.GasPrice)
-
-	auth.GasPrice = big.NewInt(10e10)
+	t.Logf("\n maxGasTip: %v \n", maxGasTip)
 	t.Logf("\n GasPrice: %v \n", auth.GasPrice)
 	tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 	if err != nil {
@@ -95,7 +95,7 @@ func TestRedpositEvent(t *testing.T) {
 	txStr := "0x30eb9dca48fd5ccb4533e92f4f1926765ec0eade6478b7726ae204a45d1b14bf"
 	evmClient, _ := ethclient.Dial(endpoint)
 
-	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount, err := getETHDepositProofNew(evmClient, txStr)
+	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount, err := getETHDepositProof(evmClient, txStr)
 
 	t.Log(err)
 

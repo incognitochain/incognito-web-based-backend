@@ -180,7 +180,7 @@ func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
 	}
 
 	data := wcommon.PappTxData{
-		IncTxHash:      task.TxHash,
+		IncTx:          task.TxHash,
 		IncTxData:      string(task.TxRawData),
 		Type:           wcommon.PappTypeSwap,
 		Status:         wcommon.StatusSubmitting,

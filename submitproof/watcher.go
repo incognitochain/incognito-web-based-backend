@@ -43,7 +43,7 @@ func watchPendingExternalTx() {
 				log.Println("DBRetrievePendingExternalTx err:", err)
 			}
 			for _, tx := range txList {
-				err := processPendingExternalTxs(tx, currentEVMHeight, 15, networkInfo.Endpoints)
+				err := processPendingExternalTxs(tx, currentEVMHeight, uint64(networkInfo.ConfirmationBlocks), networkInfo.Endpoints)
 				if err != nil {
 					log.Println("processPendingExternalTxs err:", err)
 				}
@@ -57,12 +57,12 @@ func watchPendingExternalTx() {
 func watchPendingIncTx() {
 	go func() {
 		for {
-			txList, err := database.DBRetrievePendingShieldTxs(0, 0)
+			txList, err := database.DBRetrievePendingPappTxs(wcommon.PappTypeSwap, 0, 0)
 			if err != nil {
 				log.Println("DBRetrievePendingShieldTxs err:", err)
 			}
 			for _, txdata := range txList {
-				err := processPendingShieldTxs(txdata)
+				err := processPendingSwapTx(txdata)
 				if err != nil {
 					log.Println("processPendingShieldTxs err:", txdata.IncTx)
 				}
@@ -142,6 +142,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 }
 
 func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uint64, finalizeRange uint64, endpoints []string) error {
+	networkID := wcommon.GetNetworkID(tx.Network)
 	for _, endpoint := range endpoints {
 		evmClient, _ := ethclient.Dial(endpoint)
 		txHash := common.Hash{}
@@ -154,9 +155,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			return err
 		}
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
-			// todo update status
-
-			// check sc re-deposit event
+			// todo update status to db
 			valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
 			defer encodeBufferPool.Put(valueBuf)
 
@@ -165,46 +164,9 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				fmt.Println("abi.JSON", err.Error())
 				return err
 			}
-
-			// erc20ABI, err := abi.JSON(strings.NewReader(IERC20ABI))
-			// if err != nil {
-			// 	fmt.Println("erc20ABI", err.Error())
-			// 	return nil, "", 0, nil, "", err
-			// }
-			// erc20ABINoIndex, err := abi.JSON(strings.NewReader(Erc20ABINoIndex))
-			// if err != nil {
-			// 	fmt.Println("erc20ABINoIndex", err.Error())
-			// 	return nil, "", 0, nil, "", err
-			// }
-
+			isRedeposit := false
 			for _, d := range txReceipt.Logs {
 				switch len(d.Data) {
-				// case 32:
-				// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
-				// 	if err != nil {
-				// 		fmt.Println("Unpack", err)
-				// 		continue
-				// 	}
-				// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
-				// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
-				// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
-				// 		fmt.Println("len(unpackResult)", err)
-				// 		continue
-				// 	}
-				// 	fmt.Println("32", d.Address.String())
-				// case 96:
-				// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
-				// 	if err != nil {
-				// 		fmt.Println("Unpack2", err)
-				// 		continue
-				// 	}
-				// 	if len(unpackResult) < 3 {
-				// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-				// 		fmt.Println("len(unpackResult)2", err)
-				// 		continue
-				// 	}
-				// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
-				// event indexed both from and to
 				case 256, 288:
 					unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
 					if err != nil {
@@ -216,16 +178,17 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						log.Println("len(unpackResult) err", err)
 						continue
 					}
-					fmt.Println("unpackResult", unpackResult)
-					// contractID = unpackResult[0].(common.Address).String()
-					// paymentaddress = unpackResult[1].(string)
+					isRedeposit = true
 				default:
-					// log.Println("invalid event index")
 				}
 			}
-			// txReceipt.CumulativeGasUsed
-			// txReceipt.Logs
-			// vault.VaultABI
+			if isRedeposit {
+				result, err := SubmitShieldProof(tx.Txhash, networkID, "")
+				if err != nil {
+					return err
+				}
+				fmt.Println("result", result)
+			}
 		}
 		return nil
 	}
@@ -233,5 +196,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 }
 
 func processPendingSwapTx(tx wcommon.PappTxData) error {
+
+	submitProofExternalChain()
 	return nil
 }

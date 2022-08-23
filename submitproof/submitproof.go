@@ -17,7 +17,7 @@ var incClient *incclient.IncClient
 var keyList []string
 
 func getProof(txhash string, networkID int) (*incclient.EVMDepositProof, string, string, string, uint, error) {
-	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, err := getETHDepositProof(incClient, networkID, txhash)
+	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, err := getETHDepositProofNew(incClient, networkID, txhash)
 	if err != nil {
 		return nil, "", "", blockHash, txIdx, err
 	}

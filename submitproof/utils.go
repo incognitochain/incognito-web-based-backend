@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/pkg/errors"
@@ -223,6 +224,190 @@ func getETHDepositProof(
 		encNodeList = append(encNodeList, str)
 	}
 	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, nil
+}
+
+func getETHDepositProofNew(
+	evmClient *ethclient.Client,
+	txHashStr string,
+) (*big.Int, string, uint, []string, string, string, bool, string, uint64, error) {
+	var contractID string
+	var paymentaddress string
+	var otaStr string
+	var shieldAmount uint64
+	var isRedeposit bool
+
+	txHash := common.Hash{}
+	err := txHash.UnmarshalText([]byte("0x30eb9dca48fd5ccb4533e92f4f1926765ec0eade6478b7726ae204a45d1b14bf"))
+	if err != nil {
+		return nil, "", 0, nil, "", "", false, "", 0, err
+	}
+	txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
+	if err != nil {
+		return nil, "", 0, nil, "", "", false, "", 0, err
+	}
+
+	txIndex := txReceipt.TransactionIndex
+	blockHash := txReceipt.BlockHash.String()
+	blockNumber := txReceipt.BlockNumber
+
+	blk, err := evmClient.BlockByHash(context.Background(), txReceipt.BlockHash)
+	if err != nil {
+		return nil, "", 0, nil, "", "", false, "", 0, err
+	}
+
+	siblingTxs := blk.Body().Transactions
+	keybuf := new(bytes.Buffer)
+	receiptTrie := new(trie.Trie)
+	receipts := make([]*types.Receipt, 0)
+
+	for i, siblingTx := range siblingTxs {
+		siblingReceipt, err := evmClient.TransactionReceipt(context.Background(), siblingTx.Hash())
+		if err != nil {
+			return nil, "", 0, nil, "", "", false, "", 0, err
+		}
+		if i == len(siblingTxs)-1 {
+			txData, _, err := evmClient.TransactionByHash(context.Background(), siblingTx.Hash())
+			if err != nil {
+				return nil, "", 0, nil, "", "", false, "", 0, err
+			}
+			from, err := evmClient.TransactionSender(context.Background(), txData, txReceipt.BlockHash, uint(i))
+			if err != nil {
+				return nil, "", 0, nil, "", "", false, "", 0, err
+			}
+			if txData.To().String() == ADDRESS_0 && from.String() == ADDRESS_0 {
+				break
+			}
+		}
+		receipts = append(receipts, siblingReceipt)
+	}
+
+	receiptList := types.Receipts(receipts)
+	receiptTrie.Reset()
+
+	valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
+	defer encodeBufferPool.Put(valueBuf)
+
+	vaultABI, err := abi.JSON(strings.NewReader(VaultABI))
+	if err != nil {
+		fmt.Println("abi.JSON", err.Error())
+		return nil, "", 0, nil, "", "", false, "", 0, err
+	}
+	// erc20ABI, err := abi.JSON(strings.NewReader(IERC20ABI))
+	// if err != nil {
+	// 	fmt.Println("erc20ABI", err.Error())
+	// 	return nil, "", 0, nil, "", err
+	// }
+	// erc20ABINoIndex, err := abi.JSON(strings.NewReader(Erc20ABINoIndex))
+	// if err != nil {
+	// 	fmt.Println("erc20ABINoIndex", err.Error())
+	// 	return nil, "", 0, nil, "", err
+	// }
+
+	for _, v := range receiptList {
+		for _, d := range v.Logs {
+			switch len(d.Data) {
+			// case 32:
+			// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
+			// 	if err != nil {
+			// 		fmt.Println("Unpack", err)
+			// 		continue
+			// 	}
+			// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
+			// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
+			// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
+			// 		fmt.Println("len(unpackResult)", err)
+			// 		continue
+			// 	}
+			// 	fmt.Println("32", d.Address.String())
+			// case 96:
+			// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
+			// 	if err != nil {
+			// 		fmt.Println("Unpack2", err)
+			// 		continue
+			// 	}
+			// 	if len(unpackResult) < 3 {
+			// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+			// 		fmt.Println("len(unpackResult)2", err)
+			// 		continue
+			// 	}
+			// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
+			// event indexed both from and to
+			case 256, 288:
+				unpackResult, err := vaultABI.Unpack("Deposit", d.Data) // same as Redeposit
+				if err != nil {
+					log.Println("unpackResult err", err)
+					continue
+				}
+				if len(unpackResult) < 3 {
+					err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+					log.Println("len(unpackResult) err", err)
+					continue
+				}
+				fmt.Println("unpackResult", unpackResult)
+				contractID = unpackResult[0].(common.Address).String()
+				amount := unpackResult[2].(*big.Int)
+				shieldAmount = amount.Uint64()
+
+				var ok bool
+				paymentaddress, ok = unpackResult[1].(string)
+				if !ok {
+					OTAReceiver := unpackResult[1].([]byte)
+					newOTA := coin.OTAReceiver{}
+					err = newOTA.SetBytes(OTAReceiver)
+					if err != nil {
+						log.Println("unpackResult err", err)
+						continue
+					}
+					otaStr, err = newOTA.String()
+					if err != nil {
+						log.Println("unpackResult err", err)
+						continue
+					}
+				}
+			default:
+				// log.Println("invalid event index")
+			}
+		}
+
+	}
+	// StackTrie requires values to be inserted in increasing hash order, which is not the
+	// order that `list` provides hashes in. This insertion sequence ensures that the
+	// order is correct.
+	var indexBuf []byte
+	for i := 1; i < receiptList.Len() && i <= 0x7f; i++ {
+		indexBuf = rlp.AppendUint64(indexBuf[:0], uint64(i))
+		value := encodeForDerive(receiptList, i, valueBuf)
+		receiptTrie.Update(indexBuf, value)
+	}
+	if receiptList.Len() > 0 {
+		indexBuf = rlp.AppendUint64(indexBuf[:0], 0)
+		value := encodeForDerive(receiptList, 0, valueBuf)
+		receiptTrie.Update(indexBuf, value)
+	}
+	for i := 0x80; i < receiptList.Len(); i++ {
+		indexBuf = rlp.AppendUint64(indexBuf[:0], uint64(i))
+		value := encodeForDerive(receiptList, i, valueBuf)
+		receiptTrie.Update(indexBuf, value)
+	}
+
+	// Constructing the proof for the current receipt (source: go-ethereum/trie/proof.go)
+	proof := light.NewNodeSet()
+	keybuf.Reset()
+	err = rlp.Encode(keybuf, uint(txIndex))
+	if err != nil {
+		return nil, "", 0, nil, "", "", false, "", 0, err
+	}
+	err = receiptTrie.Prove(keybuf.Bytes(), 0, proof)
+	if err != nil {
+		return nil, "", 0, nil, "", "", false, "", 0, err
+	}
+	nodeList := proof.NodeList()
+	encNodeList := make([]string, 0)
+	for _, node := range nodeList {
+		str := base64.StdEncoding.EncodeToString(node)
+		encNodeList = append(encNodeList, str)
+	}
+	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, isRedeposit, otaStr, shieldAmount, nil
 }
 
 func findTokenByContractID(contractID string, networkID int) (string, string, error) {

@@ -14,26 +14,33 @@ type SubmitProofShieldTask struct {
 	Time      time.Time
 }
 
-type SubmitPappSwapTask struct {
+type SubmitPappTxTask struct {
 	TxHash         string
 	TxRawData      []byte
 	IsPRVTx        bool
 	IsUnifiedToken bool
 	FeeToken       string
 	FeeAmount      uint64
-	Networks       []int
+	Networks       []string
 	Time           time.Time
 }
 
-type WatchShieldProofTask struct {
-	PaymentAddress string
-	Txhash         string
-	NetworkID      int
-	TokenID        string
-	IsPunified     bool
-	IncTx          string
+type SubmitPappProofOutChainTask struct {
+	IncTxhash      string
+	Network        string
+	IsUnifiedToken bool
 	Time           time.Time
 }
+
+// type WatchShieldProofTask struct {
+// 	PaymentAddress string
+// 	Txhash         string
+// 	NetworkID      int
+// 	TokenID        string
+// 	IsPunified     bool
+// 	IncTx          string
+// 	Time           time.Time
+// }
 
 type SubmitProofConsumer struct {
 	UseKey    string

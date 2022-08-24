@@ -59,8 +59,30 @@ func DBUpdateExternalTxStatus(externalTx string, status string, errStr string) e
 	return nil
 }
 
+func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string) error {
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTx}}
+	update := bson.M{"$set": bson.M{"status": status, "error": errStr}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBSaveExternalTxStatus(txdata *common.ExternalTxStatus) error {
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: txdata.IncRequestTx}}
+	update := bson.M{"$set": bson.M{"txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func DBUpdatePappTxStatus(incTx string, status string, errStr string) error {
-	filter := bson.M{"inctxhash": bson.M{operator.Eq: incTx}}
+	filter := bson.M{"inctx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status, "error": errStr}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
@@ -70,8 +92,11 @@ func DBUpdatePappTxStatus(incTx string, status string, errStr string) error {
 	return nil
 }
 
-func DBAddPappTxData(txdata common.PappTxData) error {
-	_, err := mgm.Coll(&common.PappTxData{}).InsertOne(context.Background(), txdata)
+func DBSavePappTxData(txdata common.PappTxData) error {
+	filter := bson.M{"inctx": bson.M{operator.Eq: txdata.IncTx}}
+	update := bson.M{"$set": bson.M{"status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "isunifiedtoken": txdata.IsUnifiedToken}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
@@ -84,7 +109,26 @@ func DBRetrievePendingPappTxs(pappType int, offset, limit int64) ([]common.PappT
 	if limit == 0 {
 		limit = int64(1000)
 	}
-	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}, "type": bson.M{operator.Eq: pappType}}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPending, common.StatusPendingOutchain}}, "type": bson.M{operator.Eq: pappType}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Skip:  &offset,
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("found %v PappTxData in %v", len(result), time.Since(startTime))
+	return result, nil
+}
+
+func DBRetrieveAcceptedPappTxs(pappType int, offset, limit int64) ([]common.PappTxData, error) {
+	startTime := time.Now()
+	var result []common.PappTxData
+	if limit == 0 {
+		limit = int64(1000)
+	}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusAccepted}}, "type": bson.M{operator.Eq: pappType}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,
@@ -100,9 +144,26 @@ func DBRetrievePendingPappTxs(pappType int, offset, limit int64) ([]common.PappT
 func DBGetPappTxStatus(incTx string) (string, error) {
 	var result common.PappTxData
 
-	filter := bson.M{"inctxhash": bson.M{operator.Eq: incTx}}
+	filter := bson.M{"inctx": bson.M{operator.Eq: incTx}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	dbresult := mgm.Coll(&common.PappTxData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return "", dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return "", err
+	}
+
+	return result.Status, nil
+}
+
+func DBGetExternalTxStatusByIncTx(incTx string, network string) (string, error) {
+	var result common.ExternalTxStatus
+
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTx}, "network": bson.M{operator.Eq: network}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.ExternalTxStatus{}).FindOne(ctx, filter)
 	if dbresult.Err() != nil {
 		return "", dbresult.Err()
 	}
@@ -129,5 +190,4 @@ func DBGetPappContractData(network string, pappType int) (*common.PappContractDa
 	}
 
 	return &result, nil
-
 }

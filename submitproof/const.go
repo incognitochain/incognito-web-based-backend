@@ -9,8 +9,13 @@ const (
 
 const (
 	SHIELD_TX_TOPIC   = "shieldtx_topic"
-	UNSHIELD_TX_TOPIC = "shieldtx_topic"
-	SWAP_TX_TOPIC     = "swaptx_topic"
+	UNSHIELD_TX_TOPIC = "unshieldtx_topic"
+	PAPP_TX_TOPIC     = "papptx_topic"
+)
+
+const (
+	PappSubmitIncTask = "papp_submit_inc_task"
+	PappSubmitExtTask = "papp_submit_ext_task"
 )
 
 const (

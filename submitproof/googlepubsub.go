@@ -11,7 +11,7 @@ import (
 var (
 	psclient      *pubsub.Client
 	shieldTxTopic *pubsub.Topic
-	swapTxTopic   *pubsub.Topic
+	pappTxTopic   *pubsub.Topic
 )
 
 func startPubsubClient(ggc_project string, ggc_acc string) error {

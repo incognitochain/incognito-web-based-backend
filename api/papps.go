@@ -94,13 +94,13 @@ func APISubmitSwapTx(c *gin.Context) {
 		return
 	}
 
-	valid, err := checkValidTxSwap(md, feeToken, feeAmount, outCoins)
+	valid, networkList, err := checkValidTxSwap(md, feeToken, feeAmount, outCoins)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
 	}
 	if valid {
-		status, err := submitproof.SubmitSwapTx(txHash, rawTxBytes, isPRVTx, feeToken, feeAmount)
+		status, err := submitproof.SubmitPappTx(txHash, rawTxBytes, isPRVTx, feeToken, feeAmount, networkList)
 		if err != nil {
 			c.JSON(200, gin.H{"Error": err.Error()})
 			return
@@ -713,36 +713,41 @@ func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
 	return result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest, feeToken string, feeAmount uint64, outCoins []coin.Coin) (bool, error) {
+func checkValidTxSwap(md *bridge.BurnForCallRequest, feeToken string, feeAmount uint64, outCoins []coin.Coin) (bool, []string, error) {
 	var result bool
 	spTkList, err := getPappSupportedTokenList()
 	if err != nil {
-		return result, err
+		return result, nil, err
 	}
 	networkInfo, err := getBridgeNetworkInfos()
 	if err != nil {
-		return result, err
+		return result, nil, err
 	}
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
-		return result, err
+		return result, nil, err
 	}
 	tokenInfo, err := getTokenInfo(md.BurnTokenID.String())
 	if err != nil {
-		return result, err
+		return result, nil, err
 	}
+	callNetworkList := []string{}
 
 	for _, v := range md.Data {
+		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))
 		receiveTokenID, err := getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList)
 		if err != nil {
-			return result, err
+			return result, nil, err
 		}
 		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
 		burnAmountStr := fmt.Sprintf("%v", burnAmountFloat)
 		quoteData, err := estimateSwapFee(v.IncTokenID.String(), receiveTokenID, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo)
 		_ = quoteData
+
+		//TODO
+
 	}
-	return result, nil
+	return result, callNetworkList, nil
 }
 
 func sendSwapTxAndStoreDB(txhash string, txRaw string, isTokenTx bool) error {

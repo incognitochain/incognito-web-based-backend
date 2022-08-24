@@ -21,8 +21,10 @@ import (
 func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
 	config = cfg
 	// network := cfg.NetworkID
-	go watchPendingIncTx()
+	go watchPendingShieldTx()
+	go watchPendingPappTx()
 	go watchPendingExternalTx()
+	go watchEVMAccountBalance()
 
 	return nil
 }
@@ -54,23 +56,23 @@ func watchPendingExternalTx() {
 	}
 }
 
-func watchPendingIncTx() {
-	go func() {
-		for {
-			txList, err := database.DBRetrievePendingPappTxs(wcommon.PappTypeSwap, 0, 0)
-			if err != nil {
-				log.Println("DBRetrievePendingShieldTxs err:", err)
-			}
-			for _, txdata := range txList {
-				err := processPendingSwapTx(txdata)
-				if err != nil {
-					log.Println("processPendingShieldTxs err:", txdata.IncTx)
-				}
-			}
-			time.Sleep(10 * time.Second)
+func watchPendingPappTx() {
+	for {
+		txList, err := database.DBRetrievePendingPappTxs(wcommon.PappTypeSwap, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingShieldTxs err:", err)
 		}
-	}()
+		for _, txdata := range txList {
+			err := processPendingSwapTx(txdata)
+			if err != nil {
+				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
 
+func watchPendingShieldTx() {
 	for {
 		txList, err := database.DBRetrievePendingShieldTxs(0, 0)
 		if err != nil {
@@ -196,7 +198,49 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 }
 
 func processPendingSwapTx(tx wcommon.PappTxData) error {
+	switch tx.Status {
+	case wcommon.StatusPending, wcommon.StatusExecuting:
+		txDetail, err := incClient.GetTxDetail(tx.IncTx)
+		if err != nil {
+			return err
+		}
+		if txDetail.IsInBlock {
+			status, err := checkBeaconBridgeAggUnshieldStatus(tx.IncTx)
+			if err != nil {
+				return err
+			}
 
-	submitProofExternalChain()
+			switch status {
+			case 0:
+				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusRejected, "")
+				if err != nil {
+					return err
+				}
+			case 1:
+				for _, network := range tx.Networks {
+					_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
+					if err != nil {
+						return err
+					}
+				}
+				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
+				if err != nil {
+					return err
+				}
+			default:
+				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
+				if err != nil {
+					return err
+				}
+			}
+
+		}
+	case wcommon.StatusPendingOutchain:
+
+	}
 	return nil
+}
+
+func watchEVMAccountBalance() {
+
 }

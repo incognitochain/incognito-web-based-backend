@@ -27,6 +27,7 @@ const (
 	StatusSubmitting            = "submitting"
 	StatusSubmitFailed          = "submit_failed"
 	StatusPending               = "pending"
+	StatusExecuting             = "executing"
 	StatusRejected              = "rejected"
 	StatusAccepted              = "accepted"
 	StatusSubmittingOutchain    = "outchain_submitting"

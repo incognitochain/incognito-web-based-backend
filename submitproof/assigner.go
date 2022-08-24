@@ -28,7 +28,7 @@ func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 		panic(err)
 	}
 
-	swapTxTopic, err = startPubsubTopic(SWAP_TX_TOPIC)
+	pappTxTopic, err = startPubsubTopic(PAPP_TX_TOPIC)
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +77,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	return "submitting", nil
 }
 
-func SubmitSwapTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, networks []string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -88,12 +88,13 @@ func SubmitSwapTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		return currentStatus, nil
 	}
 
-	task := SubmitPappSwapTask{
+	task := SubmitPappTxTask{
 		TxHash:    txhash,
 		TxRawData: rawTxData,
 		IsPRVTx:   isPRVTx,
 		FeeToken:  feeToken,
 		FeeAmount: feeAmount,
+		Networks:  networks,
 		Time:      time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
@@ -102,10 +103,47 @@ func SubmitSwapTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 	msg := &pubsub.Message{
 		Attributes: map[string]string{
 			"txhash": txhash,
+			"task":   PappSubmitIncTask,
 		},
 		Data: taskBytes,
 	}
-	msgID, err := swapTxTopic.Publish(ctx, msg).Get(ctx)
+	msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("publish msgID:", msgID)
+
+	return "submitting", nil
+}
+
+func SendOutChainPappTx(incTxHash string, network string, isUnifiedToken bool) (interface{}, error) {
+	currentStatus, err := database.DBGetExternalTxStatusByIncTx(incTxHash, network)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			return "", err
+		}
+	}
+	if currentStatus != "" {
+		return currentStatus, nil
+	}
+
+	task := SubmitPappProofOutChainTask{
+		IncTxhash:      incTxHash,
+		Network:        network,
+		IsUnifiedToken: isUnifiedToken,
+		Time:           time.Now(),
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	ctx := context.Background()
+	msg := &pubsub.Message{
+		Attributes: map[string]string{
+			"txhash": incTxHash,
+			"task":   PappSubmitExtTask,
+		},
+		Data: taskBytes,
+	}
+	msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
 	if err != nil {
 		return nil, err
 	}

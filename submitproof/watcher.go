@@ -157,7 +157,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			return err
 		}
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
-			// todo update status to db
+
+			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusSubmitOutchainSuccess, "")
+			if err != nil {
+				return err
+			}
+
 			valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
 			defer encodeBufferPool.Put(valueBuf)
 

@@ -117,13 +117,6 @@ func getBscGasPrice(c *ethclient.Client) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
-
-	// fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
-
-	// fee = fee.Mul(fee, big.NewInt(3))
-
-	// fmt.Println("fee est bsc x3: ", fee)
 
 	return gasPrice, nil
 }

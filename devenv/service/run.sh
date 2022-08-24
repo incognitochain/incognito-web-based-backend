@@ -15,6 +15,7 @@ CONFIG_JSON=$(cat <<EOF
   "ShieldService": "$SHIELD_SERVICE_URL",
   "FaucetService": "$FAUCET_SERVICE_URL",
   "CaptchaSecret":"$CAPTCHA_SECRET",
+  "SlackMonitor":"$SLACK_MONITOR",
   "IncKey": "$INC_KEY",
   "EVMKey": "$EVM_KEY",
   "GGCProject": "$GOOGLE_CLOUD_PROJECT",

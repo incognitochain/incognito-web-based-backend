@@ -1,24 +1,18 @@
 package submitproof
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/rpchandler"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
-	"github.com/incognitochain/incognito-web-based-backend/evmproof"
 )
 
 var config wcommon.Config
@@ -164,53 +158,18 @@ func checkProofSubmitted(blockHash string, txIdx uint, networkID int) (bool, err
 	return result, nil
 }
 
-func submitProofExternalChain(networkId int, incTxHash string) (string, error) {
-	proof, err := evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0, uint(networkId))
+func checkBeaconBridgeAggUnshieldStatus(txhash string) (int, error) {
+	var result struct {
+		Status int
+	}
+	method := "bridgeaggGetStatusUnshield"
+	responseInBytes, err := incClient.NewRPCCall("1.0", method, []interface{}{txhash}, 1)
 	if err != nil {
-		return "", err
+		return -1, err
 	}
-	networkName := wcommon.GetNetworkName(networkId)
-	networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
+	err = rpchandler.ParseResponse(responseInBytes, &result)
 	if err != nil {
-		return "", err
+		return -1, err
 	}
-
-	pcallContractData, err := database.DBGetPappContractData(networkName, wcommon.PappTypeSwap)
-	if err != nil {
-		return "", err
-	}
-
-	chainID, _ := new(big.Int).SetString(networkInfo.ChainID, 10)
-	privKey, _ := crypto.HexToECDSA(config.EVMKey)
-
-	auth, err := bind.NewKeyedTransactorWithChainID(privKey, chainID)
-	if err != nil {
-		return "", err
-	}
-	for _, endpoint := range networkInfo.Endpoints {
-		evmClient, err := ethclient.Dial(endpoint)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		c, err := vault.NewVault(common.HexToAddress(pcallContractData.ContractAddress), evmClient)
-		if err != nil {
-			return "", err
-		}
-
-		gasPrice, err := evmClient.SuggestGasPrice(context.Background())
-		if err != nil {
-			return "", err
-		}
-		auth.GasPrice = gasPrice
-
-		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
-		if err != nil {
-			return "", err
-		}
-		return tx.Hash().String(), nil
-	}
-
-	return "", errors.New("no usable endpoint found")
+	return result.Status, nil
 }

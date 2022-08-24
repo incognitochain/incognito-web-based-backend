@@ -38,7 +38,7 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		panic(err)
 	}
 
-	swapTxTopic, err = startPubsubTopic(SWAP_TX_TOPIC)
+	pappTxTopic, err = startPubsubTopic(PAPP_TX_TOPIC)
 	if err != nil {
 		panic(err)
 	}
@@ -73,13 +73,13 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 	}
 	log.Println("shieldSub.ID()", shieldSub.ID())
 
-	var swapSub *pubsub.Subscription
-	swapSub, err = psclient.CreateSubscription(context.Background(), serviceID.String()+"_swap",
-		pubsub.SubscriptionConfig{Topic: swapTxTopic})
+	var pappSub *pubsub.Subscription
+	pappSub, err = psclient.CreateSubscription(context.Background(), serviceID.String()+"_papp",
+		pubsub.SubscriptionConfig{Topic: pappTxTopic})
 	if err != nil {
-		swapSub = psclient.Subscription(serviceID.String() + "_swap")
+		pappSub = psclient.Subscription(serviceID.String() + "_papp")
 	}
-	log.Println("swapSub.ID()", swapSub.ID())
+	log.Println("pappSub.ID()", pappSub.ID())
 
 	go func() {
 		ctx := context.Background()
@@ -91,11 +91,12 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 
 	go func() {
 		ctx := context.Background()
-		err := swapSub.Receive(ctx, ProcessSwapRequest)
+		err := pappSub.Receive(ctx, ProcessPappTxRequest)
 		if err != nil {
 			panic(err)
 		}
 	}()
+
 	return nil
 }
 
@@ -158,37 +159,33 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	m.Ack()
 }
 
-func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
-	task := SubmitPappSwapTask{}
+func ProcessPappTxRequest(ctx context.Context, m *pubsub.Message) {
+	taskDesc := m.Attributes["task"]
+	switch taskDesc {
+	case PappSubmitIncTask:
+		processSubmitPappIncTask(ctx, m)
+	case PappSubmitExtTask:
+		processSubmitPappExtTask(ctx, m)
+	}
+}
+
+func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
+	task := SubmitPappProofOutChainTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
-		errdb := database.DBUpdatePappTxStatus(m.Attributes["txhash"], wcommon.StatusSubmitFailed, err.Error())
-		if err != nil {
-			log.Println("DBUpdatePappTxStatus err", errdb)
-		}
-		log.Println("ProcessShieldRequest error decoding message", err)
+		log.Println("processSubmitPappExtTask error decoding message", err)
 		m.Ack()
 		return
 	}
 
-	var errSubmit error
-
-	if task.IsPRVTx {
-		errSubmit = incClient.SendRawTx(task.TxRawData)
-	} else {
-		errSubmit = incClient.SendRawTokenTx(task.TxRawData)
+	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken)
+	if err != nil {
+		log.Println("createOutChainSwapTx error", err)
+		m.Ack()
+		return
 	}
 
-	data := wcommon.PappTxData{
-		IncTx:          task.TxHash,
-		IncTxData:      string(task.TxRawData),
-		Type:           wcommon.PappTypeSwap,
-		Status:         wcommon.StatusSubmitting,
-		IsUnifiedToken: task.IsUnifiedToken,
-		FeeToken:       task.FeeToken,
-		FeeAmount:      task.FeeAmount,
-	}
-	err = database.DBAddPappTxData(data)
+	err = database.DBSaveExternalTxStatus(status)
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
 		if !ok {
@@ -201,6 +198,79 @@ func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
 			m.Ack()
 			return
 		}
+	}
+	m.Ack()
+}
+
+func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
+	task := SubmitPappTxTask{}
+	err := json.Unmarshal(m.Data, &task)
+	if err != nil {
+		log.Println("ProcessShieldRequest error decoding message", err)
+		m.Ack()
+		return
+	}
+
+	data := wcommon.PappTxData{
+		IncTx:          task.TxHash,
+		IncTxData:      string(task.TxRawData),
+		Type:           wcommon.PappTypeSwap,
+		Status:         wcommon.StatusSubmitting,
+		IsUnifiedToken: task.IsUnifiedToken,
+		FeeToken:       task.FeeToken,
+		FeeAmount:      task.FeeAmount,
+		Networks:       task.Networks,
+	}
+	err = database.DBSavePappTxData(data)
+	if err != nil {
+		writeErr, ok := err.(mongo.WriteException)
+		if !ok {
+			log.Println("DBAddPappTxData err", err)
+			m.Ack()
+			return
+		}
+		if !writeErr.HasErrorCode(11000) {
+			log.Println("DBAddPappTxData err", err)
+			m.Ack()
+			return
+		}
+	}
+
+	txDetail, err := incClient.GetTxDetail(task.TxHash)
+	if err != nil {
+		log.Println("GetTxDetail err", err)
+	} else {
+		if txDetail.IsInMempool {
+			err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusPending, "")
+			if err != nil {
+				log.Println(err)
+				m.Nack()
+				return
+			}
+		}
+		if txDetail.IsInBlock {
+			err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusExecuting, "")
+			if err != nil {
+				log.Println(err)
+				m.Nack()
+				return
+			}
+		}
+	}
+
+	var errSubmit error
+
+	if task.IsPRVTx {
+		errSubmit = incClient.SendRawTx(task.TxRawData)
+	} else {
+		errSubmit = incClient.SendRawTokenTx(task.TxRawData)
+	}
+
+	err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusPending, errSubmit.Error())
+	if err != nil {
+		log.Println(err)
+		m.Nack()
+		return
 	}
 
 	if errSubmit != nil {
@@ -217,17 +287,16 @@ func ProcessSwapRequest(ctx context.Context, m *pubsub.Message) {
 	m.Ack()
 }
 
-func createOutChainSwapTx(network int, incTxHash string, isUnifiedToken bool) (*wcommon.ExternalTxStatus, error) {
+func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
-	networkName := wcommon.GetNetworkName(network)
-
-	networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
+	networkID := wcommon.GetNetworkID(network)
+	networkInfo, err := database.DBGetBridgeNetworkInfo(network)
 	if err != nil {
 		return nil, err
 	}
 
-	pappAddress, err := database.DBGetPappContractData(networkName, wcommon.PappTypeSwap)
+	pappAddress, err := database.DBGetPappContractData(network, wcommon.PappTypeSwap)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +308,7 @@ func createOutChainSwapTx(network int, incTxHash string, isUnifiedToken bool) (*
 
 	var proof *evmproof.DecodedProof
 	if isUnifiedToken {
-		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0, uint(network))
+		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0, uint(networkID))
 	} else {
 		proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
 	}
@@ -290,7 +359,7 @@ func createOutChainSwapTx(network int, incTxHash string, isUnifiedToken bool) (*
 		result.Txhash = tx.Hash().String()
 		result.Status = wcommon.StatusPendingOutchain
 		result.Type = wcommon.PappTypeSwap
-		result.Network = networkName
+		result.Network = network
 		result.IncRequestTx = incTxHash
 		break
 	}

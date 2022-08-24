@@ -8,6 +8,7 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/feeestimator"
+	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
 
@@ -22,6 +23,10 @@ func main() {
 	err := loadConfig()
 	if err != nil {
 		panic(err)
+	}
+
+	if config.SlackMonitor != "" {
+		go slacknoti.StartSlackHook()
 	}
 
 	err = database.ConnectDB(config.Mongodb, config.Mongo)

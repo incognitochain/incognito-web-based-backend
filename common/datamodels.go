@@ -58,16 +58,14 @@ type ExternalTxStatus struct {
 
 type PappTxData struct {
 	mgm.DefaultModel `bson:",inline"`
-	IncTx            string `json:"inctx" bson:"inctx"`
-	ExternalTx       string `json:"externaltx" bson:"externaltx"`
-	Network          string `json:"network" bson:"network"`
-	Type             int    `json:"type" bson:"type"`
-	IncTxData        string `json:"inctxdata" bson:"inctxdata"`
-	ExternalTxData   string `json:"externaltxdata" bson:"externaltxdata"`
-	FeeToken         string `json:"feetoken" bson:"feetoken"`
-	FeeAmount        uint64 `json:"feeamount" bson:"feeamount"`
-	Status           string `json:"status" bson:"status"`
-	IsUnifiedToken   bool   `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	IncTx            string   `json:"inctx" bson:"inctx"`
+	Networks         []string `json:"networks" bson:"networks"`
+	Type             int      `json:"type" bson:"type"`
+	IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
+	FeeToken         string   `json:"feetoken" bson:"feetoken"`
+	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
+	Status           string   `json:"status" bson:"status"`
+	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
 }
 
 type PappContractData struct {

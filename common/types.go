@@ -11,6 +11,7 @@ type Config struct {
 	FaucetService  string
 	NetworkID      string
 	CaptchaSecret  string
+	SlackMonitor   string
 	// papps submit proof
 	IncKey string
 	EVMKey string

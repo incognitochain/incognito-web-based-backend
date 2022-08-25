@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
@@ -158,7 +159,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		}
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
 
-			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusSubmitOutchainSuccess, "")
+			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusAccepted, "")
 			if err != nil {
 				return err
 			}
@@ -203,49 +204,71 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 }
 
 func processPendingSwapTx(tx wcommon.PappTxData) error {
-	switch tx.Status {
-	case wcommon.StatusPending, wcommon.StatusExecuting:
-		txDetail, err := incClient.GetTxDetail(tx.IncTx)
+	txDetail, err := incClient.GetTxDetail(tx.IncTx)
+	if err != nil {
+		return err
+	}
+	if txDetail.IsInBlock {
+		status, err := checkBeaconBridgeAggUnshieldStatus(tx.IncTx)
 		if err != nil {
 			return err
 		}
-		if txDetail.IsInBlock {
-			status, err := checkBeaconBridgeAggUnshieldStatus(tx.IncTx)
+
+		switch status {
+		case 0:
+			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusRejected, "")
 			if err != nil {
 				return err
 			}
-
-			switch status {
-			case 0:
-				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusRejected, "")
+		case 1:
+			for _, network := range tx.Networks {
+				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
 				if err != nil {
 					return err
 				}
-			case 1:
-				for _, network := range tx.Networks {
-					_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
-					if err != nil {
-						return err
-					}
-				}
-				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
-				if err != nil {
-					return err
-				}
-			default:
+			}
+			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
+			if err != nil {
+				return err
+			}
+		default:
+			if tx.Status != wcommon.StatusExecuting {
 				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
 				if err != nil {
 					return err
 				}
 			}
-
 		}
-	case wcommon.StatusPendingOutchain:
 
 	}
 	return nil
 }
 
 func watchEVMAccountBalance() {
+	for {
+		networks, err := database.DBGetBridgeNetworkInfos()
+		if err != nil {
+			log.Println("DBGetBridgeNetworkInfos err:", err)
+		}
+		privKey, _ := crypto.HexToECDSA(config.EVMKey)
+		keyAddr := crypto.PubkeyToAddress(privKey.PublicKey)
+		for _, networkInfo := range networks {
+			for _, endpoint := range networkInfo.Endpoints {
+				evmClient, err := ethclient.Dial(endpoint)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				gasLeft, err := evmClient.BalanceAt(context.Background(), keyAddr, nil)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				log.Printf("network %v has %v gas left\n", networkInfo.Network, gasLeft.Uint64())
+				break
+			}
+		}
+		time.Sleep(1 * time.Minute)
+	}
 
 }

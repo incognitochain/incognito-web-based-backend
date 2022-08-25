@@ -24,16 +24,16 @@ const (
 // )
 
 const (
-	StatusSubmitting            = "submitting"
-	StatusSubmitFailed          = "submit_failed"
-	StatusPending               = "pending"
-	StatusExecuting             = "executing"
-	StatusRejected              = "rejected"
-	StatusAccepted              = "accepted"
-	StatusSubmittingOutchain    = "outchain_submitting"
-	StatusPendingOutchain       = "outchain_pending"
-	StatusSubmitOutchainFailed  = "outchain_submit_failed"
-	StatusSubmitOutchainSuccess = "outchain_submit_success"
+	StatusSubmitting   = "submitting"
+	StatusSubmitFailed = "submit_failed"
+	StatusPending      = "pending"
+	StatusExecuting    = "executing"
+	StatusRejected     = "rejected"
+	StatusAccepted     = "accepted"
+	// StatusSubmittingOutchain    = "outchain_submitting"
+	// StatusPendingOutchain       = "outchain_pending"
+	// StatusSubmitOutchainFailed  = "outchain_submit_failed"
+	// StatusSubmitOutchainSuccess = "outchain_submit_success"
 )
 
 const (

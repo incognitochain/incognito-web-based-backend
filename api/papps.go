@@ -19,6 +19,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
 	"github.com/mongodb/mongo-tools/common/json"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
@@ -462,7 +463,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if err != nil {
 				return nil, err
 			}
+
 			tokenMapBytes, err := json.Marshal(tokenMap)
+			if err != nil {
+				return nil, err
+			}
 
 			log.Println("tokenMapBytes", string(tokenMapBytes))
 			data, err := papps.PancakeQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, amount, networkChainId, pTokenContract1.Symbol, pTokenContract2.Symbol, pTokenContract1.Decimals, pTokenContract2.Decimals, false, endpoint, string(tokenMapBytes))
@@ -516,11 +521,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if err != nil {
 				return nil, err
 			}
-			token1PoolIndex, err := getTokenCurvePoolIndex(pTokenContract1.ContractIDGetRate, poolList)
+			token1PoolIndex, curvePoolAddress1, err := getTokenCurvePoolIndex(pTokenContract1.ContractIDGetRate, poolList)
 			if err != nil {
 				return nil, err
 			}
-			token2PoolIndex, err := getTokenCurvePoolIndex(pTokenContract2.ContractIDGetRate, poolList)
+			token2PoolIndex, _, err := getTokenCurvePoolIndex(pTokenContract2.ContractIDGetRate, poolList)
 			if err != nil {
 				return nil, err
 			}
@@ -545,8 +550,23 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			i := big.NewInt(int64(token1PoolIndex))
 			j := big.NewInt(int64(token2PoolIndex))
 
-			_ = i
-			_ = j
+			curvePool := ethcommon.HexToAddress(curvePoolAddress1)
+			amountOut, err := papps.CurveQuote(amountBigInt, i, j, curvePool)
+			if err != nil {
+				return nil, err
+			}
+
+			expectOutputAmountBigFloat := new(big.Float)
+			expectOutputAmountBigFloat, _ = expectOutputAmountBigFloat.SetString(amountOut.String())
+
+			result = append(result, QuoteDataResp{
+				AppName:      appName,
+				AmountIn:     amount,
+				AmountOut:    pTokenAmount.String(),
+				AmountOutRaw: amountOut.String(),
+				Route:        quote.Data.Route,
+				Fee:          fees,
+			})
 		}
 	}
 	if len(result) == 0 {
@@ -844,11 +864,11 @@ func getCurvePoolIndex() ([]CurvePoolIndex, error) {
 
 }
 
-func getTokenCurvePoolIndex(contractID string, poolList []CurvePoolIndex) (int, error) {
+func getTokenCurvePoolIndex(contractID string, poolList []CurvePoolIndex) (int, string, error) {
 	for _, v := range poolList {
 		if v.DappTokenAddress == contractID {
-			return v.CurveTokenIndex, nil
+			return v.CurveTokenIndex, v.CurvePoolAddress, nil
 		}
 	}
-	return -1, errors.New("pool not found")
+	return -1, "", errors.New("pool not found")
 }

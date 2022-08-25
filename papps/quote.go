@@ -3,8 +3,13 @@ package papps
 import (
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/incognitochain/bridge-eth/bridge/pcurve"
 )
 
 func PancakeQuote(tokenIn, tokenOut, amount, chainId, tokenInSymbol, tokenOutSymbol string, tokenInDecimal, tokenOutDecimal int, exactIn bool, endpoint string, tokenList string) ([]byte, error) {
@@ -114,7 +119,21 @@ func UniswapQuote(tokenIn, tokenOut, amount, chainId string, exactIn bool, endpo
 	return body, nil
 }
 
-func CurveQuote(tokenIn, tokenOut, amount, chainId string, endpoint string) ([]byte, error) {
+func CurveQuote(
+	evmClient *ethclient.Client,
+	srcQty *big.Int,
+	i *big.Int,
+	j *big.Int,
+	curvePool common.Address,
+) (*big.Int, error) {
+	c, err := pcurve.NewPcurvehelper(curvePool, evmClient)
+	if err != nil {
+		return nil, err
+	}
+	amountOut, err := c.GetDyUnderlying(nil, i, j, srcQty)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }

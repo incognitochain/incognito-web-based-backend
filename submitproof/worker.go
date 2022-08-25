@@ -357,7 +357,7 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 			continue
 		}
 		result.Txhash = tx.Hash().String()
-		result.Status = wcommon.StatusPendingOutchain
+		result.Status = wcommon.StatusPending
 		result.Type = wcommon.PappTypeSwap
 		result.Network = network
 		result.IncRequestTx = incTxHash

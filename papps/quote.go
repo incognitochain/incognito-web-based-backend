@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/incognitochain/bridge-eth/bridge/pcurve"
+	"github.com/incognitochain/incognito-web-based-backend/papps/pcurve"
 )
 
 func PancakeQuote(tokenIn, tokenOut, amount, chainId, tokenInSymbol, tokenOutSymbol string, tokenInDecimal, tokenOutDecimal int, exactIn bool, endpoint string, tokenList string) ([]byte, error) {
@@ -135,5 +135,5 @@ func CurveQuote(
 		return nil, err
 	}
 
-	return nil, nil
+	return amountOut, nil
 }

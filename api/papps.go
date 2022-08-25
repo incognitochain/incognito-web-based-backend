@@ -20,6 +20,7 @@ import (
 	"github.com/mongodb/mongo-tools/common/json"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
@@ -36,58 +37,70 @@ func APISubmitSwapTx(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
 	}
-	if req.TxRaw == "" {
-		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
-		return
-	}
-	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
-		return
-	}
 
-	// Unmarshal from json data to object tx))
-	tx, err := transaction.DeserializeTransactionJSON(rawTxBytes)
-	// var tx transaction.Tx
-	// err = json.Unmarshal(rawTxBytes, &tx)
-	if err != nil {
-		tx, err = transaction.DeserializeTransactionJSON(rawTxBytes)
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
-			return
-		}
-	}
 	var md *bridge.BurnForCallRequest
-	var ok bool
 	var isPRVTx bool
 	var feeToken string
 	var feeAmount uint64
 	var outCoins []coin.Coin
+	var txHash string
+	var rawTxBytes []byte
 
-	txHash := ""
-	if tx.TokenVersion2 != nil {
-		txHash = tx.TokenVersion2.Hash().String()
-		if tx.TokenVersion2.GetMetadataType() == metadata.BurnForCallRequestMeta {
-			md, ok = tx.TokenVersion2.GetMetadata().(*bridge.BurnForCallRequest)
-			if !ok {
-				c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+	if req.TxHash != "" {
+		txHash = req.TxHash
+		txDetail, err := incClient.GetTx(req.TxHash)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
+			return
+		}
+		if txDetail.GetMetadataType() == metadata.BurnForCallRequestMeta {
+			md = txDetail.GetMetadata().(*bridge.BurnForCallRequest)
+			// txDetail.GetProof().GetOutputCoins()
+		}
+	} else {
+		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
+			return
+		}
+
+		// Unmarshal from json data to object tx))
+		tx, err := transaction.DeserializeTransactionJSON(rawTxBytes)
+		// var tx transaction.Tx
+		// err = json.Unmarshal(rawTxBytes, &tx)
+		if err != nil {
+			tx, err = transaction.DeserializeTransactionJSON(rawTxBytes)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 				return
 			}
 		}
-	}
-	if tx.Version2 != nil {
-		isPRVTx = true
-		txHash = tx.TokenVersion2.Hash().String()
-		feeToken = common.PRVCoinID.String()
-		if tx.Version2.GetMetadataType() == metadata.BurnForCallRequestMeta {
-			md, ok = tx.Version2.GetMetadata().(*bridge.BurnForCallRequest)
-			if !ok {
-				c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
-				return
-			}
-			tx.Version2.GetProof().GetOutputCoins()
+		var ok bool
+		if tx.TokenVersion2 != nil {
+			txHash = tx.TokenVersion2.Hash().String()
+			if tx.TokenVersion2.GetMetadataType() == metadata.BurnForCallRequestMeta {
+				md, ok = tx.TokenVersion2.GetMetadata().(*bridge.BurnForCallRequest)
+				if !ok {
+					c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+					return
+				}
 
+			}
 		}
+		if tx.Version2 != nil {
+			isPRVTx = true
+			txHash = tx.TokenVersion2.Hash().String()
+			feeToken = common.PRVCoinID.String()
+			if tx.Version2.GetMetadataType() == metadata.BurnForCallRequestMeta {
+				md, ok = tx.Version2.GetMetadata().(*bridge.BurnForCallRequest)
+				if !ok {
+					c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+					return
+				}
+				outCoins = tx.Version2.GetProof().GetOutputCoins()
+			}
+		}
+
 	}
 
 	if md == nil {
@@ -551,20 +564,57 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			j := big.NewInt(int64(token2PoolIndex))
 
 			curvePool := ethcommon.HexToAddress(curvePoolAddress1)
-			amountOut, err := papps.CurveQuote(amountBigInt, i, j, curvePool)
+
+			networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
 			if err != nil {
 				return nil, err
+			}
+			var amountOut *big.Int
+
+			for _, endpoint := range networkInfo.Endpoints {
+				evmClient, err := ethclient.Dial(endpoint)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				amountOut, err = papps.CurveQuote(evmClient, amountBigInt, i, j, curvePool)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
 			}
 
 			expectOutputAmountBigFloat := new(big.Float)
 			expectOutputAmountBigFloat, _ = expectOutputAmountBigFloat.SetString(amountOut.String())
+			amountOutDecimal := ConvertToNanoIncognitoToken(expectOutputAmountBigFloat, int64(pTokenContract2.Decimals))
+
+			fees := []PappNetworkFee{}
+
+			estGasUsed := uint64(600000)
+			if isUnifiedNativeToken {
+				fees = append(fees, PappNetworkFee{
+					Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+					FeeAddress: nativeToken.ID,
+				})
+			} else {
+				if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType || pTokenContract1.MovedUnifiedToken {
+					fees = append(fees, PappNetworkFee{
+						Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv/pTokenContract1.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+						FeeAddress: pTokenContract1.ID,
+					})
+				} else {
+					fees = append(fees, PappNetworkFee{
+						Amount:     ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+						FeeAddress: common.PRVCoinID.String(),
+					})
+				}
+			}
 
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
 				AmountIn:     amount,
-				AmountOut:    pTokenAmount.String(),
+				AmountOut:    amountOutDecimal.String(),
 				AmountOutRaw: amountOut.String(),
-				Route:        quote.Data.Route,
 				Fee:          fees,
 			})
 		}

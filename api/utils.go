@@ -65,6 +65,8 @@ func initIncClient(network string) error {
 	case "testnet-1":
 		incClient, err = incclient.NewTestNet1Client()
 	case "devnet":
+		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, "local")
+	default:
 		return errors.New("unsupported network")
 	}
 	if err != nil {

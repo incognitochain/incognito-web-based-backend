@@ -257,7 +257,8 @@ type SubmitTxListRequest struct {
 }
 
 type SubmitSwapTxRequest struct {
-	TxRaw string
+	TxRaw  string
+	TxHash string
 }
 
 type TxStatusRespond struct {

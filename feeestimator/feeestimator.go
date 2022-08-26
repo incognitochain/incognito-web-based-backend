@@ -112,7 +112,6 @@ func getEthGasPrice(c *ethclient.Client) (*big.Int, error) {
 }
 
 func getBscGasPrice(c *ethclient.Client) (*big.Int, error) {
-	// todo: get from network:
 	gasPrice, err := SuggestGasPrice(c)
 	if err != nil {
 		return nil, err
@@ -122,7 +121,6 @@ func getBscGasPrice(c *ethclient.Client) (*big.Int, error) {
 }
 
 func getPlgGasPrice(c *ethclient.Client) (*big.Int, error) {
-	// todo: get from network:
 	gasPrice, err := SuggestGasPrice(c)
 	if err != nil {
 		return nil, err

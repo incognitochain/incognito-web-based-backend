@@ -92,16 +92,19 @@ func TestSubmitProof(t *testing.T) {
 func TestRedpositEvent(t *testing.T) {
 
 	endpoint := "https://matic-mumbai.chainstacklabs.com"
-	txStr := "0x30eb9dca48fd5ccb4533e92f4f1926765ec0eade6478b7726ae204a45d1b14bf"
+	txStr := "0x2a378a3ee8d1d346ef698643336e4b29c26e1cf8c03aa7b85c20013aeef1af0f"
 	evmClient, _ := ethclient.Dial(endpoint)
 
-	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount, err := getETHDepositProof(evmClient, txStr)
+	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount, logResult, err := getETHDepositProof(evmClient, txStr)
 
 	t.Log(err)
 
-	t.Logf("\n blockNumber: %v, blockHash: %v, txIdx: %v, contractID: %v, paymentAddr: %v, isRedeposit: %v, otaStr: %v, shieldAmount: %v\n", blockNumber, blockHash, txIdx, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount)
+	t.Logf("\n blockNumber: %v, blockHash: %v, txIdx: %v, contractID: %v, isRedeposit: %v, paymentAddr: %v, otaStr: %v, shieldAmount: %v\n", blockNumber, blockHash, txIdx, contractID, isRedeposit, paymentAddr, otaStr, shieldAmount)
 
-	t.Log("proof", proof)
+	t.Logf("\n logResult: %v \n", logResult)
+	_ = proof
+	// t.Log("proof", proof)
+
 	// txHash := common.Hash{}
 	// err := txHash.UnmarshalText([]byte("0x30eb9dca48fd5ccb4533e92f4f1926765ec0eade6478b7726ae204a45d1b14bf"))
 	// if err != nil {
@@ -119,7 +122,6 @@ func TestRedpositEvent(t *testing.T) {
 	// }
 
 	// // if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
-	// // todo update status
 
 	// // check sc re-deposit event
 	// valueBuf := encodeBufferPool.Get().(*bytes.Buffer)

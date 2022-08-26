@@ -32,7 +32,7 @@ func getProof(txhash string, networkID int) (*wcommon.EVMProofRecordData, *inccl
 			log.Println(err)
 			continue
 		}
-		blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, amount, err := getETHDepositProof(evmClient, txhash)
+		blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, amount, _, err := getETHDepositProof(evmClient, txhash)
 		if err != nil {
 			log.Println(err)
 			continue

@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
@@ -53,21 +54,22 @@ const ADDRESS_0 = "0x0000000000000000000000000000000000000000"
 func getETHDepositProof(
 	evmClient *ethclient.Client,
 	txHashStr string,
-) (*big.Int, string, uint, []string, string, string, bool, string, uint64, error) {
+) (*big.Int, string, uint, []string, string, string, bool, string, uint64, string, error) {
 	var contractID string
 	var paymentaddress string
 	var otaStr string
 	var shieldAmount uint64
 	var isRedeposit bool
+	var logResult string
 
 	txHash := common.Hash{}
 	err := txHash.UnmarshalText([]byte(txHashStr))
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, err
+		return nil, "", 0, nil, "", "", false, "", 0, "", err
 	}
 	txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, err
+		return nil, "", 0, nil, "", "", false, "", 0, "", err
 	}
 
 	txIndex := txReceipt.TransactionIndex
@@ -76,7 +78,7 @@ func getETHDepositProof(
 
 	blk, err := evmClient.BlockByHash(context.Background(), txReceipt.BlockHash)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, err
+		return nil, "", 0, nil, "", "", false, "", 0, "", err
 	}
 
 	siblingTxs := blk.Body().Transactions
@@ -87,16 +89,16 @@ func getETHDepositProof(
 	for i, siblingTx := range siblingTxs {
 		siblingReceipt, err := evmClient.TransactionReceipt(context.Background(), siblingTx.Hash())
 		if err != nil {
-			return nil, "", 0, nil, "", "", false, "", 0, err
+			return nil, "", 0, nil, "", "", false, "", 0, "", err
 		}
 		if i == len(siblingTxs)-1 {
 			txData, _, err := evmClient.TransactionByHash(context.Background(), siblingTx.Hash())
 			if err != nil {
-				return nil, "", 0, nil, "", "", false, "", 0, err
+				return nil, "", 0, nil, "", "", false, "", 0, "", err
 			}
 			from, err := evmClient.TransactionSender(context.Background(), txData, txReceipt.BlockHash, uint(i))
 			if err != nil {
-				return nil, "", 0, nil, "", "", false, "", 0, err
+				return nil, "", 0, nil, "", "", false, "", 0, "", err
 			}
 			if txData.To().String() == ADDRESS_0 && from.String() == ADDRESS_0 {
 				break
@@ -111,10 +113,10 @@ func getETHDepositProof(
 	valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
 	defer encodeBufferPool.Put(valueBuf)
 
-	vaultABI, err := abi.JSON(strings.NewReader(VaultABI))
+	vaultABI, err := abi.JSON(strings.NewReader(vault.VaultABI))
 	if err != nil {
 		fmt.Println("abi.JSON", err.Error())
-		return nil, "", 0, nil, "", "", false, "", 0, err
+		return nil, "", 0, nil, "", "", false, "", 0, "", err
 	}
 	// erc20ABI, err := abi.JSON(strings.NewReader(IERC20ABI))
 	// if err != nil {
@@ -157,39 +159,51 @@ func getETHDepositProof(
 			// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
 			// event indexed both from and to
 			case 256, 288:
-				unpackResult, err := vaultABI.Unpack("Deposit", d.Data) // same as Redeposit
-				if err != nil {
-					log.Println("unpackResult err", err)
-					continue
-				}
-				if len(unpackResult) < 3 {
-					err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-					log.Println("len(unpackResult) err", err)
-					continue
-				}
-				fmt.Println("unpackResult", unpackResult)
-				contractID = unpackResult[0].(common.Address).String()
-				amount := unpackResult[2].(*big.Int)
-				shieldAmount = amount.Uint64()
+				if contractID == "" {
+					unpackResult, err := vaultABI.Unpack("Redeposit", d.Data) // same as Redeposit
+					if err != nil {
+						unpackResult, err = vaultABI.Unpack("Deposit", d.Data) // same as Redeposit
+						if err != nil {
+							log.Println("unpackResult err", err)
+							continue
+						}
+					}
+					if len(unpackResult) < 3 {
+						err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+						log.Println("len(unpackResult) err", err)
+						return nil, "", 0, nil, "", "", false, "", 0, "", err
+					}
+					contractID = unpackResult[0].(common.Address).String()
+					amount := unpackResult[2].(*big.Int)
+					shieldAmount = amount.Uint64()
 
-				var ok bool
-				paymentaddress, ok = unpackResult[1].(string)
-				if !ok {
-					OTAReceiver := unpackResult[1].([]byte)
-					newOTA := coin.OTAReceiver{}
-					err = newOTA.SetBytes(OTAReceiver)
-					if err != nil {
-						log.Println("unpackResult err", err)
-						continue
-					}
-					otaStr, err = newOTA.String()
-					if err != nil {
-						log.Println("unpackResult err", err)
-						continue
+					var ok bool
+					paymentaddress, ok = unpackResult[1].(string)
+					if !ok {
+						OTAReceiver := unpackResult[1].([]byte)
+						newOTA := coin.OTAReceiver{}
+						err = newOTA.SetBytes(OTAReceiver)
+						if err != nil {
+							log.Println("unpackResult err", err)
+							return nil, "", 0, nil, "", "", false, "", 0, "", err
+						}
+						isRedeposit = true
+						otaStr, err = newOTA.String()
+						if err != nil {
+							log.Println("unpackResult err", err)
+							return nil, "", 0, nil, "", "", false, "", 0, "", err
+						}
 					}
 				}
+
 			default:
-				// log.Println("invalid event index")
+				unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data) // same as Redeposit
+				if err != nil {
+					log.Println("unpackResult2 err", err)
+					continue
+				} else {
+					logResult = fmt.Sprintf("%s", unpackResult)
+				}
 			}
 		}
 
@@ -219,11 +233,11 @@ func getETHDepositProof(
 	keybuf.Reset()
 	err = rlp.Encode(keybuf, uint(txIndex))
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, err
+		return nil, "", 0, nil, "", "", false, "", 0, "", err
 	}
 	err = receiptTrie.Prove(keybuf.Bytes(), 0, proof)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, err
+		return nil, "", 0, nil, "", "", false, "", 0, "", err
 	}
 	nodeList := proof.NodeList()
 	encNodeList := make([]string, 0)
@@ -231,7 +245,7 @@ func getETHDepositProof(
 		str := base64.StdEncoding.EncodeToString(node)
 		encNodeList = append(encNodeList, str)
 	}
-	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, isRedeposit, otaStr, shieldAmount, nil
+	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, isRedeposit, otaStr, shieldAmount, logResult, nil
 }
 
 func findTokenByContractID(contractID string, networkID int) (string, string, error) {
@@ -242,7 +256,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 		return "", "", err
 	}
 	contractID = strings.ToLower(contractID)
-	if contractID == EthAddrStr {
+	if contractID == EthNativeAddrStr {
 		for _, token := range tokenList {
 			if token.IsBridge && token.Verified && token.NetworkID == networkID {
 				linkedTokenID = token.TokenID

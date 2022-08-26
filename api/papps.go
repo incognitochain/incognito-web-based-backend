@@ -84,7 +84,8 @@ func APISubmitSwapTx(c *gin.Context) {
 					c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
 					return
 				}
-
+				outCoins = append(outCoins, tx.TokenVersion2.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
+				outCoins = append(outCoins, tx.TokenVersion2.Tx.Proof.GetOutputCoins()...)
 			}
 		}
 		if tx.Version2 != nil {

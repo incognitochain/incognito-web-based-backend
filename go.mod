@@ -18,7 +18,7 @@ require (
 	github.com/gin-contrib/cors v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.2.0
-	github.com/incognitochain/bridge-eth v0.0.0-20220822091718-f61748701f87
+	github.com/incognitochain/bridge-eth v0.0.0-20220826034447-e3f063b9fef4
 	github.com/incognitochain/coin-service v1.8.0
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/pkg/errors v0.9.1

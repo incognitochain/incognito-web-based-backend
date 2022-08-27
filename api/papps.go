@@ -364,6 +364,12 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, err
 	}
 
+	vaultData, err := database.DBGetPappContractData(networkName, wcommon.PappTypeSwap)
+	if err != nil {
+		fmt.Println("DBGetPappContractData", err)
+		return nil, err
+	}
+
 	pTokenContract1, err := getpTokenContractID(fromToken, networkID, spTkList)
 	if err != nil {
 		log.Println("err get pTokenContract1")
@@ -462,13 +468,47 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				FeeAddress: "gasPrice",
 			})
 
+			vaultAddress := ethcommon.Address{}
+			err = vaultAddress.UnmarshalText([]byte(vaultData.ContractAddress))
+			if err != nil {
+				return nil, err
+			}
+			amountInBig, _ := new(big.Int).SetString(quote.Data.AmountIn, 10)
+			amountOutBig, _ := new(big.Int).SetString(quote.Data.AmountOutRaw, 10)
+
+			paths := []ethcommon.Address{}
+
+			for _, route := range quote.Data.Route[0] {
+				tokenAddress := ethcommon.Address{}
+				err = tokenAddress.UnmarshalText([]byte(route.TokenIn.Address))
+				if err != nil {
+					return nil, err
+				}
+				paths = append(paths, tokenAddress)
+			}
+
+			tokenOutAddress := ethcommon.Address{}
+			err = tokenOutAddress.UnmarshalText([]byte(pTokenContract2.ContractID))
+			if err != nil {
+				return nil, err
+			}
+			paths = append(paths, tokenOutAddress)
+
+			calldata, err := papps.BuildCallDataUniswap(paths, vaultAddress, []int64{int64(estGasUsed)}, amountInBig, amountOutBig, isUnifiedNativeToken)
+			if err != nil {
+				log.Println("Error building call data: ", err)
+				calldata = err.Error()
+			}
+
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
 				AmountIn:     amount,
+				AmountInRaw:  quote.Data.AmountIn,
 				AmountOut:    quote.Data.AmountOut,
 				AmountOutRaw: quote.Data.AmountOutRaw,
 				Route:        quote.Data.Route,
 				Fee:          fees,
+				Calldata:     calldata,
 			})
 		case "pancake":
 			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)

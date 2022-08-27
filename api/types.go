@@ -61,6 +61,7 @@ type QuoteDataResp struct {
 	AmountOutRaw string
 	Fee          []PappNetworkFee
 	Route        interface{}
+	Calldata     string
 }
 
 type SubmitSwapTx struct {
@@ -289,14 +290,35 @@ type PappSupportedTokenData struct {
 
 type UniswapQuote struct {
 	Data struct {
-		AmountIn         string      `json:"amountIn"`
-		AmountOut        string      `json:"amountOut"`
-		AmountOutRaw     string      `json:"amountOutRaw"`
-		Route            interface{} `json:"route"`
-		Impact           float64     `json:"impact"`
-		EstimatedGasUsed string      `json:"estimatedGasUsed"`
+		AmountIn         string           `json:"amountIn"`
+		AmountOut        string           `json:"amountOut"`
+		AmountOutRaw     string           `json:"amountOutRaw"`
+		Route            [][]UniswapRoute `json:"route"`
+		Impact           float64          `json:"impact"`
+		EstimatedGasUsed string           `json:"estimatedGasUsed"`
 	} `json:"data"`
 	Message string `json:"message"`
+}
+
+type UniswapRoute struct {
+	AmountIn          string            `json:"amountIn"`
+	AmountOut         string            `json:"amountOut"`
+	Fee               int64             `json:"fee"`
+	Liquidity         string            `json:"liquidity"`
+	Percent           float64           `json:"percent"`
+	Type              string            `json:"type"`
+	PoolAddress       string            `json:"poolAddress"`
+	RawQuote          string            `json:"rawQuote"`
+	SqrtPriceX96After string            `json:"sqrtPriceX96After"`
+	TokenIn           UniswapQuoteToken `json:"tokenIn"`
+	TokenOut          UniswapQuoteToken `json:"tokenOut"`
+}
+
+type UniswapQuoteToken struct {
+	Address  string `json:"address"`
+	Name     string `json:"name"`
+	Symbol   string `json:"symbol"`
+	IsNative bool   `json:"isNative"`
 }
 
 type PancakeQuote struct {

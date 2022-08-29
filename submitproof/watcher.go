@@ -21,7 +21,18 @@ import (
 
 func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
 	config = cfg
-	// network := cfg.NetworkID
+	network := cfg.NetworkID
+
+	err := initIncClient(network)
+	if err != nil {
+		return err
+	}
+
+	err = StartAssigner(config, serviceID)
+	if err != nil {
+		return err
+	}
+
 	go watchPendingShieldTx()
 	go watchPendingPappTx()
 	go watchPendingExternalTx()

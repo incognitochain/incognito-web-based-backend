@@ -40,6 +40,7 @@ func APISubmitSwapTx(c *gin.Context) {
 
 	var md *bridge.BurnForCallRequest
 	var isPRVTx bool
+	var isUnifiedToken bool
 	var feeToken string
 	var feeAmount uint64
 	var outCoins []coin.Coin
@@ -56,6 +57,15 @@ func APISubmitSwapTx(c *gin.Context) {
 		if txDetail.GetMetadataType() == metadata.BurnForCallRequestMeta {
 			md = txDetail.GetMetadata().(*bridge.BurnForCallRequest)
 			// txDetail.GetProof().GetOutputCoins()
+		}
+		txType := txDetail.GetType()
+		switch txType {
+		case common.TxCustomTokenPrivacyType:
+			isPRVTx = false
+
+		case common.TxNormalType:
+			isPRVTx = true
+			feeToken = common.PRVCoinID.String()
 		}
 	} else {
 		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
@@ -84,6 +94,7 @@ func APISubmitSwapTx(c *gin.Context) {
 					c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
 					return
 				}
+
 				outCoins = append(outCoins, tx.TokenVersion2.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
 				outCoins = append(outCoins, tx.TokenVersion2.Tx.Proof.GetOutputCoins()...)
 			}
@@ -109,18 +120,28 @@ func APISubmitSwapTx(c *gin.Context) {
 		return
 	}
 
+	burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		isUnifiedToken = true
+	}
+
 	valid, networkList, err := checkValidTxSwap(md, feeToken, feeAmount, outCoins)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
 	}
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, rawTxBytes, isPRVTx, feeToken, feeAmount, networkList)
+		status, err := submitproof.SubmitPappTx(txHash, rawTxBytes, isPRVTx, feeToken, feeAmount, isUnifiedToken, networkList)
 		if err != nil {
 			c.JSON(200, gin.H{"Error": err.Error()})
 			return
 		}
 		c.JSON(200, gin.H{"Result": status})
+		return
 	}
 
 	c.JSON(200, gin.H{"Error": "invalid tx swap"})
@@ -473,7 +494,18 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if err != nil {
 				return nil, err
 			}
-			amountInBig, _ := new(big.Int).SetString(quote.Data.AmountIn, 10)
+
+			amountFloat := new(big.Float)
+			amountFloat, ok := amountFloat.SetString(amount)
+			if !ok {
+				return nil, fmt.Errorf("amount is not a number")
+			}
+			amountBigFloat := ConvertToNanoIncognitoToken(amountFloat, int64(pTokenContract1.Decimals)) //amount *big.Float, decimal int64, return *big.Float
+			log.Println("amountBigFloat: ", amountBigFloat.String())
+
+			// convert float to bigin:
+			amountInBig, _ := amountBigFloat.Int(nil)
+
 			amountOutBig, _ := new(big.Int).SetString(quote.Data.AmountOutRaw, 10)
 
 			paths := []ethcommon.Address{}
@@ -856,8 +888,8 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, feeToken string, feeAmount 
 		_ = quoteData
 
 		//TODO
-
 	}
+	result = true
 	return result, callNetworkList, nil
 }
 

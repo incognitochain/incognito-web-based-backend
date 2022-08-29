@@ -77,7 +77,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, networks []string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, isUnifiedToken bool, networks []string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -89,13 +89,14 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 	}
 
 	task := SubmitPappTxTask{
-		TxHash:    txhash,
-		TxRawData: rawTxData,
-		IsPRVTx:   isPRVTx,
-		FeeToken:  feeToken,
-		FeeAmount: feeAmount,
-		Networks:  networks,
-		Time:      time.Now(),
+		TxHash:         txhash,
+		TxRawData:      rawTxData,
+		IsPRVTx:        isPRVTx,
+		IsUnifiedToken: isUnifiedToken,
+		FeeToken:       feeToken,
+		FeeAmount:      feeAmount,
+		Networks:       networks,
+		Time:           time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
 

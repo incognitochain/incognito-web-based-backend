@@ -81,10 +81,10 @@ retry:
 		time.Sleep(1 * time.Second)
 	}
 	i++
-	proofRecord, depositProof, err := getProof(txhash, networkID-1)
+	proofRecord, depositProof, err := getProof(txhash, networkID)
 	if err != nil {
 		log.Println("error:", err)
-		finalErr = "getProof " + err.Error()
+		finalErr = fmt.Sprintf("getProof %v %v ", txhash, networkID) + err.Error()
 		goto retry
 	}
 	isSubmitted, err := checkProofSubmitted(proofRecord.BlockHash, proofRecord.TxIndex, networkID)

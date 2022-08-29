@@ -378,14 +378,8 @@ func initIncClient(network string) error {
 	switch network {
 	case "mainnet":
 		incClient, err = incclient.NewMainNetClient()
-	case "testnet-2": // testnet2
-		incClient, err = incclient.NewTestNetClient()
-	case "testnet-1":
-		incClient, err = incclient.NewTestNet1Client()
-	case "devnet":
-		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, "local")
 	default:
-		return errors.New("unsupported network")
+		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, network)
 	}
 	if err != nil {
 		return err

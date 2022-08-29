@@ -54,6 +54,7 @@ type ExternalTxStatus struct {
 	Status           string `json:"status" bson:"status"`
 	Type             int    `json:"type" bson:"type"`
 	Error            string `json:"error" bson:"error"`
+	OtherInfo        string `json:"otherinfo" bson:"otherinfo"`
 }
 
 type PappTxData struct {
@@ -66,6 +67,7 @@ type PappTxData struct {
 	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
 	Status           string   `json:"status" bson:"status"`
 	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	Error            string   `json:"error" bson:"error"`
 }
 
 type PappContractData struct {

@@ -85,7 +85,7 @@ func DBRetrieveRejectedShieldTxs(offset, limit int64) ([]common.ShieldTxData, er
 func DBGetShieldTxStatusByExternalTx(externalTx string, networkID int) (string, error) {
 	var result common.ShieldTxData
 
-	filter := bson.M{"externalTx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
+	filter := bson.M{"externaltx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	dbresult := mgm.Coll(&common.ShieldTxData{}).FindOne(ctx, filter)
 	if dbresult.Err() != nil {
@@ -98,10 +98,26 @@ func DBGetShieldTxStatusByExternalTx(externalTx string, networkID int) (string, 
 
 	return result.Status, nil
 }
+func DBGetShieldTxByExternalTx(externalTx string, networkID int) (*common.ShieldTxData, error) {
+	var result common.ShieldTxData
+
+	filter := bson.M{"externaltx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.ShieldTxData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
 
 func DBUpdateShieldTxStatus(externalTx string, networkID int, status string, errStr string) error {
-	filter := bson.M{"externalTx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
-	update := bson.M{"$set": bson.M{"externalTx": externalTx, "networkid": networkID, "status": status, "error": errStr}}
+	filter := bson.M{"externaltx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
+	update := bson.M{"$set": bson.M{"externaltx": externalTx, "networkid": networkID, "status": status, "error": errStr}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.ShieldTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
@@ -111,10 +127,10 @@ func DBUpdateShieldTxStatus(externalTx string, networkID int, status string, err
 }
 
 func DBUpdateShieldOnChainTxInfo(externalTx string, networkID int, paymentAddr string, incTx string, tokenID string, linkedTokenID string) error {
-	filter := bson.M{"externalTx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
-	update := bson.M{"$set": bson.M{"externalTx": externalTx, "networkid": networkID, "paymentaddress": paymentAddr, "inctx": incTx, "tokenid": tokenID, "utokenid": linkedTokenID}}
+	filter := bson.M{"externaltx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
+	update := bson.M{"$set": bson.M{"externaltx": externalTx, "networkid": networkID, "paymentaddress": paymentAddr, "inctx": incTx, "tokenid": tokenID, "utokenid": linkedTokenID}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	_, err := mgm.Coll(&common.ShieldTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
+	_, err := mgm.Coll(&common.ShieldTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}

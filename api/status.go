@@ -5,6 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/incognitochain/incognito-web-based-backend/common"
+	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
 )
 
 func APIGetStatusByShieldService(c *gin.Context) {
@@ -107,4 +110,59 @@ func APIGetSwapTxStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	result := make(map[string]interface{})
+	for _, txHash := range req.TxList {
+		statusResult, err := checkPappTxSwapStatus(txHash)
+		if err != nil {
+			result[txHash] = err
+			continue
+		}
+		result[txHash] = statusResult
+	}
+	c.JSON(200, gin.H{"Result": result})
+}
+
+func checkPappTxSwapStatus(txhash string) (map[string]string, error) {
+	result := make(map[string]string)
+	data, err := database.DBGetPappTxData(txhash)
+	if err != nil {
+		return result, err
+	}
+
+	if data.Status != common.StatusAccepted {
+		result["submitswaptx"] = data.Status
+		if data.Error != "" {
+			result["error"] = data.Error
+		}
+	} else {
+		result["submitswaptx"] = common.StatusAccepted
+		for _, network := range data.Networks {
+			outchainTx, err := database.DBGetExternalTxByIncTx(txhash, network)
+			if err != nil {
+				return result, err
+			}
+			result[network] = outchainTx.Status
+			result[network+"_exttx"] = outchainTx.Txhash
+			if outchainTx.Error != "" {
+				result[network+"_err"] = outchainTx.Error
+			}
+			if outchainTx.Status == common.StatusAccepted && outchainTx.OtherInfo != "" {
+				var outchainTxResult wcommon.ExternalTxSwapResult
+				err = json.Unmarshal([]byte(outchainTx.OtherInfo), &outchainTxResult)
+				if err != nil {
+					return result, err
+				}
+				if outchainTxResult.IsRedeposit {
+					networkID := wcommon.GetNetworkID(network)
+					redepositTx, err := database.DBGetShieldTxByExternalTx(outchainTx.Txhash, networkID)
+					if err != nil {
+						return result, err
+					}
+					result[network+"_redeposit"] = redepositTx.Status
+					result[network+"_redeposit_inctx"] = redepositTx.IncTx
+				}
+			}
+		}
+	}
+	return result, nil
 }

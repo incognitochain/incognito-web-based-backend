@@ -59,6 +59,17 @@ func DBUpdateExternalTxStatus(externalTx string, status string, errStr string) e
 	return nil
 }
 
+func DBUpdateExternalTxOtherInfo(externalTx string, otherInfo string) error {
+	filter := bson.M{"txhash": bson.M{operator.Eq: externalTx}}
+	update := bson.M{"$set": bson.M{"otherinfo": otherInfo}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status, "error": errStr}}
@@ -158,6 +169,23 @@ func DBGetPappTxStatus(incTx string) (string, error) {
 	return result.Status, nil
 }
 
+func DBGetPappTxData(incTx string) (*common.PappTxData, error) {
+	var result common.PappTxData
+
+	filter := bson.M{"inctx": bson.M{operator.Eq: incTx}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.PappTxData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func DBGetExternalTxStatusByIncTx(incTx string, network string) (string, error) {
 	var result common.ExternalTxStatus
 
@@ -173,6 +201,23 @@ func DBGetExternalTxStatusByIncTx(incTx string, network string) (string, error) 
 	}
 
 	return result.Status, nil
+}
+
+func DBGetExternalTxByIncTx(incTx string, network string) (*common.ExternalTxStatus, error) {
+	var result common.ExternalTxStatus
+
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTx}, "network": bson.M{operator.Eq: network}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.ExternalTxStatus{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func DBGetPappContractData(network string, pappType int) (*common.PappContractData, error) {

@@ -14,10 +14,11 @@ import (
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
-	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
+	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
 	"github.com/mongodb/mongo-tools/common/json"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -39,6 +40,7 @@ func APISubmitSwapTx(c *gin.Context) {
 	}
 
 	var md *bridge.BurnForCallRequest
+	var mdRaw metadataCommon.Metadata
 	var isPRVTx bool
 	var isUnifiedToken bool
 	var feeToken string
@@ -47,6 +49,7 @@ func APISubmitSwapTx(c *gin.Context) {
 	var txHash string
 	var rawTxBytes []byte
 
+	var ok bool
 	if req.TxHash != "" {
 		txHash = req.TxHash
 		txDetail, err := incClient.GetTx(req.TxHash)
@@ -54,15 +57,11 @@ func APISubmitSwapTx(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 			return
 		}
-		if txDetail.GetMetadataType() == metadata.BurnForCallRequestMeta {
-			md = txDetail.GetMetadata().(*bridge.BurnForCallRequest)
-			// txDetail.GetProof().GetOutputCoins()
-		}
+		mdRaw = txDetail.GetMetadata()
 		txType := txDetail.GetType()
 		switch txType {
 		case common.TxCustomTokenPrivacyType:
 			isPRVTx = false
-
 		case common.TxNormalType:
 			isPRVTx = true
 			feeToken = common.PRVCoinID.String()
@@ -85,38 +84,42 @@ func APISubmitSwapTx(c *gin.Context) {
 				return
 			}
 		}
-		var ok bool
 		if tx.TokenVersion2 != nil {
+			isPRVTx = false
 			txHash = tx.TokenVersion2.Hash().String()
-			if tx.TokenVersion2.GetMetadataType() == metadata.BurnForCallRequestMeta {
-				md, ok = tx.TokenVersion2.GetMetadata().(*bridge.BurnForCallRequest)
-				if !ok {
-					c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
-					return
-				}
-
-				outCoins = append(outCoins, tx.TokenVersion2.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
-				outCoins = append(outCoins, tx.TokenVersion2.Tx.Proof.GetOutputCoins()...)
-			}
+			mdRaw = tx.TokenVersion2.GetMetadata()
+			outCoins = append(outCoins, tx.TokenVersion2.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
+			outCoins = append(outCoins, tx.TokenVersion2.Tx.Proof.GetOutputCoins()...)
 		}
 		if tx.Version2 != nil {
 			isPRVTx = true
 			txHash = tx.TokenVersion2.Hash().String()
 			feeToken = common.PRVCoinID.String()
-			if tx.Version2.GetMetadataType() == metadata.BurnForCallRequestMeta {
-				md, ok = tx.Version2.GetMetadata().(*bridge.BurnForCallRequest)
-				if !ok {
-					c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
-					return
-				}
-				outCoins = tx.Version2.GetProof().GetOutputCoins()
-			}
+			mdRaw = tx.Version2.GetMetadata()
+			outCoins = tx.Version2.GetProof().GetOutputCoins()
 		}
 
 	}
 
-	if md == nil {
+	if mdRaw == nil {
 		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+	md, ok = mdRaw.(*bridge.BurnForCallRequest)
+	if !ok {
+		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+
+	statusResult, err := checkPappTxSwapStatus(txHash)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			c.JSON(200, gin.H{"Error": err.Error()})
+			return
+		}
+	}
+	if len(statusResult) > 0 {
+		c.JSON(200, gin.H{"Result": statusResult})
 		return
 	}
 

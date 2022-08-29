@@ -3,6 +3,7 @@ package submitproof
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -168,6 +169,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		if err != nil {
 			return err
 		}
+		var logResult string
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
 
 			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusAccepted, "")
@@ -199,7 +201,25 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					}
 					isRedeposit = true
 				default:
+					unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data) // same as Redeposit
+					if err != nil {
+						log.Println("unpackResult2 err", err)
+						continue
+					} else {
+						logResult = fmt.Sprintf("%s", unpackResult)
+					}
 				}
+			}
+			otherInfo := wcommon.ExternalTxSwapResult{
+				LogResult:   logResult,
+				IsRedeposit: isRedeposit,
+			}
+
+			otherInfoBytes, _ := json.MarshalIndent(otherInfo, "", "\t")
+
+			err = database.DBUpdateExternalTxOtherInfo(tx.Txhash, string(otherInfoBytes))
+			if err != nil {
+				return err
 			}
 			if isRedeposit {
 				result, err := SubmitShieldProof(tx.Txhash, networkID, "")

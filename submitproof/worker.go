@@ -3,6 +3,7 @@ package submitproof
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -146,6 +147,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 			return
 		}
 		log.Println("submitProof error:", err) //
+		m.Nack()
 		return
 	}
 
@@ -256,6 +258,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				return
 			}
 		}
+		return
 	}
 
 	var errSubmit error
@@ -314,6 +317,9 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 	}
 	if err != nil {
 		return nil, err
+	}
+	if proof == nil {
+		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
 	}
 
 	privKey, _ := crypto.HexToECDSA(config.EVMKey)

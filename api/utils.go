@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -60,14 +61,8 @@ func initIncClient(network string) error {
 	switch network {
 	case "mainnet":
 		incClient, err = incclient.NewMainNetClient()
-	case "testnet-2": // testnet2
-		incClient, err = incclient.NewTestNetClient()
-	case "testnet-1":
-		incClient, err = incclient.NewTestNet1Client()
-	case "devnet":
-		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, "local")
 	default:
-		return errors.New("unsupported network")
+		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, network)
 	}
 	if err != nil {
 		return err
@@ -124,6 +119,9 @@ func getpTokenContractID(tokenID string, networkID int, supportedTokenList []Pap
 }
 
 func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData) (string, error) {
+	if !strings.Contains(contractID, "0x") {
+		contractID = "0x" + contractID
+	}
 	for _, v := range supportedTokenList {
 		if v.ContractIDGetRate == contractID && v.NetworkID == networkID {
 			return v.ID, nil

@@ -2,8 +2,10 @@ package papps
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"net/http"
 	"strings"
@@ -158,6 +160,10 @@ func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees
 			AmountIn:         srcQty,
 			AmountOutMinimum: expectedOut,
 		}
+
+		agrBytes, _ := json.MarshalIndent(agr, "", "\t")
+		log.Println("IUinswpaHelperExactInputParams", isNative, paths[0].String(), paths[1].String(), string(agrBytes))
+
 		input, err = tradeAbi.Pack("tradeInput", agr, isNative)
 	} else {
 		agr := &pUniswapHelper.IUinswpaHelperExactInputSingleParams{
@@ -169,9 +175,12 @@ func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees
 			SqrtPriceLimitX96: big.NewInt(0),
 			AmountOutMinimum:  expectedOut,
 		}
+		agrBytes, _ := json.MarshalIndent(agr, "", "\t")
+		log.Println("IUinswpaHelperExactInputSingleParams", isNative, string(agrBytes))
+
 		input, err = tradeAbi.Pack("tradeInputSingle", agr, isNative)
 	}
-	result = string(input)
+	result = hex.EncodeToString(input)
 	return result, err
 }
 

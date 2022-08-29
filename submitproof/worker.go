@@ -126,14 +126,14 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	key := keyList[t%int64(len(keyList))]
 	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.TxHash, task.TokenID, task.NetworkID, key)
 
-	if tokenID != "" && linkedTokenID != "" {
-		err = database.DBUpdateShieldOnChainTxInfo(task.TxHash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
-		if err != nil {
-			log.Println("DBUpdateShieldOnChainTxInfo error:", err)
-			m.Nack()
-			return
-		}
+	// if tokenID != "" && linkedTokenID != "" {
+	errdb := database.DBUpdateShieldOnChainTxInfo(task.TxHash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
+	if errdb != nil {
+		log.Println("DBUpdateShieldOnChainTxInfo error:", err)
+		m.Nack()
+		return
 	}
+	// }
 
 	if err != nil {
 		if err.Error() == ProofAlreadySubmitError {

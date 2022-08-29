@@ -58,3 +58,8 @@ type TokenInfo struct {
 	MovedUnifiedToken bool
 	ParentUnifiedID   int
 }
+
+type ExternalTxSwapResult struct {
+	LogResult   string
+	IsRedeposit bool
+}

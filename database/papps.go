@@ -220,12 +220,12 @@ func DBGetExternalTxByIncTx(incTx string, network string) (*common.ExternalTxSta
 	return &result, nil
 }
 
-func DBGetPappContractData(network string, pappType int) (*common.PappContractData, error) {
-	var result common.PappContractData
+func DBGetPappVaultData(network string, pappType int) (*common.PappVaultData, error) {
+	var result common.PappVaultData
 
 	filter := bson.M{"network": bson.M{operator.Eq: network}, "type": bson.M{operator.Eq: pappType}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	dbresult := mgm.Coll(&common.PappContractData{}).FindOne(ctx, filter)
+	dbresult := mgm.Coll(&common.PappVaultData{}).FindOne(ctx, filter)
 	if dbresult.Err() != nil {
 		return nil, dbresult.Err()
 	}

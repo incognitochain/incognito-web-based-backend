@@ -127,7 +127,7 @@ func DBCreateIndex() error {
 			Keys: bsonx.Doc{{Key: "network", Value: bsonx.Int32(1)}, {Key: "type", Value: bsonx.Int32(1)}},
 		},
 	}
-	_, err = mgm.Coll(&common.PappContractData{}).Indexes().CreateMany(context.Background(), pappsAddressModel)
+	_, err = mgm.Coll(&common.PappVaultData{}).Indexes().CreateMany(context.Background(), pappsAddressModel)
 	if err != nil {
 		log.Printf("failed to index coins in %v", time.Since(startTime))
 		return err

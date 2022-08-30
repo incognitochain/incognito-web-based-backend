@@ -14,9 +14,11 @@ import (
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
+	"github.com/incognitochain/go-incognito-sdk-v2/crypto"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
+	"github.com/incognitochain/go-incognito-sdk-v2/transaction/tx_generic"
 	"github.com/mongodb/mongo-tools/common/json"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -43,8 +45,6 @@ func APISubmitSwapTx(c *gin.Context) {
 	var mdRaw metadataCommon.Metadata
 	var isPRVTx bool
 	var isUnifiedToken bool
-	var feeToken string
-	var feeAmount uint64
 	var outCoins []coin.Coin
 	var txHash string
 	var rawTxBytes []byte
@@ -62,10 +62,13 @@ func APISubmitSwapTx(c *gin.Context) {
 		switch txType {
 		case common.TxCustomTokenPrivacyType:
 			isPRVTx = false
+			txToken := txDetail.(tx_generic.TransactionToken)
+			outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
 		case common.TxNormalType:
 			isPRVTx = true
-			feeToken = common.PRVCoinID.String()
+			// feeToken = common.PRVCoinID.String()
 		}
+		outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
 	} else {
 		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
 		if err != nil {
@@ -89,12 +92,12 @@ func APISubmitSwapTx(c *gin.Context) {
 			txHash = tx.TokenVersion2.Hash().String()
 			mdRaw = tx.TokenVersion2.GetMetadata()
 			outCoins = append(outCoins, tx.TokenVersion2.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
-			outCoins = append(outCoins, tx.TokenVersion2.Tx.Proof.GetOutputCoins()...)
+			outCoins = append(outCoins, tx.TokenVersion2.TokenData.Proof.GetOutputCoins()...)
 		}
 		if tx.Version2 != nil {
 			isPRVTx = true
 			txHash = tx.TokenVersion2.Hash().String()
-			feeToken = common.PRVCoinID.String()
+			// feeToken = common.PRVCoinID.String()
 			mdRaw = tx.Version2.GetMetadata()
 			outCoins = tx.Version2.GetProof().GetOutputCoins()
 		}
@@ -132,7 +135,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, err := checkValidTxSwap(md, feeToken, feeAmount, outCoins)
+	valid, networkList, feeToken, feeAmount, err := checkValidTxSwap(md, outCoins)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
@@ -388,9 +391,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, err
 	}
 
-	vaultData, err := database.DBGetPappContractData(networkName, wcommon.PappTypeSwap)
+	vaultData, err := database.DBGetPappVaultData(networkName, wcommon.PappTypeSwap)
 	if err != nil {
-		fmt.Println("DBGetPappContractData", err)
+		fmt.Println("DBGetPappVaultData", err)
 		return nil, err
 	}
 
@@ -445,6 +448,14 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, errors.New("no ExchangeApps found")
 	}
 
+	amountFloat := new(big.Float)
+	amountFloat, ok := amountFloat.SetString(amount)
+	if !ok {
+		return nil, fmt.Errorf("amount is not a number")
+	}
+	amountBigFloat := ConvertToNanoIncognitoToken(amountFloat, int64(pTokenContract1.Decimals)) //amount *big.Float, decimal int64, return *big.Float
+	amountInBig, _ := amountBigFloat.Int(nil)
+
 	for appName, endpoint := range pappList.ExchangeApps {
 		switch appName {
 		case "uniswap":
@@ -498,17 +509,6 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err
 			}
 
-			amountFloat := new(big.Float)
-			amountFloat, ok := amountFloat.SetString(amount)
-			if !ok {
-				return nil, fmt.Errorf("amount is not a number")
-			}
-			amountBigFloat := ConvertToNanoIncognitoToken(amountFloat, int64(pTokenContract1.Decimals)) //amount *big.Float, decimal int64, return *big.Float
-			log.Println("amountBigFloat: ", amountBigFloat.String())
-
-			// convert float to bigin:
-			amountInBig, _ := amountBigFloat.Int(nil)
-
 			amountOutBig, _ := new(big.Int).SetString(quote.Data.AmountOutRaw, 10)
 
 			paths := []ethcommon.Address{}
@@ -535,6 +535,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				calldata = err.Error()
 			}
 
+			contract, ok := pappList.AppContracts[appName]
+			if !ok {
+				return nil, errors.New("contract not found " + appName)
+			}
+
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
 				AmountIn:     amount,
@@ -544,6 +549,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				Route:        quote.Data.Route,
 				Fee:          fees,
 				Calldata:     calldata,
+				CallContract: contract,
 			})
 		case "pancake":
 			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
@@ -593,9 +599,33 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				}
 			}
 
+			amountOutBig, _ := new(big.Int).SetString(quote.Data.Outputs[1], 10)
+
+			paths := []ethcommon.Address{}
+
+			for _, token := range quote.Data.Route {
+				tokenAddress := ethcommon.Address{}
+				err = tokenAddress.UnmarshalText([]byte(token))
+				if err != nil {
+					return nil, err
+				}
+				paths = append(paths, tokenAddress)
+			}
+
+			calldata, err := papps.BuildCallDataPancake(paths, amountInBig, amountOutBig, isUnifiedNativeToken)
+			if err != nil {
+				log.Println("Error building call data: ", err)
+				calldata = err.Error()
+			}
+
 			amountOut, _ := new(big.Float).SetString(quote.Data.Outputs[1])
 
 			pTokenAmount := new(big.Float).Mul(amountOut, big.NewFloat(math.Pow10(-pTokenContract2.Decimals)))
+
+			contract, ok := pappList.AppContracts[appName]
+			if !ok {
+				return nil, errors.New("contract not found " + appName)
+			}
 
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
@@ -604,7 +634,10 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOutRaw: quote.Data.Outputs[1],
 				Route:        quote.Data.Route,
 				Fee:          fees,
+				Calldata:     calldata,
+				CallContract: contract,
 			})
+
 		case "curve":
 			poolList, err := getCurvePoolIndex()
 			if err != nil {
@@ -685,6 +718,10 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					})
 				}
 			}
+			contract, ok := pappList.AppContracts[appName]
+			if !ok {
+				return nil, errors.New("contract not found " + appName)
+			}
 
 			result = append(result, QuoteDataResp{
 				AppName:      appName,
@@ -692,6 +729,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOut:    amountOutDecimal.String(),
 				AmountOutRaw: amountOut.String(),
 				Fee:          fees,
+				CallContract: contract,
 			})
 		}
 	}
@@ -859,41 +897,83 @@ func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
 	return result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest, feeToken string, feeAmount uint64, outCoins []coin.Coin) (bool, []string, error) {
+func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool, []string, string, uint64, int64, error) {
+	var feeAmount uint64
+	var feeToken string
+	var feeDiff int64
 	var result bool
 	spTkList, err := getPappSupportedTokenList()
 	if err != nil {
-		return result, nil, err
+		return result, nil, "", 0, 0, err
 	}
 	networkInfo, err := getBridgeNetworkInfos()
 	if err != nil {
-		return result, nil, err
+		return result, nil, "", 0, 0, err
 	}
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
-		return result, nil, err
+		return result, nil, "", 0, 0, err
 	}
 	tokenInfo, err := getTokenInfo(md.BurnTokenID.String())
 	if err != nil {
-		return result, nil, err
+		return result, nil, "", 0, 0, err
 	}
 	callNetworkList := []string{}
+
+	burnTokenAssetTag := crypto.HashToPoint(md.BurnTokenID[:])
+
+	for _, c := range outCoins {
+		feeCoin, rK := c.DoesCoinBelongToKeySet(&incFeeKeySet.KeySet)
+		if feeCoin {
+			if c.GetAssetTag() == nil {
+				feeToken = common.PRVCoinID.String()
+			} else {
+				assetTag := c.GetAssetTag()
+				blinder, err := coin.ComputeAssetTagBlinder(rK)
+				if err != nil {
+					return result, nil, "", 0, 0, err
+				}
+				rawAssetTag := new(crypto.Point).Sub(
+					assetTag,
+					new(crypto.Point).ScalarMult(crypto.PedCom.G[coin.PedersenRandomnessIndex], blinder),
+				)
+				if rawAssetTag == burnTokenAssetTag {
+					feeToken = md.BurnTokenID.String()
+				}
+			}
+
+			coin, err := c.Decrypt(&incFeeKeySet.KeySet)
+			if err != nil {
+				return result, nil, "", 0, 0, err
+			}
+			feeAmount = coin.GetValue()
+		}
+	}
 
 	for _, v := range md.Data {
 		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))
 		receiveTokenID, err := getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList)
 		if err != nil {
-			return result, nil, err
+			return result, nil, "", 0, 0, err
 		}
 		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
 		burnAmountStr := fmt.Sprintf("%v", burnAmountFloat)
-		quoteData, err := estimateSwapFee(v.IncTokenID.String(), receiveTokenID, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo)
-		_ = quoteData
-
-		//TODO
+		quoteDatas, err := estimateSwapFee(v.IncTokenID.String(), receiveTokenID, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo)
+		if err != nil {
+			return result, nil, "", 0, 0, err
+		}
+		for _, quote := range quoteDatas {
+			if quote.CallContract == "0x"+v.ExternalCallAddress {
+				for _, fee := range quote.Fee {
+					if fee.FeeAddress == feeToken {
+						feeDiff = int64(fee.Amount) - int64(feeAmount)
+					}
+				}
+			}
+		}
 	}
 	result = true
-	return result, callNetworkList, nil
+	return result, callNetworkList, feeToken, feeAmount, feeDiff, nil
 }
 
 func sendSwapTxAndStoreDB(txhash string, txRaw string, isTokenTx bool) error {

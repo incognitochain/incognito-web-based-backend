@@ -55,6 +55,7 @@ type EstimateSwapRespond struct {
 
 type QuoteDataResp struct {
 	AppName      string
+	CallContract string
 	AmountIn     string
 	AmountInRaw  string
 	AmountOut    string
@@ -323,9 +324,9 @@ type UniswapQuoteToken struct {
 
 type PancakeQuote struct {
 	Data struct {
-		Outputs []string    `json:"outputs"`
-		Route   interface{} `json:"paths"`
-		Impact  float64     `json:"impactAmount"`
+		Outputs []string `json:"outputs"`
+		Route   []string `json:"paths"`
+		Impact  float64  `json:"impactAmount"`
 	} `json:"data"`
 	Message string `json:"message"`
 }

@@ -9,10 +9,12 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	pancakeproxy "github.com/incognitochain/incognito-web-based-backend/papps/pancake"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pcurve"
 	pUniswapHelper "github.com/incognitochain/incognito-web-based-backend/papps/puniswaphelper"
 	puniswap "github.com/incognitochain/incognito-web-based-backend/papps/puniswapproxy"
@@ -197,4 +199,22 @@ func buildPathUniswap(paths []common.Address, fees []int64) []byte {
 	temp = append(temp, paths[len(paths)-1].Bytes()...)
 
 	return temp
+}
+
+func BuildCallDataPancake(paths []common.Address, srcQty *big.Int, expectedOut *big.Int, isNative bool) (string, error) {
+	var result string
+	var input []byte
+	var err error
+
+	tradeAbi, err := abi.JSON(strings.NewReader(pancakeproxy.PancakeproxyMetaData.ABI))
+	if err != nil {
+		return result, err
+	}
+	deadline := uint(time.Now().Unix() + 60000)
+	input, err = tradeAbi.Pack("trade", paths, srcQty, expectedOut, big.NewInt(int64(deadline)), isNative)
+	if err != nil {
+		return result, err
+	}
+	result = hex.EncodeToString(input)
+	return result, err
 }

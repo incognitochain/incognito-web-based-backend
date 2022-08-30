@@ -299,7 +299,7 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 		return nil, err
 	}
 
-	pappAddress, err := database.DBGetPappContractData(network, wcommon.PappTypeSwap)
+	pappAddress, err := database.DBGetPappVaultData(network, wcommon.PappTypeSwap)
 	if err != nil {
 		return nil, err
 	}

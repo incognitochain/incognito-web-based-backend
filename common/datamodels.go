@@ -23,6 +23,7 @@ type PAppsEndpointData struct {
 	mgm.DefaultModel `bson:",inline"`
 	Network          string            `json:"network" bson:"network"`
 	ExchangeApps     map[string]string `json:"excapps" bson:"excapps"`
+	AppContracts     map[string]string `json:"appcontracts" bson:"appcontracts"`
 }
 
 type BridgeNetworkData struct {
@@ -70,7 +71,7 @@ type PappTxData struct {
 	Error            string   `json:"error" bson:"error"`
 }
 
-type PappContractData struct {
+type PappVaultData struct {
 	mgm.DefaultModel `bson:",inline"`
 	Network          string `json:"network" bson:"network"`
 	Type             int    `json:"type" bson:"type"`

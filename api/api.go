@@ -8,17 +8,25 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/patrickmn/go-cache"
 )
 
 var config common.Config
+var incFeeKeySet *wallet.KeyWallet
 
 func StartAPIservice(cfg common.Config) {
 	log.Println("initiating api-service...")
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
 	network := config.NetworkID
+	if cfg.IncKey != "" {
+		err := loadOTAKey(cfg.IncKey)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	err := initIncClient(network)
 	if err != nil {
@@ -74,4 +82,17 @@ func StartAPIservice(cfg common.Config) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func loadOTAKey(key string) error {
+	wl, err := wallet.Base58CheckDeserialize(key)
+	if err != nil {
+		return err
+	}
+	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
+
+		return err
+	}
+	incFeeKeySet = wl
+	return nil
 }

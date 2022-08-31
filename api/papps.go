@@ -135,7 +135,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, err := checkValidTxSwap(md, outCoins)
+	valid, networkList, feeToken, feeAmount, feeDiff, err := checkValidTxSwap(md, outCoins)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
@@ -146,7 +146,7 @@ func APISubmitSwapTx(c *gin.Context) {
 			c.JSON(200, gin.H{"Error": err.Error()})
 			return
 		}
-		c.JSON(200, gin.H{"Result": status})
+		c.JSON(200, gin.H{"Result": status, "feeDiff": feeDiff})
 		return
 	}
 

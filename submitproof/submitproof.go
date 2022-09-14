@@ -32,7 +32,7 @@ func getProof(txhash string, networkID int) (*wcommon.EVMProofRecordData, *inccl
 			log.Println(err)
 			continue
 		}
-		blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, amount, _, err := getETHDepositProof(evmClient, txhash)
+		blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, amount, _, isTxPass, err := getETHDepositProof(evmClient, txhash)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -54,6 +54,7 @@ func getProof(txhash string, networkID int) (*wcommon.EVMProofRecordData, *inccl
 			ContractID:  contractID,
 			PaymentAddr: paymentAddr,
 			IsRedeposit: isRedeposit,
+			IsTxPass:    isTxPass,
 			OTAStr:      otaStr,
 			Amount:      amount,
 			Network:     networkName,
@@ -74,11 +75,11 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, str
 	i := 0
 	var finalErr string
 retry:
-	if i == 10 {
+	if i == 15 {
 		return "", "", "", "", errors.New(finalErr)
 	}
 	if i > 0 {
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	i++
 	proofRecord, depositProof, err := getProof(txhash, networkID)
@@ -90,6 +91,7 @@ retry:
 	isSubmitted, err := checkProofSubmitted(proofRecord.BlockHash, proofRecord.TxIndex, networkID)
 	if err != nil {
 		log.Println("checkProofSubmitted error:", err)
+		finalErr = "checkProofSubmitted " + err.Error()
 	}
 	if isSubmitted {
 		return "", "", "", "", errors.New(ProofAlreadySubmitError)
@@ -97,9 +99,14 @@ retry:
 	if linkedTokenID == "" && tokenID == "" {
 		tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
 		if err != nil {
-			log.Println("error:", err)
+			log.Println("findTokenByContractID error:", err)
+			finalErr = "findTokenByContractID " + err.Error()
 			goto retry
 		}
+	}
+	if tokenID == "" {
+		log.Println("error:", "invalid tokenID empty", proofRecord.ContractID, networkID)
+		goto retry
 	}
 	incTx, err := submitProofTx(depositProof, linkedTokenID, tokenID, networkID, key)
 	if err != nil {

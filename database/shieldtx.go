@@ -126,9 +126,9 @@ func DBUpdateShieldTxStatus(externalTx string, networkID int, status string, err
 	return nil
 }
 
-func DBUpdateShieldOnChainTxInfo(externalTx string, networkID int, paymentAddr string, incTx string, tokenID string, linkedTokenID string) error {
+func DBUpdateShieldOnChainTxInfo(externalTx string, networkID int, paymentAddr string, incTx string, utokenID string, linkedTokenID string) error {
 	filter := bson.M{"externaltx": bson.M{operator.Eq: externalTx}, "networkid": bson.M{operator.Eq: networkID}}
-	update := bson.M{"$set": bson.M{"externaltx": externalTx, "networkid": networkID, "paymentaddress": paymentAddr, "inctx": incTx, "tokenid": tokenID, "utokenid": linkedTokenID}}
+	update := bson.M{"$set": bson.M{"externaltx": externalTx, "networkid": networkID, "paymentaddress": paymentAddr, "inctx": incTx, "tokenid": linkedTokenID, "utokenid": utokenID}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.ShieldTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {

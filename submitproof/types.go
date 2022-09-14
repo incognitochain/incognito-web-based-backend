@@ -21,6 +21,8 @@ type SubmitPappTxTask struct {
 	IsUnifiedToken bool
 	FeeToken       string
 	FeeAmount      uint64
+	BurntToken     string
+	BurntAmount    uint64
 	Networks       []string
 	Time           time.Time
 }

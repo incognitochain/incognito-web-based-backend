@@ -213,6 +213,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			otherInfo := wcommon.ExternalTxSwapResult{
 				LogResult:   logResult,
 				IsRedeposit: isRedeposit,
+				IsReverted:  (len(txReceipt.Logs) >= 2) && (len(txReceipt.Logs) <= 3),
+				IsFailed:    (txReceipt.Status == 0),
 			}
 
 			otherInfoBytes, _ := json.MarshalIndent(otherInfo, "", "\t")

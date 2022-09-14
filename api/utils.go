@@ -122,7 +122,18 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 	if !strings.Contains(contractID, "0x") {
 		contractID = "0x" + contractID
 	}
+	if contractID == "0x0000000000000000000000000000000000000000" { //native token
+		networkName := common.GetNetworkName(networkID)
+		nativeCtype := common.GetNativeNetworkCurrencyType(networkName)
+		for _, v := range supportedTokenList {
+			if v.CurrencyType == nativeCtype {
+				return v.ID, nil
+			}
+		}
+	}
+	contractID = strings.ToLower(contractID)
 	for _, v := range supportedTokenList {
+		v.ContractIDGetRate = strings.ToLower(v.ContractIDGetRate)
 		if v.ContractIDGetRate == contractID && v.NetworkID == networkID {
 			return v.ID, nil
 		}
@@ -130,19 +141,27 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 	return "", errors.New("can't find tokenID for contract " + contractID)
 }
 
-func uniswapDataExtractor(data []byte) (*UniswapQuote, error) {
+func uniswapDataExtractor(data []byte) (*UniswapQuote, [][]int64, error) {
 	if len(data) == 0 {
-		return nil, errors.New("can't extract data from empty byte array")
+		return nil, nil, errors.New("can't extract data from empty byte array")
 	}
+	feePaths := [][]int64{}
 	result := UniswapQuote{}
 	err := json.Unmarshal(data, &result)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if result.Message != "ok" {
-		return nil, errors.New(result.Message)
+		return nil, nil, errors.New(result.Error)
 	}
-	return &result, nil
+	for _, route := range result.Data.Route {
+		fees := []int64{}
+		for _, path := range route {
+			fees = append(fees, path.Fee)
+		}
+		feePaths = append(feePaths, fees)
+	}
+	return &result, feePaths, nil
 }
 
 func pancakeDataExtractor(data []byte) (*PancakeQuote, error) {
@@ -155,7 +174,7 @@ func pancakeDataExtractor(data []byte) (*PancakeQuote, error) {
 		return nil, err
 	}
 	if result.Message != "ok" {
-		return nil, errors.New(result.Message)
+		return nil, errors.New(result.Error)
 	}
 	return &result, nil
 }
@@ -220,8 +239,36 @@ func getNetworkIDFromCurrencyType(currencyType int) (int, error) {
 	return netID, nil
 }
 
-func getCoinAmount() uint64 {
-	var result uint64
+func getSwapContractID(tokenID string, network int, supportedTokenList []PappSupportedTokenData) (string, error) {
+	var result string
+	for _, pTk := range supportedTokenList {
+		if pTk.ID == tokenID {
+			pNetID := pTk.NetworkID
+			if pNetID == network {
+				result = pTk.ContractIDGetRate
+				return result, nil
+			}
+		}
+	}
+	return result, nil
+}
 
-	return result
+func verifySlippage(slippage string) (*big.Float, error) {
+	result := big.NewFloat(0)
+	upperBound := float64(90)
+	lowerBound := float64(0)
+	if slippage == "" {
+		return nil, nil
+	}
+	result, ok := result.SetString(slippage)
+	if !ok {
+		return nil, fmt.Errorf("invalid slippage %s", slippage)
+	}
+	f, _ := result.Float64()
+
+	if f > upperBound || f < lowerBound {
+		return nil, fmt.Errorf("out of range slippage %s", slippage)
+	}
+
+	return result, nil
 }

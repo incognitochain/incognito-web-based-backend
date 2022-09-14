@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	pancakeproxy "github.com/incognitochain/incognito-web-based-backend/papps/pancake"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pcurve"
-	pUniswapHelper "github.com/incognitochain/incognito-web-based-backend/papps/puniswaphelper"
 	puniswap "github.com/incognitochain/incognito-web-based-backend/papps/puniswapproxy"
 )
 
@@ -146,7 +145,7 @@ func CurveQuote(
 	return amountOut, nil
 }
 
-func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees []int64, srcQty *big.Int, expectedOut *big.Int, isNative bool) (string, error) {
+func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees []int64, srcQty *big.Int, expectedOut *big.Int, isNativeOut bool) (string, error) {
 	var result string
 	var input []byte
 	var err error
@@ -155,8 +154,9 @@ func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees
 	if err != nil {
 		return result, err
 	}
-	if len(paths) == 2 {
-		agr := &pUniswapHelper.IUinswpaHelperExactInputParams{
+
+	if len(fees) > 1 {
+		agr := &puniswap.ISwapRouter2ExactInputParams{
 			Path:             buildPathUniswap(paths, fees),
 			Recipient:        recipient,
 			AmountIn:         srcQty,
@@ -164,11 +164,11 @@ func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees
 		}
 
 		agrBytes, _ := json.MarshalIndent(agr, "", "\t")
-		log.Println("IUinswpaHelperExactInputParams", isNative, paths[0].String(), paths[1].String(), string(agrBytes))
+		log.Println("ISwapRouter2ExactInputParams", isNativeOut, paths[0].String(), paths[1].String(), string(agrBytes))
 
-		input, err = tradeAbi.Pack("tradeInput", agr, isNative)
+		input, err = tradeAbi.Pack("tradeInput", agr, isNativeOut)
 	} else {
-		agr := &pUniswapHelper.IUinswpaHelperExactInputSingleParams{
+		agr := &puniswap.ISwapRouter2ExactInputSingleParams{
 			TokenIn:           paths[0],
 			TokenOut:          paths[len(paths)-1],
 			Fee:               big.NewInt(fees[0]),
@@ -178,9 +178,9 @@ func BuildCallDataUniswap(paths []common.Address, recipient common.Address, fees
 			AmountOutMinimum:  expectedOut,
 		}
 		agrBytes, _ := json.MarshalIndent(agr, "", "\t")
-		log.Println("IUinswpaHelperExactInputSingleParams", isNative, string(agrBytes))
+		log.Println("ISwapRouter2ExactInputSingleParams", isNativeOut, string(agrBytes))
 
-		input, err = tradeAbi.Pack("tradeInputSingle", agr, isNative)
+		input, err = tradeAbi.Pack("tradeInputSingle", agr, isNativeOut)
 	}
 	result = hex.EncodeToString(input)
 	return result, err
@@ -210,11 +210,12 @@ func BuildCallDataPancake(paths []common.Address, srcQty *big.Int, expectedOut *
 	if err != nil {
 		return result, err
 	}
-	deadline := uint(time.Now().Unix() + 60000)
+	deadline := uint(time.Now().Unix() + 259200000)
 	input, err = tradeAbi.Pack("trade", paths, srcQty, expectedOut, big.NewInt(int64(deadline)), isNative)
 	if err != nil {
 		return result, err
 	}
 	result = hex.EncodeToString(input)
+
 	return result, err
 }

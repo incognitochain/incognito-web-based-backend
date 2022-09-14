@@ -57,9 +57,13 @@ type TokenInfo struct {
 	NetworkID         int
 	MovedUnifiedToken bool
 	ParentUnifiedID   int
+	IsSwapable        bool
+	ContractIDSwap    string
 }
 
 type ExternalTxSwapResult struct {
 	LogResult   string
 	IsRedeposit bool
+	IsReverted  bool
+	IsFailed    bool
 }

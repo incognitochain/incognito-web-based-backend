@@ -238,9 +238,9 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				txtype = "unknown"
 			}
 			if otherInfo.IsFailed {
-				go slacknoti.SendSlackNoti(fmt.Sprintf("[%v] tx outchain have failed outcome needed check 😵, txhash %v, network %v", txtype, tx.Txhash, tx.Network))
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, txhash `%v`, network `%v`", txtype, tx.Txhash, tx.Network))
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("[%v] tx outchain accepted txhash %v, network %v, incReqTx %v\n outcome of tx: %v\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain accepted txhash `%v`, network `%v`, incReqTx `%v`\n outcome of tx: `%v`\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
 		}
 		return nil
 	}
@@ -264,7 +264,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("[swaptx] txhash %v rejected 😢\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` txhash `%v` rejected 😢\n", tx.IncTx))
 		case 1:
 			for _, network := range tx.Networks {
 				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
@@ -276,9 +276,9 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("[swaptx] txhash %v accpected 👌\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` txhash `%v` accpected 👌\n", tx.IncTx))
 		default:
-			if tx.Status != wcommon.StatusExecuting {
+			if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
 				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
 				if err != nil {
 					return err

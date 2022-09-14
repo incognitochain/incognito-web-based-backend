@@ -20,6 +20,7 @@ import (
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/evmproof"
+	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -103,11 +104,11 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 
 func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	task := SubmitProofShieldTask{}
+	defer m.Ack()
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
 		// rejectDelivery(delivery, payload)
 		log.Println("ProcessShieldRequest error decoding message", err)
-		m.Ack()
 		return
 	}
 
@@ -115,10 +116,8 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, "timeout")
 		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
-			m.Nack()
 			return
 		}
-		m.Ack()
 		return
 	}
 
@@ -126,34 +125,28 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	key := keyList[t%int64(len(keyList))]
 	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.TxHash, task.TokenID, task.NetworkID, key)
 
-	// if tokenID != "" && linkedTokenID != "" {
 	errdb := database.DBUpdateShieldOnChainTxInfo(task.TxHash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
 	if errdb != nil {
 		log.Println("DBUpdateShieldOnChainTxInfo error:", err)
-		m.Nack()
 		return
 	}
 	// }
 
 	if err != nil {
+		go slacknoti.SendSlackNoti(fmt.Sprintf("[submitProof] txhash %v, tokenID %v, networkID %v, error: %v\n", task.TxHash, task.TokenID, task.NetworkID, err))
 		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
 		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
-			m.Nack()
 			return
 		}
-		m.Ack()
 		return
 	}
 
 	err = database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusPending, "")
 	if err != nil {
 		log.Println("DBUpdateShieldTxStatus err:", err)
-		m.Nack()
 		return
 	}
-
-	m.Ack()
 }
 
 func ProcessPappTxRequest(ctx context.Context, m *pubsub.Message) {
@@ -203,7 +196,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 	task := SubmitPappTxTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
-		log.Println("ProcessShieldRequest error decoding message", err)
+		log.Println("processSubmitPappIncTask error decoding message", err)
 		m.Ack()
 		return
 	}

@@ -1,8 +1,12 @@
 package submitproof
 
 const (
-	MqSubmitTx        = "submitproof"
-	MqWatchTx         = "watchsubmit"
+	MqSubmitTx = "submitproof"
+	MqWatchTx  = "watchsubmit"
+)
+
+const (
+	TxTypeRedeposit   = "redeposit"
 	TxTypeShielding   = "shielding"
 	TxTypeUnshielding = "unshielding"
 )
@@ -24,6 +28,10 @@ const (
 	BSC_NetworkID = 2
 	PLG_NetworkID = 3
 	FTM_NetworkID = 4
+)
+
+const (
+	max_retry = 15
 )
 
 const (

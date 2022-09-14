@@ -74,19 +74,24 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, str
 	}
 	i := 0
 	var finalErr string
+	var proofRecord *wcommon.EVMProofRecordData
+	var depositProof *incclient.EVMDepositProof
+	var err error
 retry:
-	if i == 15 {
+	if i == max_retry {
 		return "", "", "", "", errors.New(finalErr)
 	}
 	if i > 0 {
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	i++
-	proofRecord, depositProof, err := getProof(txhash, networkID)
-	if err != nil {
-		log.Println("error:", err)
-		finalErr = fmt.Sprintf("getProof %v %v ", txhash, networkID) + err.Error()
-		goto retry
+	if proofRecord == nil {
+		proofRecord, depositProof, err = getProof(txhash, networkID)
+		if err != nil {
+			log.Println("error:", err)
+			finalErr = fmt.Sprintf("getProof %v %v ", txhash, networkID) + err.Error()
+			goto retry
+		}
 	}
 	isSubmitted, err := checkProofSubmitted(proofRecord.BlockHash, proofRecord.TxIndex, networkID)
 	if err != nil {

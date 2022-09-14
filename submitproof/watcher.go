@@ -17,6 +17,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
 )
 
@@ -171,12 +172,6 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		}
 		var logResult string
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
-
-			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusAccepted, "")
-			if err != nil {
-				return err
-			}
-
 			valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
 			defer encodeBufferPool.Put(valueBuf)
 
@@ -224,12 +219,28 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				return err
 			}
 			if isRedeposit {
-				result, err := SubmitShieldProof(tx.Txhash, networkID, "")
+				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit)
 				if err != nil {
 					return err
 				}
-				fmt.Println("result", result)
 			}
+
+			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusAccepted, "")
+			if err != nil {
+				return err
+			}
+
+			txtype := ""
+			switch tx.Type {
+			case wcommon.PappTypeSwap:
+				txtype = "swaptx"
+			default:
+				txtype = "unknown"
+			}
+			if otherInfo.IsFailed {
+				go slacknoti.SendSlackNoti(fmt.Sprintf("[%v] tx outchain have failed outcome needed check 😵, txhash %v, network %v", txtype, tx.Txhash, tx.Network))
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("[%v] tx outchain accepted txhash %v, network %v, incReqTx %v\n outcome of tx: %v\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
 		}
 		return nil
 	}
@@ -253,6 +264,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("[swaptx] txhash %v rejected 😢\n", tx.IncTx))
 		case 1:
 			for _, network := range tx.Networks {
 				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
@@ -264,6 +276,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("[swaptx] txhash %v accpected 👌\n", tx.IncTx))
 		default:
 			if tx.Status != wcommon.StatusExecuting {
 				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")

@@ -1,5 +1,7 @@
 package common
 
+import "strings"
+
 var DefaultConfig = Config{
 	Port:           9898,
 	CoinserviceURL: "http://51.161.117.193:8096",
@@ -100,14 +102,21 @@ const (
 
 var (
 	NetworkCurrencyMap = map[int]int{
-		ETH:       NETWORK_ETH_ID,
-		ERC20:     NETWORK_ETH_ID,
-		BNB_BSC:   NETWORK_BSC_ID,
-		BNB_BEP20: NETWORK_BSC_ID,
-		MATIC:     NETWORK_PLG_ID,
-		PLG_ERC20: NETWORK_PLG_ID,
-		FTM:       NETWORK_FTM_ID,
-		FTM_ERC20: NETWORK_FTM_ID,
+		UNIFINE_TOKEN: NETWORK_INC_ID,
+		ETH:           NETWORK_ETH_ID,
+		ERC20:         NETWORK_ETH_ID,
+		BNB_BSC:       NETWORK_BSC_ID,
+		BNB_BEP20:     NETWORK_BSC_ID,
+		MATIC:         NETWORK_PLG_ID,
+		PLG_ERC20:     NETWORK_PLG_ID,
+		FTM:           NETWORK_FTM_ID,
+		FTM_ERC20:     NETWORK_FTM_ID,
+	}
+)
+
+var (
+	WrappedNativeMap = map[int][]string{
+		NETWORK_PLG_ID: {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
 	}
 )
 

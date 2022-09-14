@@ -44,13 +44,15 @@ func StartAPIservice(cfg common.Config) {
 
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	r.GET("/tokenlist", APIGetTokenList)
+	r.GET("/tokenlist", APIGetSupportedToken)
 
 	r.POST("/estimateshieldreward", APIEstimateReward)
 
 	r.POST("/estimateunshieldfee", APIEstimateUnshield)
 
 	r.POST("/genunshieldaddress", APIGenUnshieldAddress)
+
+	r.POST("/genshieldaddress", APIGenShieldAddress)
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 

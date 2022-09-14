@@ -136,18 +136,13 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	// }
 
 	if err != nil {
-		if err.Error() == ProofAlreadySubmitError {
-			errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
-			if errdb != nil {
-				log.Println("DBUpdateShieldTxStatus error:", errdb)
-				m.Nack()
-				return
-			}
-			m.Ack()
+		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
+		if errdb != nil {
+			log.Println("DBUpdateShieldTxStatus error:", errdb)
+			m.Nack()
 			return
 		}
-		log.Println("submitProof error:", err) //
-		m.Nack()
+		m.Ack()
 		return
 	}
 
@@ -221,6 +216,8 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		IsUnifiedToken: task.IsUnifiedToken,
 		FeeToken:       task.FeeToken,
 		FeeAmount:      task.FeeAmount,
+		BurntToken:     task.BurntToken,
+		BurntAmount:    task.BurntAmount,
 		Networks:       task.Networks,
 	}
 	err = database.DBSavePappTxData(data)
@@ -293,7 +290,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
-	networkID := wcommon.GetNetworkID(network)
+	// networkID := wcommon.GetNetworkID(network)
 	networkInfo, err := database.DBGetBridgeNetworkInfo(network)
 	if err != nil {
 		return nil, err
@@ -310,11 +307,11 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 	networkChainIdInt.SetString(networkChainId, 10)
 
 	var proof *evmproof.DecodedProof
-	if isUnifiedToken {
-		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0, uint(networkID))
-	} else {
-		proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
-	}
+	// if isUnifiedToken {
+	proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0)
+	// } else {
+	// 	proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
+	// }
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +352,10 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 			continue
 		}
 
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
+
 		auth.GasPrice = gasPrice
+		auth.GasLimit = 500000
 
 		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 		if err != nil {

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateCalldata(t *testing.T) {
+func TestCreateCalldataUniswap(t *testing.T) {
 
 	token1 := common.Address{}
 	token2 := common.Address{}
@@ -27,6 +27,27 @@ func TestCreateCalldata(t *testing.T) {
 	dstQty := new(big.Int).SetInt64(2000000)
 
 	result, err := BuildCallDataUniswap(paths, recipient, []int64{1000000000}, srcQty, dstQty, true)
+	require.Equal(t, nil, err)
+
+	t.Logf("result: %s\n", result)
+}
+
+func TestCreateCalldataPancake(t *testing.T) {
+
+	token1 := common.Address{}
+	token2 := common.Address{}
+	err := token1.UnmarshalText([]byte("0x78867bbeef44f2326bf8ddd1941a4439382ef2a7"))
+	require.Equal(t, nil, err)
+	err = token2.UnmarshalText([]byte("0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06"))
+	require.Equal(t, nil, err)
+
+	paths := []common.Address{}
+	paths = append(paths, token1)
+	paths = append(paths, token2)
+	srcQty := new(big.Int).SetInt64(10000)
+	dstQty := new(big.Int).SetInt64(1)
+
+	result, err := BuildCallDataPancake(paths, srcQty, dstQty, true)
 	require.Equal(t, nil, err)
 
 	t.Logf("result: %s\n", result)

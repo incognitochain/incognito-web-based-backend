@@ -1,12 +1,15 @@
 package api
 
 import (
+	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	"github.com/stretchr/testify/suite"
@@ -40,27 +43,31 @@ func TestHelpTestSuite(t *testing.T) {
 	suite.Run(t, new(HelpTestSuite))
 }
 
-func (t *HelpTestSuite) TestSwapFlowUniSwapSuccess() {
-
-}
-
 func (t *HelpTestSuite) TestSwapFlowUniSwapRedeposit() {
-
+	o := "43000"
+	amountOutBig, _ := new(big.Int).SetString(o, 10)
+	t.T().Log("amountOutBig", amountOutBig.Uint64())
+	amountOutBig = amountOutBig.Div(amountOutBig, big.NewInt(100))
+	amountOutBig = amountOutBig.Div(amountOutBig, big.NewInt(10))
+	t.T().Log("amountOutBig", amountOutBig.String())
 }
 
 func (t *HelpTestSuite) TestSwapFlowUniSwapRedepositWrongFee() {
 
 	// 112t8rnX6JdMsZJngeixtnKLziMYm6tyH9w2Z2qd7zdHyd2nSxybzqMDFAwjTqZrk4UHsybDtodLKbWoj8tbP2rdtQXNyjM1s7K2AK3DyCuJ
-	tokenID := common.Hash{}
-	_, _ = tokenID.NewHashFromStr("f5d88e2e3c8f02d6dc1e01b54c90f673d730bef7d941aeec81ad1e1db690961f")
+	tokenID, err := common.Hash{}.NewHashFromStr("f5d88e2e3c8f02d6dc1e01b54c90f673d730bef7d941aeec81ad1e1db690961f")
+	if err != nil {
+		t.T().Fatal(err)
+	}
 
-	receiveTokenID := common.Hash{}
-	_, _ = receiveTokenID.NewHashFromStr("dae027b21d8d57114da11209dce8eeb587d01adf59d4fc356a8be5eedc146859")
-
+	receiveTokenID, err := common.Hash{}.NewHashFromStr("dae027b21d8d57114da11209dce8eeb587d01adf59d4fc356a8be5eedc146859")
+	if err != nil {
+		t.T().Fatal(err)
+	}
 	keyWallet, _ := wallet.Base58CheckDeserialize(t.MasterKey)
 
 	var recv coin.OTAReceiver
-	err := recv.FromAddress(keyWallet.KeySet.PaymentAddress)
+	err = recv.FromAddress(keyWallet.KeySet.PaymentAddress)
 	if err != nil {
 		t.T().Fatal(err)
 	}
@@ -69,7 +76,7 @@ func (t *HelpTestSuite) TestSwapFlowUniSwapRedepositWrongFee() {
 		BurningAmount:       2000000,
 		ExternalNetworkID:   3,
 		ExternalCallAddress: "68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
-		IncTokenID:          receiveTokenID,
+		IncTokenID:          *receiveTokenID,
 		ReceiveToken:        "a6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
 		WithdrawAddress:     "0000000000000000000000000000000000000000",
 		RedepositReceiver:   recv,
@@ -77,8 +84,9 @@ func (t *HelpTestSuite) TestSwapFlowUniSwapRedepositWrongFee() {
 	}
 
 	md := bridge.BurnForCallRequest{
-		BurnTokenID: tokenID,
-		Data:        []bridge.BurnForCallRequestData{burnData},
+		BurnTokenID:  *tokenID,
+		Data:         []bridge.BurnForCallRequestData{burnData},
+		MetadataBase: *metadata.NewMetadataBase(metadata.BurnForCallRequestMeta),
 	}
 
 	// receiverList := []string{"12seyCLbpyNuz3mjtiWKegnE3dGY1nDtvrhgYwxfoHvyj6pDA3Bw1rkSE9HUwCnGeJn5ai4mLmbhB4CgNi8KRCbaR49BvbiuAxfLM6sjhJqVfkGWvrEBbAMsuEMNvZymnGmLZdnmvt7Q9Grc8qBY"}
@@ -96,5 +104,54 @@ func (t *HelpTestSuite) TestSwapFlowUniSwapRedepositWrongFee() {
 		t.T().Fatal(err)
 	}
 
-	t.T().Log(txHash, base58.Base58Check{}.Encode(txRaw, 0x00))
+	// err = t.incClient.SendRawTokenTx(txRaw)
+	// if err != nil {
+	// 	t.T().Fatal(err)
+	// }
+
+	rawTxBytes, _, err := base58.Base58Check{}.Decode(string(txRaw))
+	if err != nil {
+		t.T().Fatal(err)
+	}
+
+	// t.T().Log(txHash, base58.Base58Check{}.Encode(txRaw, 0x00))
+	t.T().Logf("\n")
+
+	mdRaw, isPRVTx, outCoins, txHash, err := extractDataFromRawTx(rawTxBytes)
+	t.T().Logf("mdRaw %v, isPRVTx %v, outCoins %v, txHash %v\n", mdRaw, isPRVTx, len(outCoins), txHash)
+	if err != nil {
+		t.T().Fatal(err)
+	}
+
+	t.T().Logf("\n")
+	md2, ok := mdRaw.(*bridge.BurnForCallRequest)
+	if !ok {
+		t.T().Fatal(errors.New("invalid tx metadata type"))
+	}
+
+	t.T().Logf("\n")
+
+	wl, err := wallet.Base58CheckDeserialize("112t8rnX6JdMsZJngeixtnKLziMYm6tyH9w2Z2qd7zdHyd2nSxybzqMDFAwjTqZrk4UHsybDtodLKbWoj8tbP2rdtQXNyjM1s7K2AK3DyCuJ")
+	if err != nil {
+		t.T().Fatal(err)
+	}
+	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
+		t.T().Fatal(err)
+	}
+	incFeeKeySet = wl
+
+	valid, networkList, feeToken, feeAmount, feeDiff, err := checkValidTxSwap(md2, outCoins)
+	if err != nil {
+		t.T().Fatal(err)
+	}
+
+	t.T().Logf("valid %v, networkList %v, feeToken %v, feeAmount %v, feeDiff %v", valid, networkList, feeToken, feeAmount, feeDiff)
+	// tx, _ := transaction.DeserializeTransactionJSON(txRaw)
+	// t.T().Log(tx.TokenVersion2)
 }
+
+// func estimateFee(tokenSource string, amount int64, tokenDest string, network string) (string, int64, string, error) {
+// 	var err error
+// 	var feeToken string
+// 	var feeAddress string
+// }

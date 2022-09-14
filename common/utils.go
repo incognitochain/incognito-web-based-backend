@@ -1,5 +1,10 @@
 package common
 
+import (
+	"errors"
+	"strings"
+)
+
 func GetNativeNetworkCurrencyType(network string) int {
 	switch network {
 	case "inc":
@@ -14,6 +19,20 @@ func GetNativeNetworkCurrencyType(network string) int {
 		return NativeCurrencyTypeFTM
 	}
 	return -1
+}
+
+func IsNativeCurrency(currencyType int) bool {
+	switch currencyType {
+	case NativeCurrencyTypeETH:
+		return true
+	case NativeCurrencyTypeBSC:
+		return true
+	case NativeCurrencyTypePLG:
+		return true
+	case NativeCurrencyTypeFTM:
+		return true
+	}
+	return false
 }
 
 func GetNetworkID(network string) int {
@@ -46,4 +65,24 @@ func GetNetworkName(network int) string {
 		return NETWORK_FTM
 	}
 	return ""
+}
+
+func GetNetworkIDFromCurrencyType(currencyType int) (int, error) {
+	netID, ok := NetworkCurrencyMap[currencyType]
+	if !ok {
+		return 0, errors.New("unsupported network")
+	}
+	return netID, nil
+}
+
+func CheckIsWrappedNativeToken(contractAddress string, network int) bool {
+	list, exist := WrappedNativeMap[network]
+	if exist {
+		for _, v := range list {
+			if strings.ToLower(contractAddress) == v {
+				return true
+			}
+		}
+	}
+	return false
 }

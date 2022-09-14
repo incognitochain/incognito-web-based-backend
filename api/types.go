@@ -45,6 +45,7 @@ type EstimateSwapRequest struct {
 	FeeAddress string
 	Network    string
 	Amount     string
+	Slippage   string
 	FromToken  string // IncTokenID
 	ToToken    string // IncTokenID
 }
@@ -61,8 +62,11 @@ type QuoteDataResp struct {
 	AmountOut    string
 	AmountOutRaw string
 	Fee          []PappNetworkFee
-	Route        interface{}
+	FeeAddress   string
+	Paths        interface{}
 	Calldata     string
+	ImpactAmount string
+	RouteDebug   interface{}
 }
 
 type SubmitSwapTx struct {
@@ -299,6 +303,7 @@ type UniswapQuote struct {
 		EstimatedGasUsed string           `json:"estimatedGasUsed"`
 	} `json:"data"`
 	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
 type UniswapRoute struct {
@@ -329,11 +334,12 @@ type PancakeQuote struct {
 		Impact  float64  `json:"impactAmount"`
 	} `json:"data"`
 	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
 type PappNetworkFee struct {
-	FeeAddress string `json:"feeAddress"`
-	Amount     uint64 `json:"amount"`
+	TokenID string `json:"tokenid"`
+	Amount  uint64 `json:"amount"`
 }
 
 type PancakeTokenMapItem struct {

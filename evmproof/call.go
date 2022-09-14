@@ -126,9 +126,8 @@ func GetAndDecodeBurnProofUnifiedToken(
 	incBridgeHost string,
 	txID string,
 	dataIndex int,
-	networkID uint,
 ) (*DecodedProof, error) {
-	body, err := getBurnProofUnifiedToken(incBridgeHost, txID, dataIndex, networkID)
+	body, err := getBurnProofUnifiedToken(incBridgeHost, txID, dataIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +147,6 @@ func getBurnProofUnifiedToken(
 	incBridgeHost string,
 	txID string,
 	dataIndex int,
-	networkID uint,
 ) (string, error) {
 	if len(txID) == 0 {
 		return "", errors.New("the tx invalid!")
@@ -161,12 +159,11 @@ func getBurnProofUnifiedToken(
 		"params": [
 			{
 				"TxReqID": "%v",
-				"DataIndex": %v,
-				"NetworkID": %v
+				"DataIndex": %v
 			}
 		]
 	}
-	`, txID, dataIndex, networkID))
+	`, txID, dataIndex))
 
 	req, _ := http.NewRequest("POST", incBridgeHost, payload)
 	res, err := http.DefaultClient.Do(req)

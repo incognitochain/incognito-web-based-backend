@@ -14,11 +14,29 @@ import (
 )
 
 const (
-	checkFeeInterval = 5 * time.Second
+	checkFeeInterval    = 5 * time.Second
+	checkMaxFeeInterval = 60 * time.Second
 )
 
 func StartService(cfg common.Config) error {
+	go getMaxFee()
 	return checkFee()
+}
+
+func getMaxFee() {
+	ticker := time.NewTicker(checkMaxFeeInterval)
+	for range ticker.C {
+		networkList, err := retrieveNetwork()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		feeList := make(map[string]uint64)
+		for _, network := range networkList {
+			_ = network
+		}
+		_ = feeList
+	}
 }
 
 func checkFee() error {
@@ -126,9 +144,9 @@ func getPlgGasPrice(c *ethclient.Client) (*big.Int, error) {
 		return nil, err
 	}
 	// speed up
-	// gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
+	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
 
-	// fee := new(big.Int).Mul(big.NewInt(int64(1000000)), gasPrice) //todo: update gas limit.
+	// fee := new(big.Int).Mul(big.NewInt(int64(10000)), gasPrice)
 
 	// fmt.Println("fee est bsc: gasPrice, fee", gasPrice, fee)
 

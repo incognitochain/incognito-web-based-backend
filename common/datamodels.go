@@ -66,6 +66,8 @@ type PappTxData struct {
 	IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
 	FeeToken         string   `json:"feetoken" bson:"feetoken"`
 	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
+	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
+	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
 	Status           string   `json:"status" bson:"status"`
 	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
 	Error            string   `json:"error" bson:"error"`
@@ -87,6 +89,7 @@ type EVMProofRecordData struct {
 	ContractID       string `json:"contractid" bson:"contractid"`
 	PaymentAddr      string `json:"paymentaddr" bson:"paymentaddr"`
 	IsRedeposit      bool   `json:"isredeposit" bson:"isredeposit"`
+	IsTxPass         bool   `json:"istxpass" bson:"isredeposit"`
 	OTAStr           string `json:"otaStr" bson:"otaStr"`
 	Amount           uint64 `json:"amount" bson:"amount"`
 	Network          string `json:"network" bson:"network"`

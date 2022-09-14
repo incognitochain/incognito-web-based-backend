@@ -133,7 +133,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	// }
 
 	if err != nil {
-		go slacknoti.SendSlackNoti(fmt.Sprintf("[submitProof] txhash %v, tokenID %v, networkID %v, error: %v\n", task.TxHash, task.TokenID, task.NetworkID, err))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[submitProof]` txhash `%v`, tokenID `%v`, networkID `%v`, error: `%v`\n", task.TxHash, task.TokenID, task.NetworkID, err))
 		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
 		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
@@ -248,6 +248,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				return
 			}
 		}
+		m.Ack()
 		return
 	}
 

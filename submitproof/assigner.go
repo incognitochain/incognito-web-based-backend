@@ -36,7 +36,7 @@ func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 	return nil
 }
 
-func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{}, error) {
+func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype string) (interface{}, error) {
 	if networkID == 0 {
 		return "", errors.New("unsported network")
 	}
@@ -55,7 +55,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string) (interface{
 		TxHash:    txhash,
 		NetworkID: networkID,
 		TokenID:   tokenID,
-		Metatype:  TxTypeShielding,
+		Metatype:  txtype,
 		Time:      time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)

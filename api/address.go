@@ -1,11 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/mongodb/mongo-tools/common/json"
 )
 
 func APIGenUnshieldAddress(c *gin.Context) {

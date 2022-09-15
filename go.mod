@@ -8,7 +8,6 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20220803110223-48128c589460
-	github.com/mongodb/mongo-tools v0.0.0-20220222145442-9a0003067b69
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 

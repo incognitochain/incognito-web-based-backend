@@ -368,7 +368,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 	if len(supportedNetworks) == 0 {
-		c.JSON(200, gin.H{"Error": "No compatible network found"})
+		c.JSON(200, gin.H{"Error": "No trade-able network found"})
 		return
 	}
 
@@ -390,23 +390,32 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
+	networkErr := make(map[string]string)
+
 	for _, network := range supportedNetworks {
 		data, err := estimateSwapFee(req.FromToken, req.ToToken, req.Amount, network, spTkList, networksInfo, networkFees, tkFromInfo, slippage)
 		if err != nil {
-			result.Networks[wcommon.GetNetworkName(network)] = err.Error()
+			networkErr[wcommon.GetNetworkName(network)] = err.Error()
+			// result.Networks[wcommon.GetNetworkName(network)] = err.Error()
 		} else {
 			result.Networks[wcommon.GetNetworkName(network)] = data
 		}
 	}
 
-	for _, v := range outofVaultNetworks {
-		result.Networks[wcommon.GetNetworkName(v)] = "not enough amount in vault"
+	if req.Network != "inc" && len(networkErr) == 1 {
+		result.Networks[req.Network] = map[string]interface{}{"error": networkErr[req.Network]}
+		response.Result = result
+		return
+	}
+	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) {
+		c.JSON(200, gin.H{"Error": "No trade-able network found"})
+		return
 	}
 
-	var response struct {
-		Result interface{}
-		Error  interface{}
-	}
 	response.Result = result
 
 	c.JSON(200, response)

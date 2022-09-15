@@ -167,7 +167,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				return err
 			}
 			go faucetPRV(txdata.PaymentAddress)
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`\n", txdata.ExternalTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`, inctx `%v`\n", txdata.ExternalTx, txdata.IncTx))
 			return nil
 		case 3:
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusRejected, "rejected by chain")

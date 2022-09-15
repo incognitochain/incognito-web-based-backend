@@ -355,3 +355,10 @@ type CurvePoolIndex struct {
 	DappTokenAddress string
 	DappTokenSymbol  string
 }
+
+type StatusSwapTxDetail struct {
+	SellToken  string
+	SellAmount uint64
+	BuyToken   string
+	Networks   []string
+}

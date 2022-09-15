@@ -130,6 +130,11 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 		log.Println("DBUpdateShieldOnChainTxInfo error:", err)
 		return
 	}
+	err = database.DBUpdateExternalTxSubmitedRedeposit(task.TxHash, true)
+	if err != nil {
+		log.Println("DBUpdateExternalTxSubmitedRedeposit error:", err)
+		return
+	}
 	// }
 
 	if err != nil {

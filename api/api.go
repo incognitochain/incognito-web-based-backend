@@ -56,7 +56,7 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
-	// r.POST("/submitshieldtx", APISubmitShieldTx) //depercated
+	r.POST("/submitshieldtx", APISubmitShieldTx) //depercated
 
 	r.POST("/shieldstatus", APIGetShieldStatus)
 
@@ -79,6 +79,7 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
 	adminGroup.GET("/retryshield")
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
+	adminGroup.POST("/submitshieldtx", APISubmitShieldTx)
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

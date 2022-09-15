@@ -95,6 +95,9 @@ func DBCreateIndex() error {
 		{
 			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "network", Value: bsonx.Int32(1)}},
 		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "will_redeposit", Value: bsonx.Int32(1)}, {Key: "redeposit_submitted", Value: bsonx.Int32(1)}},
+		},
 	}
 	_, err := mgm.Coll(&common.ExternalTxStatus{}).Indexes().CreateMany(context.Background(), externalTxModel)
 	if err != nil {

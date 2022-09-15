@@ -19,6 +19,7 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
@@ -39,8 +40,30 @@ func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
 	go watchPendingPappTx()
 	go watchPendingExternalTx()
 	go watchEVMAccountBalance()
+	go watchRedepositExternalTx()
 
 	return nil
+}
+
+func watchRedepositExternalTx() {
+	for {
+		txList, err := database.DBRetrievePendingRedepositExternalTx(0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingExternalTx err:", err)
+		}
+		for _, tx := range txList {
+			networkID := wcommon.GetNetworkID(tx.Network)
+			if _, err := database.DBGetShieldTxStatusByExternalTx(tx.Txhash, networkID); err == mongo.ErrNoDocuments {
+				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+
+			}
+		}
+		time.Sleep(60 * time.Second)
+	}
 }
 
 func watchPendingExternalTx() {
@@ -143,7 +166,8 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
-			faucetPRV(txdata.PaymentAddress)
+			go faucetPRV(txdata.PaymentAddress)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`\n", txdata.ExternalTx))
 			return nil
 		case 3:
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusRejected, "rejected by chain")
@@ -151,6 +175,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have rejected needed check 😵, exttx `%v`\n", txdata.ExternalTx))
 			return nil
 		}
 	}
@@ -219,6 +244,10 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				return err
 			}
 			if isRedeposit {
+				err = database.DBUpdateExternalTxWillRedeposit(tx.Txhash, true)
+				if err != nil {
+					return err
+				}
 				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit)
 				if err != nil {
 					return err
@@ -238,9 +267,9 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				txtype = "unknown"
 			}
 			if otherInfo.IsFailed {
-				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, txhash `%v`, network `%v`", txtype, tx.Txhash, tx.Network))
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, exttx `%v`, network `%v`\n", txtype, tx.Txhash, tx.Network))
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain accepted txhash `%v`, network `%v`, incReqTx `%v`\n outcome of tx: `%v`\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain accepted exttx `%v`, network `%v`, incReqTx `%v`\n outcome of tx: `%v`\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
 		}
 		return nil
 	}
@@ -264,7 +293,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` txhash `%v` rejected 😢\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` rejected 😢\n", tx.IncTx))
 		case 1:
 			for _, network := range tx.Networks {
 				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
@@ -276,7 +305,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` txhash `%v` accpected 👌\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted 👌\n", tx.IncTx))
 		default:
 			if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
 				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")

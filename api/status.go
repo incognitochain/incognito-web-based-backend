@@ -135,6 +135,7 @@ func checkPappTxSwapStatus(txhash string) map[string]interface{} {
 	}
 
 	result["inc_request_tx_status"] = data.Status
+	// result["inc_swap_detail"] = data.
 	if data.Status != common.StatusAccepted {
 		if data.Error != "" {
 			result["error"] = data.Error

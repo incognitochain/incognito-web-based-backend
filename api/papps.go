@@ -555,6 +555,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
 			if slippage != nil {
 				sl := new(big.Float).SetFloat64(0.01)
+				slippage = slippage.Add(slippage, new(big.Float).SetFloat64(0.2))
 				sl = sl.Mul(sl, slippage)
 				sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
 				amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)

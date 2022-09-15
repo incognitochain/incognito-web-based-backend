@@ -48,14 +48,16 @@ type BridgeNetworkData struct {
 // }
 
 type ExternalTxStatus struct {
-	mgm.DefaultModel `bson:",inline"`
-	Txhash           string `json:"txhash" bson:"txhash"`
-	IncRequestTx     string `json:"increquesttx" bson:"increquesttx"`
-	Network          string `json:"network" bson:"network"`
-	Status           string `json:"status" bson:"status"`
-	Type             int    `json:"type" bson:"type"`
-	Error            string `json:"error" bson:"error"`
-	OtherInfo        string `json:"otherinfo" bson:"otherinfo"`
+	mgm.DefaultModel   `bson:",inline"`
+	Txhash             string `json:"txhash" bson:"txhash"`
+	IncRequestTx       string `json:"increquesttx" bson:"increquesttx"`
+	Network            string `json:"network" bson:"network"`
+	Status             string `json:"status" bson:"status"`
+	Type               int    `json:"type" bson:"type"`
+	Error              string `json:"error" bson:"error"`
+	OtherInfo          string `json:"otherinfo" bson:"otherinfo"`
+	WillRedeposit      bool   `json:"will_redeposit" bson:"will_redeposit"`
+	RedepositSubmitted bool   `json:"redeposit_submitted" bson:"redeposit_submitted"`
 }
 
 type PappTxData struct {

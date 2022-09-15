@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/incognito-web-based-backend/common"
-	"github.com/mongodb/mongo-tools/common/json"
 )
 
 var incClient *incclient.IncClient

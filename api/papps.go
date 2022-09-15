@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -19,7 +20,6 @@ import (
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction/tx_generic"
-	"github.com/mongodb/mongo-tools/common/json"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"

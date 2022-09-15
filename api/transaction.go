@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
-	"github.com/mongodb/mongo-tools/common/json"
 )
 
 func APISubmitUnshieldTx(c *gin.Context) {

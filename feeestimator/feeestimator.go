@@ -144,7 +144,7 @@ func getPlgGasPrice(c *ethclient.Client) (*big.Int, error) {
 		return nil, err
 	}
 	// speed up
-	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
+	// gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
 
 	// fee := new(big.Int).Mul(big.NewInt(int64(10000)), gasPrice)
 
@@ -178,13 +178,8 @@ func SuggestGasPrice(client *ethclient.Client) (*big.Int, error) {
 
 	fmt.Println("gas from SuggestGasPrice from chain ID: ", chainID, gasPrice)
 
-	// // hardcode for polygon:
-	// if chainID.Uint64() == 137 || chainID.Uint64() == 80001 {
-	// 	// increase x1.5:
-	// 	gasPrice = new(big.Int).Mul(big.NewInt(int64(15)), gasPrice)
-	// 	gasPrice = new(big.Int).Div(gasPrice, big.NewInt(int64(10)))
+	gasPrice = new(big.Int).Mul(big.NewInt(int64(15)), gasPrice)
+	gasPrice = new(big.Int).Div(gasPrice, big.NewInt(int64(10)))
 
-	// 	fmt.Println("gas x1.5 from SuggestGasPrice: ", gasPrice)
-	// }
 	return gasPrice, nil
 }

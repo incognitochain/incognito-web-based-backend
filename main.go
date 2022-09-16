@@ -29,7 +29,7 @@ func main() {
 		go slacknoti.StartSlackHook()
 	}
 
-	err = database.ConnectDB(config.Mongodb, config.Mongo)
+	err = database.ConnectDB(config.Mongodb, config.Mongo, config.NetworkID)
 	if err != nil {
 		panic(err)
 	}

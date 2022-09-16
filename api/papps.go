@@ -409,6 +409,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	if req.Network != "inc" && len(networkErr) == 1 {
 		result.Networks[req.Network] = map[string]interface{}{"error": networkErr[req.Network]}
 		response.Result = result
+		c.JSON(200, response)
 		return
 	}
 	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) {

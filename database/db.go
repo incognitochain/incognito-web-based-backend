@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
-func ConnectDB(dbName string, mongoAddr string) error {
+func ConnectDB(dbName string, mongoAddr string, network string) error {
 	wc := writeconcern.New(writeconcern.W(1), writeconcern.J(true))
 	err := mgm.SetDefaultConfig(nil, dbName, options.Client().ApplyURI(mongoAddr).SetWriteConcern(wc))
 	if err != nil {
@@ -43,6 +43,8 @@ func ConnectDB(dbName string, mongoAddr string) error {
 	if err != nil {
 		return err
 	}
+
+	DBCreateDefaultNetworkInfo(network)
 
 	return nil
 }

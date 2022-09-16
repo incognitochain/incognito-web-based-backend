@@ -18,12 +18,9 @@ const (
 	MODE_UNSHIELDWATCHER = "unshieldwatcher"
 )
 
-// const (
-// 	BurnForCallConfirmMeta      = 158
-// 	BurnForCallRequestMeta      = 348
-// 	BurnForCallResponseMeta     = 349
-// 	IssuingReshieldResponseMeta = 350
-// )
+const (
+	EVMGasLimit = 600000
+)
 
 const (
 	StatusSubmitting   = "submitting"
@@ -117,6 +114,8 @@ var (
 var (
 	WrappedNativeMap = map[int][]string{
 		NETWORK_PLG_ID: {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
+		NETWORK_BSC_ID: {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
+		NETWORK_ETH_ID: {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
 	}
 )
 
@@ -125,4 +124,76 @@ const (
 	PappTypeSwap
 )
 
-//Default param
+// Default param mainnet
+var MainnetBridgeNetworkData = []BridgeNetworkData{
+	{
+		Network:            "eth",
+		ChainID:            "1",
+		ConfirmationBlocks: 35,
+		Endpoints:          []string{"https://mainnet.infura.io/v3"},
+	},
+	{
+		Network:            "plg",
+		ChainID:            "137",
+		ConfirmationBlocks: 128,
+		Endpoints:          []string{"https://rpc.ankr.com/polygon"},
+	},
+	{
+		Network:            "bsc",
+		ChainID:            "56",
+		ConfirmationBlocks: 14,
+		Endpoints:          []string{"https://bsc-dataseed1.ninicoin.io"},
+	},
+}
+
+var MainnetPappsEndpointData = []PAppsEndpointData{
+	{
+		Network:      "plg",
+		ExchangeApps: map[string]string{"uniswap": "uniswapep:3000"},
+		AppContracts: map[string]string{"uniswap": ""},
+	},
+	{
+		Network:      "bsc",
+		ExchangeApps: map[string]string{"pancake": "pancakeswapep:3000"},
+		AppContracts: map[string]string{"pancake": ""},
+	},
+}
+
+// Default param testnet
+var TestnetBridgeNetworkData = []BridgeNetworkData{
+	{
+		Network:            "eth",
+		ChainID:            "42",
+		ConfirmationBlocks: 35,
+		Endpoints:          []string{"https://goerli.infura.io/v3"},
+	},
+	{
+		Network:            "plg",
+		ChainID:            "80001",
+		ConfirmationBlocks: 128,
+		Endpoints:          []string{"https://matic-mumbai.chainstacklabs.com"},
+	},
+	{
+		Network:            "bsc",
+		ChainID:            "97",
+		ConfirmationBlocks: 14,
+		Endpoints: []string{
+			"https://data-seed-prebsc-1-s1.binance.org:8545",
+			"https://data-seed-prebsc-2-s2.binance.org:8545",
+			"https://data-seed-prebsc-1-s1.binance.org:8545",
+		},
+	},
+}
+
+var TestnetPappsEndpointData = []PAppsEndpointData{
+	{
+		Network:      "plg",
+		ExchangeApps: map[string]string{"uniswap": "uniswapep:3000"},
+		AppContracts: map[string]string{"uniswap": "0xAe85BB3D2ED209736E4d236DcE24624EA1A04249"},
+	},
+	{
+		Network:      "bsc",
+		ExchangeApps: map[string]string{"pancake": "pancakeswapep:3000"},
+		AppContracts: map[string]string{"pancake": "0x0e2923c21E2C5A2BDD18aa460B3FdDDDaDb0aE18"},
+	},
+}

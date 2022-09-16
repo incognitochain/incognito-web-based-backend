@@ -354,7 +354,7 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
 
 		auth.GasPrice = gasPrice
-		auth.GasLimit = 500000
+		auth.GasLimit = wcommon.EVMGasLimit
 
 		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 		if err != nil {

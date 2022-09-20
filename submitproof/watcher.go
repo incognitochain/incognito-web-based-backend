@@ -476,7 +476,7 @@ func watchEVMAccountBalance() {
 				break
 			}
 		}
-		time.Sleep(1 * time.Minute)
+		time.Sleep(30 * time.Minute)
 	}
 
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 	"time"
 
@@ -39,10 +40,119 @@ func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
 	go watchPendingShieldTx()
 	go watchPendingPappTx()
 	go watchPendingExternalTx()
+	go watchIncAccountBalance()
 	go watchEVMAccountBalance()
 	go watchRedepositExternalTx()
+	go watchPappTxNeedFeeRefund()
+	go watchPendingFeeRefundTx()
+	go forwardCollectedFee()
 
 	return nil
+}
+
+func forwardCollectedFee() {
+	for {
+		time.Sleep(5 * time.Minute)
+	}
+}
+
+func watchIncAccountBalance() {
+	for {
+		time.Sleep(1 * time.Minute)
+	}
+}
+
+func watchPendingFeeRefundTx() {
+	for {
+		txList, err := database.DBGetPendingFeeRefundTx(0)
+		if err != nil {
+			log.Println("DBGetPappTxNeedFeeRefund err:", err)
+		}
+
+		for _, tx := range txList {
+			status := tx.RefundStatus
+			switch status {
+			case wcommon.StatusWaiting:
+				_, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundToken, tx.RefundAmount)
+				if err != nil {
+					log.Println("SubmitTxFeeRefund err:", err)
+					continue
+				} else {
+					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusSubmitting)
+					if err != nil {
+						log.Println("DBUpdateRefundFeeRefundTx err:", err)
+						continue
+					}
+				}
+			case wcommon.StatusPending:
+				txDetail, err := incClient.GetTxDetail(tx.RefundTx)
+				if err != nil {
+					log.Println("CheckTxInBlock err:", err)
+				}
+
+				if txDetail == nil {
+					if time.Since(tx.UpdatedAt) > 1*time.Hour {
+						err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusSubmitFailed)
+						if err != nil {
+							log.Println("DBUpdateRefundFeeRefundTx err:", err)
+							continue
+						}
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`\n", tx.RefundTx, tx.IncRequestTx))
+					}
+				}
+
+				if txDetail.IsInBlock {
+					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted)
+					if err != nil {
+						log.Println("DBUpdateRefundFeeRefundTx err:", err)
+						continue
+					}
+					go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.RefundTx, tx.IncRequestTx))
+				}
+
+			}
+		}
+		time.Sleep(20 * time.Second)
+	}
+}
+
+func watchPappTxNeedFeeRefund() {
+	for {
+		txList, err := database.DBGetPappTxNeedFeeRefund(0)
+		if err != nil {
+			log.Println("DBGetPappTxNeedFeeRefund err:", err)
+		}
+		for _, tx := range txList {
+			rftx, err := database.DBGetTxFeeRefundByReq(tx.IncTx)
+			if err != nil {
+				if err != mongo.ErrNoDocuments {
+					log.Println("DBGetTxFeeRefundByReq", err)
+					continue
+				}
+			}
+			if rftx != nil {
+				err = database.DBUpdatePappRefund(tx.IncTx, true)
+				if err != nil {
+					log.Println("DBGetTxFeeRefundByReq", err)
+					continue
+				}
+			}
+			data := wcommon.RefundFeeData{
+				IncRequestTx: tx.IncTx,
+				RefundAmount: tx.FeeAmount,
+				RefundToken:  tx.FeeToken,
+				RefundOTA:    tx.FeeRefundOTA,
+				RefundStatus: wcommon.StatusWaiting,
+			}
+
+			err = database.DBCreateRefundFeeRecord(data)
+			if err != nil {
+				log.Println("DBGetTxFeeRefundByReq", err)
+				continue
+			}
+		}
+		time.Sleep(20 * time.Second)
+	}
 }
 
 func watchRedepositExternalTx() {
@@ -62,7 +172,7 @@ func watchRedepositExternalTx() {
 
 			}
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(20 * time.Second)
 	}
 }
 
@@ -327,6 +437,12 @@ func watchEVMAccountBalance() {
 		}
 		privKey, _ := crypto.HexToECDSA(config.EVMKey)
 		keyAddr := crypto.PubkeyToAddress(privKey.PublicKey)
+
+		feeData, err := database.DBRetrieveFeeTable()
+		if err != nil {
+			log.Println("DBRetrieveFeeTable err:", err)
+		}
+
 		for _, networkInfo := range networks {
 			for _, endpoint := range networkInfo.Endpoints {
 				evmClient, err := ethclient.Dial(endpoint)
@@ -334,12 +450,29 @@ func watchEVMAccountBalance() {
 					log.Println(err)
 					continue
 				}
-				gasLeft, err := evmClient.BalanceAt(context.Background(), keyAddr, nil)
+				feeLeft, err := evmClient.BalanceAt(context.Background(), keyAddr, nil)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
-				log.Printf("network %v has %v gas left\n", networkInfo.Network, gasLeft.Uint64())
+				log.Printf("network %v has %v gas left\n", networkInfo.Network, feeLeft.Uint64())
+
+				gasPrice, ok := feeData.GasPrice[networkInfo.Network]
+				if !ok {
+					log.Printf("network %v have no gasprice\n", networkInfo.Network)
+				}
+				gasPriceBig := new(big.Int).SetUint64(gasPrice)
+				gasLimitBig := new(big.Int).SetUint64(wcommon.EVMGasLimit)
+
+				feeLeft = feeLeft.Div(feeLeft, gasPriceBig)
+				txLeft := feeLeft.Div(feeLeft, gasLimitBig)
+
+				log.Printf("network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64())
+
+				if txLeft.Uint64() <= wcommon.MinEVMTxs {
+					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64()))
+				}
+
 				break
 			}
 		}

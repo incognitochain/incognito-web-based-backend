@@ -20,6 +20,7 @@ const (
 
 const (
 	EVMGasLimit = 600000
+	MinEVMTxs   = uint64(10)
 )
 
 const (
@@ -29,6 +30,7 @@ const (
 	StatusExecuting    = "executing"
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
+	StatusWaiting      = "waiting"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"

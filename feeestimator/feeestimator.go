@@ -116,7 +116,7 @@ retry:
 func saveFeeData(data map[string]uint64) error {
 	var feeData common.ExternalNetworksFeeData
 	feeData.Creating()
-	feeData.Fees = data
+	feeData.GasPrice = data
 	return database.DBSaveFeetTable(feeData)
 }
 

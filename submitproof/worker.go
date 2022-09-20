@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
+	inccommon "github.com/incognitochain/go-incognito-sdk-v2/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
@@ -64,6 +65,18 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 			return err
 		}
 	}
+
+	if config.IncKey != "" {
+		wl, err := wallet.Base58CheckDeserialize(config.IncKey)
+		if err != nil {
+			panic(err)
+		}
+		err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
+		if err != nil {
+			return err
+		}
+	}
+
 	incclient.Logger = incclient.NewLogger(true)
 	log.Println("Done submit keys")
 
@@ -161,6 +174,8 @@ func ProcessPappTxRequest(ctx context.Context, m *pubsub.Message) {
 		processSubmitPappIncTask(ctx, m)
 	case PappSubmitExtTask:
 		processSubmitPappExtTask(ctx, m)
+	case PappSubmitFeeRefundTask:
+		processSubmitRefundFeeTask(ctx, m)
 	}
 }
 
@@ -217,6 +232,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		BurntToken:     task.BurntToken,
 		BurntAmount:    task.BurntAmount,
 		Networks:       task.Networks,
+		FeeRefundOTA:   task.FeeRefundOTA,
 	}
 	err = database.DBSavePappTxData(data)
 	if err != nil {
@@ -265,13 +281,6 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		errSubmit = incClient.SendRawTokenTx(task.TxRawData)
 	}
 
-	err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusPending, errSubmit.Error())
-	if err != nil {
-		log.Println(err)
-		m.Nack()
-		return
-	}
-
 	if errSubmit != nil {
 		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusSubmitFailed, errSubmit.Error())
 		if err != nil {
@@ -281,6 +290,13 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		}
 		m.Ack()
 		return
+	} else {
+		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusPending, "")
+		if err != nil {
+			log.Println(err)
+			m.Nack()
+			return
+		}
 	}
 
 	m.Ack()
@@ -376,6 +392,49 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 	return &result, nil
 }
 
+func processSubmitRefundFeeTask(ctx context.Context, m *pubsub.Message) {
+	task := SubmitRefundFeeTask{}
+	err := json.Unmarshal(m.Data, &task)
+	if err != nil {
+		log.Println("processSubmitRefundFeeTask error decoding message", err)
+		m.Ack()
+		return
+	}
+	i := 0
+	defer m.Ack()
+retry:
+	i++
+	var errSubmit error
+	var txhash string
+	if i == 10 {
+		err = database.DBUpdateRefundFeeRefundTx(txhash, task.IncReqTx, wcommon.StatusSubmitFailed)
+		if err != nil {
+			log.Println("DBUpdateRefundFeeRefundTx error ", err)
+			return
+		}
+	}
+	if task.Token != inccommon.PRVCoinID.String() {
+		// incClient.CreateRawTokenTransaction()
+		// incClient.
+		// incClient.CreateAndSendRawTokenTransaction(config.IncKey,)
+	} else {
+
+	}
+
+	if errSubmit != nil {
+		log.Println("processSubmitRefundFeeTask error ", errSubmit)
+		time.Sleep(5 * time.Second)
+		goto retry
+	} else {
+	retrySaved:
+		err = database.DBUpdateRefundFeeRefundTx(txhash, task.IncReqTx, wcommon.StatusPending)
+		if err != nil {
+			time.Sleep(5 * time.Second)
+			goto retrySaved
+		}
+	}
+
+}
 func speedupOutChainSwapTx(network int, evmTxHash string) error {
 	//TODO
 	return nil

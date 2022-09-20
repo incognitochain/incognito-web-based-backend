@@ -18,8 +18,9 @@ const (
 )
 
 const (
-	PappSubmitIncTask = "papp_submit_inc_task"
-	PappSubmitExtTask = "papp_submit_ext_task"
+	PappSubmitIncTask       = "papp_submit_inc_task"
+	PappSubmitExtTask       = "papp_submit_ext_task"
+	PappSubmitFeeRefundTask = "papp_submit_refundfee_task"
 )
 
 const (

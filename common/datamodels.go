@@ -16,7 +16,7 @@ type ShieldTxData struct {
 
 type ExternalNetworksFeeData struct {
 	mgm.DefaultModel `bson:",inline"`
-	Fees             map[string]uint64 `json:"fees" bson:"fees"`
+	GasPrice         map[string]uint64 `json:"fees" bson:"fees"`
 }
 
 type PAppsEndpointData struct {
@@ -72,6 +72,8 @@ type PappTxData struct {
 	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
 	Status           string   `json:"status" bson:"status"`
 	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
+	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
 	Error            string   `json:"error" bson:"error"`
 }
 
@@ -95,4 +97,14 @@ type EVMProofRecordData struct {
 	OTAStr           string `json:"otaStr" bson:"otaStr"`
 	Amount           uint64 `json:"amount" bson:"amount"`
 	Network          string `json:"network" bson:"network"`
+}
+
+type RefundFeeData struct {
+	mgm.DefaultModel `bson:",inline"`
+	IncRequestTx     string `json:"increquesttx" bson:"increquesttx"`
+	RefundAmount     uint64 `json:"refundamount" bson:"refundamount"`
+	RefundToken      string `json:"refundtoken" bson:"refundtoken"`
+	RefundOTA        string `json:"refundota" bson:"refundota"`
+	RefundTx         string `json:"refundtx" bson:"refundtx"`
+	RefundStatus     string `json:"status" bson:"status"`
 }

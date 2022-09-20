@@ -77,7 +77,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -95,6 +95,7 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		IsUnifiedToken: isUnifiedToken,
 		FeeToken:       feeToken,
 		FeeAmount:      feeAmount,
+		FeeRefundOTA:   refundFeeOTA,
 		BurntToken:     burntToken,
 		BurntAmount:    burntAmount,
 		Networks:       networks,
@@ -107,6 +108,33 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		Attributes: map[string]string{
 			"txhash": txhash,
 			"task":   PappSubmitIncTask,
+		},
+		Data: taskBytes,
+	}
+	msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("publish msgID:", msgID)
+
+	return "submitting", nil
+}
+
+func SubmitTxFeeRefund(incReqTx, refundOTA, token string, amount uint64) (interface{}, error) {
+	task := SubmitRefundFeeTask{
+		IncReqTx: incReqTx,
+		OTA:      refundOTA,
+		Amount:   amount,
+		Token:    token,
+		Time:     time.Now(),
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	ctx := context.Background()
+	msg := &pubsub.Message{
+		Attributes: map[string]string{
+			"txhash": incReqTx,
+			"task":   PappSubmitFeeRefundTask,
 		},
 		Data: taskBytes,
 	}

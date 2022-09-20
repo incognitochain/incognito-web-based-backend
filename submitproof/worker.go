@@ -402,6 +402,7 @@ func processSubmitRefundFeeTask(ctx context.Context, m *pubsub.Message) {
 	}
 	i := 0
 	defer m.Ack()
+	go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` Need refund fee for tx `%v`\n", task.IncReqTx))
 retry:
 	i++
 	var errSubmit error

@@ -24,6 +24,10 @@ const (
 )
 
 const (
+	PercentFeeDiff = float64(5)
+)
+
+const (
 	StatusSubmitting   = "submitting"
 	StatusSubmitFailed = "submit_failed"
 	StatusPending      = "pending"

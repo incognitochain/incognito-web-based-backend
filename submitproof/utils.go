@@ -105,8 +105,10 @@ func getETHDepositProof(
 			if err != nil {
 				return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
 			}
-			if txData.To().String() == ADDRESS_0 && from.String() == ADDRESS_0 {
-				break
+			if txData.To() != nil {
+				if txData.To().String() == ADDRESS_0 && from.String() == ADDRESS_0 {
+					break
+				}
 			}
 		}
 		receipts = append(receipts, siblingReceipt)

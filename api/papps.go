@@ -1114,7 +1114,11 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 					if fee.TokenID == feeToken {
 						feeDiff = int64(feeAmount) - int64(fee.Amount)
 						if feeDiff < 0 {
-							return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
+							feeDiffFloat := float64(-feeDiff)
+							diffPercent := feeDiffFloat / float64(fee.Amount) * 100
+							if diffPercent > wcommon.PercentFeeDiff {
+								return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
+							}
 						}
 					}
 				}

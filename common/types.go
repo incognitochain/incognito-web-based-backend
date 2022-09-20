@@ -19,6 +19,7 @@ type Config struct {
 	GGCProject string
 	GGCAuth    string
 }
+
 type TokenInfo struct {
 	TokenID            string
 	Name               string

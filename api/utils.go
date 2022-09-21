@@ -272,3 +272,20 @@ func verifySlippage(slippage string) (*big.Float, error) {
 
 	return result, nil
 }
+
+func getParentUToken(tokenID string) (*common.TokenInfo, error) {
+	tokenList, err := retrieveTokenList()
+	if err != nil {
+		return nil, err
+	}
+	for _, tokenInfo := range tokenList {
+		if tokenInfo.CurrencyType == common.UnifiedCurrencyType {
+			for _, cTk := range tokenInfo.ListUnifiedToken {
+				if cTk.TokenID == tokenID {
+					return &tokenInfo, nil
+				}
+			}
+		}
+	}
+	return nil, errors.New("can't find parent unified token")
+}

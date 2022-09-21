@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/incognito-web-based-backend/evmproof"
 )
 
@@ -98,4 +99,15 @@ func TestRedpositEvent(t *testing.T) {
 
 	t.Logf("\n logResult: %v \n", logResult)
 	_ = proof
+}
+
+func TestOTADecode(t *testing.T) {
+	ota := "16SWHaPJFNNx9GBsDW658eFji8AkVQUaWEhkzUnCYWc1DTeMyrVHGnebj9LjtjZFeMtvpYaEmSQA3zK1gBrZbbTu8LYm5NM48VPVLg21CsySHUxCtNjfGB5dACYzmsYWAhcbDqdBefosMsuL"
+	otacoin := new(coin.OTAReceiver)
+	err := otacoin.FromString(ota)
+	t.Log(err)
+
+	t.Logf("\n PublicKey: %v \n", otacoin.PublicKey.String())
+	t.Logf("\n TxRandom: %v \n", string(otacoin.TxRandom.Bytes()))
+	otacoin.String()
 }

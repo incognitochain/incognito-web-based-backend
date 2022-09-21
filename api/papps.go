@@ -467,7 +467,21 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 	pTokenContract2, err := getpTokenContractID(toToken, networkID, spTkList)
 	if err != nil {
 		log.Println("err get pTokenContract2")
-		return nil, err
+
+		toTokenInfo, err := getTokenInfo(toToken)
+		if err != nil {
+			return nil, err
+		}
+		if toTokenInfo.MovedUnifiedToken {
+			utokenInfo, err := getParentUToken(toToken)
+			if err != nil {
+				return nil, err
+			}
+			pTokenContract2, err = getpTokenContractID(utokenInfo.TokenID, networkID, spTkList)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	log.Println("done get pTokenContract1")

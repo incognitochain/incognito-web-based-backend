@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -32,6 +33,27 @@ func loadConfig() error {
 	} else {
 		log.Println("cfg.json is empty")
 		config = common.DefaultConfig
+	}
+	return nil
+}
+
+func loadKey() error {
+	evmKeyEncrypted := os.Getenv("EVMKEY_ENC")
+	incKeyEncrypted := os.Getenv("INCKEY_ENC")
+	decryptKeyEncrypted := os.Getenv("DECKEY")
+
+	if decryptKeyEncrypted == "" {
+		return nil
+	} else {
+		log.Println("using env encrypted key")
+	}
+
+	if evmKeyEncrypted != "" {
+
+	}
+
+	if incKeyEncrypted != "" {
+
 	}
 	return nil
 }

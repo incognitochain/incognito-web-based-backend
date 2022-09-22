@@ -75,6 +75,21 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		if err != nil {
 			return err
 		}
+		// err = genShardsAccount(config.IncKey)
+		// if err != nil {
+		// 	return err
+		// }
+
+		// for _, v := range incShardsAccount {
+		// 	wl, err := wallet.Base58CheckDeserialize(v)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
 	}
 
 	incclient.Logger = incclient.NewLogger(true)
@@ -222,17 +237,20 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 	}
 
 	data := wcommon.PappTxData{
-		IncTx:          task.TxHash,
-		IncTxData:      string(task.TxRawData),
-		Type:           wcommon.PappTypeSwap,
-		Status:         wcommon.StatusSubmitting,
-		IsUnifiedToken: task.IsUnifiedToken,
-		FeeToken:       task.FeeToken,
-		FeeAmount:      task.FeeAmount,
-		BurntToken:     task.BurntToken,
-		BurntAmount:    task.BurntAmount,
-		Networks:       task.Networks,
-		FeeRefundOTA:   task.FeeRefundOTA,
+		IncTx:            task.TxHash,
+		IncTxData:        string(task.TxRawData),
+		Type:             wcommon.PappTypeSwap,
+		Status:           wcommon.StatusSubmitting,
+		IsUnifiedToken:   task.IsUnifiedToken,
+		FeeToken:         task.FeeToken,
+		FeeAmount:        task.FeeAmount,
+		BurntToken:       task.BurntToken,
+		BurntAmount:      task.BurntAmount,
+		Networks:         task.Networks,
+		FeeRefundOTA:     task.FeeRefundOTA,
+		FeeRefundOTASS:   task.FeeRefundOTASS,
+		FeeRefundAddress: task.FeeRefundAddress,
+		//TODO add ShardID: ,
 	}
 	err = database.DBSavePappTxData(data)
 	if err != nil {
@@ -367,7 +385,8 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 			continue
 		}
 
-		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(2))
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(12))
+		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
 
 		auth.GasPrice = gasPrice
 		auth.GasLimit = wcommon.EVMGasLimit
@@ -407,19 +426,62 @@ retry:
 	i++
 	var errSubmit error
 	var txhash string
+	var txRaw []byte
 	if i == 10 {
-		err = database.DBUpdateRefundFeeRefundTx(txhash, task.IncReqTx, wcommon.StatusSubmitFailed)
+		errStr := ""
+		if errSubmit != nil {
+			errStr = errSubmit.Error()
+		}
+		err = database.DBUpdateRefundFeeRefundTx(txhash, task.IncReqTx, wcommon.StatusSubmitFailed, errStr)
 		if err != nil {
 			log.Println("DBUpdateRefundFeeRefundTx error ", err)
 			return
 		}
 	}
-	if task.Token != inccommon.PRVCoinID.String() {
-		// incClient.CreateRawTokenTransaction()
-		// incClient.
-		// incClient.CreateAndSendRawTokenTransaction(config.IncKey,)
-	} else {
 
+	if task.Token != inccommon.PRVCoinID.String() {
+		var tokenParam *incclient.TxTokenParam
+		if task.PaymentAddress != "" {
+			tokenParam = incclient.NewTxTokenParam(task.Token, 1, []string{task.PaymentAddress}, []uint64{task.Amount}, false, 0, nil)
+		} else {
+			tokenParam = incclient.NewTxTokenParam(task.Token, 1, []string{task.OTA}, []uint64{task.Amount}, false, 0, nil)
+		}
+
+		txParam := incclient.NewTxParam(config.IncKey, []string{}, []uint64{}, 100, tokenParam, nil, nil)
+
+		txRaw, txhash, err = incClient.CreateRawTokenTransactionVer2(txParam)
+		if err != nil {
+			log.Println("CreateRawTokenTransactionVer2 error ", err)
+			errSubmit = err
+			goto retry
+		}
+		err = incClient.SendRawTokenTx(txRaw)
+		if err != nil {
+			log.Println("SendRawTokenTx error ", err)
+			errSubmit = err
+			goto retry
+		}
+	} else {
+		var txParam *incclient.TxParam
+
+		if task.PaymentAddress != "" {
+			txParam = incclient.NewTxParam(config.IncKey, []string{task.PaymentAddress}, []uint64{task.Amount}, 0, nil, nil, nil)
+		} else {
+			txParam = incclient.NewTxParam(config.IncKey, []string{task.OTA}, []uint64{task.Amount}, 0, nil, nil, nil)
+		}
+
+		txRaw, txhash, err = incClient.CreateRawTransactionVer2(txParam)
+		if err != nil {
+			log.Println("CreateRawTransactionVer2 error ", err)
+			errSubmit = err
+			goto retry
+		}
+		err = incClient.SendRawTx(txRaw)
+		if err != nil {
+			log.Println("SendRawTx error ", err)
+			errSubmit = err
+			goto retry
+		}
 	}
 
 	if errSubmit != nil {
@@ -428,7 +490,7 @@ retry:
 		goto retry
 	} else {
 	retrySaved:
-		err = database.DBUpdateRefundFeeRefundTx(txhash, task.IncReqTx, wcommon.StatusPending)
+		err = database.DBUpdateRefundFeeRefundTx(txhash, task.IncReqTx, wcommon.StatusPending, "")
 		if err != nil {
 			time.Sleep(5 * time.Second)
 			goto retrySaved

@@ -40,6 +40,11 @@ func APISubmitSwapTx(c *gin.Context) {
 		return
 	}
 
+	if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
+		c.JSON(http.StatusOK, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
+		return
+	}
+
 	var md *bridge.BurnForCallRequest
 	var mdRaw metadataCommon.Metadata
 	var isPRVTx bool
@@ -48,40 +53,12 @@ func APISubmitSwapTx(c *gin.Context) {
 	var txHash string
 	var rawTxBytes []byte
 
-	if req.FeeRefundOTA == "" {
-		c.JSON(http.StatusOK, gin.H{"Error": "FeeRefundOTA can't be empty"})
+	if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
+		c.JSON(http.StatusOK, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
 		return
 	}
 
 	var ok bool
-	// if req.TxHash != "" {
-	// 	txHash = req.TxHash
-
-	// 	statusResult := checkPappTxSwapStatus(txHash)
-	// 	if len(statusResult) > 0 {
-	// 		c.JSON(200, gin.H{"Result": statusResult})
-	// 		return
-	// 	}
-
-	// 	txDetail, err := incClient.GetTx(req.TxHash)
-	// 	if err != nil {
-	// 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
-	// 		return
-	// 	}
-	// 	mdRaw = txDetail.GetMetadata()
-	// 	txType := txDetail.GetType()
-	// 	switch txType {
-	// 	case common.TxCustomTokenPrivacyType:
-	// 		isPRVTx = false
-	// 		txToken := txDetail.(tx_generic.TransactionToken)
-	// 		outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
-	// 		// outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-	// 	case common.TxNormalType:
-	// 		isPRVTx = true
-	// 		// feeToken = common.PRVCoinID.String()
-	// 		outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-	// 	}
-	// } else {
 	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
@@ -93,7 +70,6 @@ func APISubmitSwapTx(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
 		return
 	}
-	// }
 
 	statusResult := checkPappTxSwapStatus(txHash)
 	if len(statusResult) > 0 {
@@ -128,7 +104,7 @@ func APISubmitSwapTx(c *gin.Context) {
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, isUnifiedToken, networkList, req.FeeRefundOTA)
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundOTASS, req.FeeRefundAddress)
 		if err != nil {
 			c.JSON(200, gin.H{"Error": err.Error()})
 			return

@@ -10,5 +10,6 @@
 	"FaucetService": "https://api-faucet.incognito.org/tool/getfreeprvv2",
 	"CaptchaSecret": "",
 	"IncKey": "",
-	"EVMKey": ""
+	"EVMKey": "",
+	"CentralIncPaymentAddress": ""
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
+	inccommon "github.com/incognitochain/go-incognito-sdk-v2/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
@@ -52,7 +53,57 @@ func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
 
 func forwardCollectedFee() {
 	for {
-		time.Sleep(5 * time.Minute)
+		// shardNums, err := incClient.GetActiveShard()
+		// if err != nil {
+		// 	log.Println("GetActiveShard", err)
+		// 	continue
+		// }
+		pendingToken, err := getPendingPappsFee(-1)
+		if err != nil {
+			log.Println("getPendingPappsFee", err)
+			continue
+		}
+
+		coins, _, err := incClient.GetAllUTXOsV2(config.IncKey)
+		if err != nil {
+			log.Println("GetAllUTXOsV2", err)
+			continue
+		}
+
+		amountToSend := make(map[string]uint64)
+		totalBalance := make(map[string]uint64)
+		for tokenID, coinList := range coins {
+			for _, v := range coinList {
+				totalBalance[tokenID] += v.GetValue()
+			}
+		}
+
+		for tokenID, amount := range totalBalance {
+			if tokenID == inccommon.PRVCoinID.String() {
+				if amount <= 1000000 { // 1000000 0,001 PRV
+					continue
+				} else {
+					amount -= 1000000
+				}
+			}
+			if pendingAmount, exist := pendingToken[tokenID]; exist {
+				amount = amount - pendingAmount
+				amountToSend[tokenID] = amount
+			} else {
+				amountToSend[tokenID] = amount
+			}
+		}
+
+		for tokenID, amount := range amountToSend {
+			txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
+			if err != nil {
+				log.Println("GetAllUTXOsV2", err)
+				continue
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[WithdrawFee]` withdraw fee to central wallet token `%v` amount `%v` txhash `%v`", tokenID, amount, txhash))
+		}
+
+		time.Sleep(15 * time.Minute)
 	}
 }
 
@@ -73,12 +124,12 @@ func watchPendingFeeRefundTx() {
 			status := tx.RefundStatus
 			switch status {
 			case wcommon.StatusWaiting:
-				_, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundToken, tx.RefundAmount)
+				_, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundOTASS, tx.RefundAddress, tx.RefundToken, tx.RefundAmount)
 				if err != nil {
 					log.Println("SubmitTxFeeRefund err:", err)
 					continue
 				} else {
-					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusSubmitting)
+					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusSubmitting, "")
 					if err != nil {
 						log.Println("DBUpdateRefundFeeRefundTx err:", err)
 						continue
@@ -92,7 +143,7 @@ func watchPendingFeeRefundTx() {
 
 				if txDetail == nil {
 					if time.Since(tx.UpdatedAt) > 1*time.Hour {
-						err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusSubmitFailed)
+						err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusSubmitFailed, "timeout")
 						if err != nil {
 							log.Println("DBUpdateRefundFeeRefundTx err:", err)
 							continue
@@ -102,7 +153,7 @@ func watchPendingFeeRefundTx() {
 				}
 
 				if txDetail.IsInBlock {
-					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted)
+					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted, "")
 					if err != nil {
 						log.Println("DBUpdateRefundFeeRefundTx err:", err)
 						continue
@@ -138,11 +189,13 @@ func watchPappTxNeedFeeRefund() {
 				}
 			}
 			data := wcommon.RefundFeeData{
-				IncRequestTx: tx.IncTx,
-				RefundAmount: tx.FeeAmount,
-				RefundToken:  tx.FeeToken,
-				RefundOTA:    tx.FeeRefundOTA,
-				RefundStatus: wcommon.StatusWaiting,
+				IncRequestTx:  tx.IncTx,
+				RefundAmount:  tx.FeeAmount,
+				RefundToken:   tx.FeeToken,
+				RefundOTA:     tx.FeeRefundOTA,
+				RefundOTASS:   tx.FeeRefundOTASS,
+				RefundAddress: tx.FeeRefundAddress,
+				RefundStatus:  wcommon.StatusWaiting,
 			}
 
 			err = database.DBCreateRefundFeeRecord(data)
@@ -479,4 +532,27 @@ func watchEVMAccountBalance() {
 		time.Sleep(30 * time.Minute)
 	}
 
+}
+
+func getPendingPappsFee(shardID int) (map[string]uint64, error) {
+	result := make(map[string]uint64)
+	var txList []wcommon.PappTxData
+	var err error
+	if shardID == -1 {
+		txList, err = database.DBGetPappTxDataByStatus(wcommon.StatusExecuting, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		txList, err = database.DBGetPappTxDataByStatusAndShardID(wcommon.StatusExecuting, shardID, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	return result, nil
 }

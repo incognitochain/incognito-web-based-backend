@@ -34,6 +34,12 @@ func loadConfig() error {
 		log.Println("cfg.json is empty")
 		config = common.DefaultConfig
 	}
+
+	err = loadKey()
+	if err != nil {
+		return nil
+	}
+
 	return nil
 }
 

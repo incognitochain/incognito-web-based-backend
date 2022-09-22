@@ -70,9 +70,9 @@ func DBCreateRefundFeeRecord(data common.RefundFeeData) error {
 	return nil
 }
 
-func DBUpdateRefundFeeRefundTx(refundtx, incReqTx, status string) error {
+func DBUpdateRefundFeeRefundTx(refundtx, incReqTx, status, errStr string) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: incReqTx}}
-	update := bson.M{"$set": bson.M{"status": status, "refundtx": refundtx, "updated_at": time.Now()}}
+	update := bson.M{"$set": bson.M{"status": status, "refundtx": refundtx, "error": errStr, "updated_at": time.Now()}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.RefundFeeData{}).UpdateOne(ctx, filter, update)
 	if err != nil {

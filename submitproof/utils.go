@@ -195,11 +195,7 @@ func getETHDepositProof(
 							continue
 						}
 						isRedeposit = true
-						otaStr, err = newOTA.String()
-						if err != nil {
-							log.Println("unpackResult5err", err)
-							return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
-						}
+						otaStr = newOTA.String(false)
 					}
 				}
 				unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
@@ -479,3 +475,56 @@ func getNonceByPrivateKey(c *ethclient.Client, senderPrivKey string) (uint64, er
 
 	return nonce, nil
 }
+
+// func genShardsAccount(mainAcc string) error {
+// 	incShardsAccount = make(map[int]string)
+// 	seed := mainAcc
+// 	shardsNum, err := incClient.GetActiveShard()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	child := 0
+// 	for {
+// 		nSeed := seed[:16] + strconv.Itoa(child)
+// 		wl, err := wallet.NewMasterKeyFromSeed([]byte(nSeed))
+// 		if err != nil {
+// 			log.Println(err, nSeed)
+// 			return err
+// 			// continue
+// 		}
+// 		pk := wl.KeySet.PaymentAddress.Pk
+// 		lastByte := pk[len(pk)-1]
+// 		shardid := int(lastByte) % shardsNum
+
+// 		if _, exist := incShardsAccount[shardid]; !exist {
+// 			incShardsAccount[shardid] = wl.Base58CheckSerialize(wallet.PrivateKeyType)
+// 			log.Println("match found: ", shardid, incShardsAccount[shardid])
+// 		}
+// 		child++
+// 		if len(incShardsAccount) == shardsNum {
+// 			return nil
+// 		}
+// 	}
+// }
+
+// // GenRandomWalletForShardID generates a random wallet for a specific shardID.
+// func GenRandomWalletForShardID(shardID byte) (*KeyWallet, error) {
+// 	numTries := 100000
+// 	for numTries > 0 {
+// 		tmpWallet, err := NewMasterKeyFromSeed(common.RandBytes(32))
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		pk := tmpWallet.KeySet.PaymentAddress.Pk
+
+// 		lastByte := pk[len(pk)-1]
+// 		if lastByte == shardID {
+// 			return tmpWallet, nil
+// 		}
+
+// 		numTries--
+// 	}
+
+// 	return nil, fmt.Errorf("failed after %v tries", numTries)
+// }

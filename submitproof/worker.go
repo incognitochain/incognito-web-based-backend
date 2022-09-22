@@ -2,6 +2,7 @@ package submitproof
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,7 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	inccommon "github.com/incognitochain/go-incognito-sdk-v2/common"
+	inccrypto "github.com/incognitochain/go-incognito-sdk-v2/crypto"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
@@ -438,6 +441,29 @@ retry:
 			return
 		}
 	}
+
+	otaReceiver := coin.OTAReceiver{}
+
+	err = otaReceiver.FromString(task.OTA)
+	if err != nil {
+		log.Println("DBUpdateRefundFeeRefundTx error ", err)
+		return
+	}
+
+	var sharedSecrets []inccrypto.Point
+	otass, err := hex.DecodeString(task.OTASS)
+	if err != nil {
+		log.Println("DecodeString OTASS error ", err)
+		return
+	}
+
+	err = json.Unmarshal(otass, &sharedSecrets)
+	if err != nil {
+		log.Println("DecodeString OTASS error ", err)
+		return
+	}
+
+	otaReceiver.SharedSecrets = sharedSecrets
 
 	if task.Token != inccommon.PRVCoinID.String() {
 		var tokenParam *incclient.TxTokenParam

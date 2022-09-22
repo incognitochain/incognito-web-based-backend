@@ -16,6 +16,8 @@ type Config struct {
 	IncKey string
 	EVMKey string
 
+	CentralIncPaymentAddress string
+
 	GGCProject string
 	GGCAuth    string
 }

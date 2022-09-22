@@ -77,7 +77,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeOTASS string, refundFeeAddress string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -89,17 +89,19 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 	}
 
 	task := SubmitPappTxTask{
-		TxHash:         txhash,
-		TxRawData:      rawTxData,
-		IsPRVTx:        isPRVTx,
-		IsUnifiedToken: isUnifiedToken,
-		FeeToken:       feeToken,
-		FeeAmount:      feeAmount,
-		FeeRefundOTA:   refundFeeOTA,
-		BurntToken:     burntToken,
-		BurntAmount:    burntAmount,
-		Networks:       networks,
-		Time:           time.Now(),
+		TxHash:           txhash,
+		TxRawData:        rawTxData,
+		IsPRVTx:          isPRVTx,
+		IsUnifiedToken:   isUnifiedToken,
+		FeeToken:         feeToken,
+		FeeAmount:        feeAmount,
+		FeeRefundOTA:     refundFeeOTA,
+		FeeRefundOTASS:   refundFeeOTASS,
+		FeeRefundAddress: refundFeeAddress,
+		BurntToken:       burntToken,
+		BurntAmount:      burntAmount,
+		Networks:         networks,
+		Time:             time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
 
@@ -120,13 +122,15 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 	return "submitting", nil
 }
 
-func SubmitTxFeeRefund(incReqTx, refundOTA, token string, amount uint64) (interface{}, error) {
+func SubmitTxFeeRefund(incReqTx, refundOTA, refundOTASS, paymentAddress, token string, amount uint64) (interface{}, error) {
 	task := SubmitRefundFeeTask{
-		IncReqTx: incReqTx,
-		OTA:      refundOTA,
-		Amount:   amount,
-		Token:    token,
-		Time:     time.Now(),
+		IncReqTx:       incReqTx,
+		OTA:            refundOTA,
+		OTASS:          refundOTASS,
+		PaymentAddress: paymentAddress,
+		Amount:         amount,
+		Token:          token,
+		Time:           time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
 

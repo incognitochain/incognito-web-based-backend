@@ -13,6 +13,7 @@ CONFIG_JSON=$(cat <<EOF
   "CoinserviceURL": "$COIN_SERVICE_URL",
   "FullnodeURL": "$FULLNODE_URL",
   "ShieldService": "$SHIELD_SERVICE_URL",
+  "BTCShieldPortal":"$BTC_SHIELD_URL",
   "FaucetService": "$FAUCET_SERVICE_URL",
   "CaptchaSecret":"$CAPTCHA_SECRET",
   "SlackMonitor":"$SLACK_MONITOR",

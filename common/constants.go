@@ -5,7 +5,7 @@ import "strings"
 var DefaultConfig = Config{
 	Port:           9898,
 	CoinserviceURL: "http://51.161.117.193:8096",
-	NetworkID:      "testnet-2",
+	NetworkID:      "testnet",
 	FullnodeURL:    "https://testnet.incognito.org/fullnode",
 	ShieldService:  "https://staging-api-service.incognito.org",
 }
@@ -125,6 +125,10 @@ var (
 	}
 )
 
+const (
+	TestnetPortalV4BTCID = "4584d5e9b2fc0337dfb17f4b5bb025e5b82c38cfa4f54e8a3d4fcdd03954ff82"
+	MainnetPortalV4BTCID = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
+)
 const (
 	PappTypeUnknown = iota
 	PappTypeSwap

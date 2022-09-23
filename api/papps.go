@@ -254,6 +254,12 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 
+	var pdexEstimate interface{}
+
+	if req.Network == "inc" {
+		pdexEstimate = estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage)
+	}
+
 	supportedNetworks := []int{}
 
 	outofVaultNetworks := []int{}
@@ -396,15 +402,58 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(200, response)
 		return
 	}
-	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) {
+	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) && pdexEstimate == nil {
 		c.JSON(200, gin.H{"Error": NotTradeable.Error()})
 		return
+	}
+	if pdexEstimate != nil {
+		result.Networks["inc"] = pdexEstimate
 	}
 
 	response.Result = result
 
 	c.JSON(200, response)
 
+}
+
+func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float) interface{} {
+	type APIRespond struct {
+		Result map[string]PdexEstimateRespond
+		Error  *string
+	}
+
+	var responseBodyData APIRespond
+
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).
+		Get(config.CoinserviceURL + "/coins/tokenlist")
+	if err != nil {
+		log.Println("estimateSwapFeeWithPdex", err)
+		return nil
+	}
+	if responseBodyData.Error != nil {
+		log.Println("estimateSwapFeeWithPdex", errors.New(*responseBodyData.Error))
+		return nil
+	}
+
+	result := make(map[string]PdexEstimateRespond)
+
+	for feeby, v := range responseBodyData.Result {
+		amountOutBigFloat := new(big.Float).SetFloat64(v.MaxGet)
+		if slippage != nil {
+			sl := new(big.Float).SetFloat64(0.01)
+			sl = sl.Mul(sl, slippage)
+			sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
+			amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)
+			amountOutFloat, _ := amountOutBigFloat.Float64()
+			v.MaxGet = math.Floor(amountOutFloat)
+		}
+		result[feeby] = v
+	}
+
+	return &responseBodyData.Result
 }
 
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {

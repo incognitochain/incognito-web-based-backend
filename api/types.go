@@ -387,3 +387,41 @@ type PdexEstimateRespond struct {
 	IsSignificant bool
 	ImpactAmount  float64
 }
+
+type TradeDataRespond struct {
+	RequestTx           string
+	RespondTxs          []string
+	RespondTokens       []string
+	RespondAmounts      []uint64
+	WithdrawTxs         map[string]TradeWithdrawInfo
+	SellTokenID         string
+	BuyTokenID          string
+	Status              string
+	StatusCode          int
+	PairID              string
+	PoolID              string
+	MinAccept           uint64
+	Amount              uint64
+	Matched             uint64
+	Requestime          int64
+	NFTID               string
+	Receiver            string
+	Fee                 uint64
+	FeeToken            string
+	IsCompleted         bool
+	SellTokenBalance    uint64
+	BuyTokenBalance     uint64
+	SellTokenWithdrawed uint64
+	BuyTokenWithdrawed  uint64
+	TradingPath         []string
+}
+
+type TradeWithdrawInfo struct {
+	TokenIDs   []string
+	IsRejected bool
+	Responds   map[string]struct {
+		Amount    uint64
+		Status    int
+		RespondTx string
+	}
+}

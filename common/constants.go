@@ -105,6 +105,7 @@ const (
 
 var (
 	NetworkCurrencyMap = map[int]int{
+		Unknown:       NETWORK_INC_ID,
 		UNIFINE_TOKEN: NETWORK_INC_ID,
 		ETH:           NETWORK_ETH_ID,
 		ERC20:         NETWORK_ETH_ID,

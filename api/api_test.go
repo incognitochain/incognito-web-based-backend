@@ -155,3 +155,10 @@ func (t *HelpTestSuite) TestSwapFlowUniSwapRedepositWrongFee() {
 // 	var feeToken string
 // 	var feeAddress string
 // }
+
+func TestSwapPDex(t *testing.T) {
+	config.CoinserviceURL = "http://51.161.117.193:8096"
+	tkFromInfo, _ := getTokenInfo("0000000000000000000000000000000000000000000000000000000000000004")
+	result := estimateSwapFeeWithPdex("0000000000000000000000000000000000000000000000000000000000000004", "00000000000000000000000000000000000000000000000000000000000115dc", "0.0001", nil, tkFromInfo)
+	t.Log("result", result)
+}

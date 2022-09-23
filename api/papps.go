@@ -214,7 +214,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	switch req.Network {
 	case "inc", "eth", "bsc", "plg", "ftm":
 	default:
-		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(200, gin.H{"Error": errors.New("unsupported network")})
 		return
 	}
 
@@ -231,6 +231,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
 	var result EstimateSwapRespond
 	result.Networks = make(map[string]interface{})
 
@@ -257,7 +261,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate interface{}
 
 	if req.Network == "inc" {
-		pdexEstimate = estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage)
+		pdexEstimate = estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
 	}
 
 	supportedNetworks := []int{}
@@ -358,6 +362,12 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 	if len(supportedNetworks) == 0 {
+		if req.Network == "inc" && pdexEstimate != nil {
+			result.Networks["inc"] = pdexEstimate
+			response.Result = result
+			c.JSON(200, response)
+			return
+		}
 		c.JSON(200, gin.H{"Error": NotTradeable.Error()})
 		return
 	}
@@ -380,10 +390,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
-	var response struct {
-		Result interface{}
-		Error  interface{}
-	}
 	networkErr := make(map[string]string)
 
 	for _, network := range supportedNetworks {
@@ -416,19 +422,23 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 }
 
-func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float) interface{} {
+func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float, tkFromInfo *wcommon.TokenInfo) interface{} {
 	type APIRespond struct {
 		Result map[string]PdexEstimateRespond
 		Error  *string
 	}
 
+	amountBig, _ := new(big.Float).SetString(amount)
+	amountBig = amountBig.Mul(amountBig, new(big.Float).SetFloat64(math.Pow10(tkFromInfo.PDecimals)))
+
+	amountRaw, _ := amountBig.Uint64()
 	var responseBodyData APIRespond
 
 	_, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").
 		SetResult(&responseBodyData).
-		Get(config.CoinserviceURL + "/coins/tokenlist")
+		Get(config.CoinserviceURL + "/pdex/v3/estimatetrade?" + fmt.Sprintf("selltoken=%v&buytoken=%v&sellamount=%v", fromToken, toToken, amountRaw))
 	if err != nil {
 		log.Println("estimateSwapFeeWithPdex", err)
 		return nil
@@ -453,7 +463,7 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 		result[feeby] = v
 	}
 
-	return &responseBodyData.Result
+	return result
 }
 
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {

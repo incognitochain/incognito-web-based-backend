@@ -204,6 +204,12 @@ type SubmitUnshieldTxRequest struct {
 	ID               int
 	IncognitoTx      string
 	UserFeeSelection int
+
+	//centralized
+	TokenFee                        string
+	PrivacyFee                      string
+	Address                         string
+	IncognitoTxToPayOutsideChainFee string
 }
 
 type GenShieldAddressRequest struct {

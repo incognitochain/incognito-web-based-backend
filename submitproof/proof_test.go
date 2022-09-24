@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
+	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/incognito-web-based-backend/evmproof"
 )
 
@@ -112,13 +113,13 @@ func TestOTADecode(t *testing.T) {
 	otacoin.String()
 }
 
-// func TestGenKey(t *testing.T) {
-// 	var err error
-// 	incClient, err = incclient.NewIncClient("https://testnet.incognito.org/fullnode", "", 2, "testnet")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+func TestGenKey(t *testing.T) {
+	var err error
+	incClient, err = incclient.NewIncClient("https://testnet.incognito.org/fullnode", "", 2, "testnet")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	err = genShardsAccount("112t8rnXUbFHzsnX7zdQouzxXEWArruE4rYzeswrEtvL3iBkcgXAXsQk4kQk23XfLNU6wMknyKk8UAu8fLBfkcUVMgxTNsfrYZURAnPqhffA")
-// 	t.Log(err)
-// }
+	err = genShardsAccount("112t8rnXUbFHzsnX7zdQouzxXEWArruE4rYzeswrEtvL3iBkcgXAXsQk4kQk23XfLNU6wMknyKk8UAu8fLBfkcUVMgxTNsfrYZURAnPqhffA")
+	t.Log(err)
+}

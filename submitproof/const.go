@@ -1,6 +1,6 @@
 package submitproof
 
-// var incShardsAccount map[int]string
+var incShardsAccount map[int]string
 
 const (
 	MqSubmitTx = "submitproof"

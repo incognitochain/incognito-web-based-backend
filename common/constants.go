@@ -136,19 +136,19 @@ var MainnetBridgeNetworkData = []BridgeNetworkData{
 		Network:            "eth",
 		ChainID:            "1",
 		ConfirmationBlocks: 35,
-		Endpoints:          []string{"https://mainnet.infura.io/v3"},
+		Endpoints:          []string{"https://eth-fullnode.incognito.org"},
 	},
 	{
 		Network:            "plg",
 		ChainID:            "137",
 		ConfirmationBlocks: 128,
-		Endpoints:          []string{"https://rpc.ankr.com/polygon"},
+		Endpoints:          []string{"https://polygon-mainnet.infura.io/v3/9bc873177cf74a03a35739e45755a9ac", "https://rpc-mainnet.maticvigil.com", "https://rpc-mainnet.matic.quiknode.pro"},
 	},
 	{
 		Network:            "bsc",
 		ChainID:            "56",
 		ConfirmationBlocks: 14,
-		Endpoints:          []string{"https://bsc-dataseed1.ninicoin.io"},
+		Endpoints:          []string{"https://bsc-dataseed1.binance.org", "https://bsc-dataseed1.ninicoin.io"},
 	},
 }
 

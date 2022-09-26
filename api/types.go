@@ -206,7 +206,6 @@ type SubmitUnshieldTxRequest struct {
 	UserFeeSelection int
 
 	//centralized
-	TokenFee                        string
 	PrivacyFee                      string
 	Address                         string
 	IncognitoTxToPayOutsideChainFee string

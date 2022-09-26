@@ -132,11 +132,9 @@ func checkPappTxSwapStatus(txhash string) map[string]interface{} {
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
 			result["error"] = err.Error()
-		} else {
-			return getPdexSwapTxStatus(txhash)
+			return result
 		}
-		result["error"] = "not found"
-		return result
+		return getPdexSwapTxStatus(txhash)
 	}
 
 	result["inc_request_tx_status"] = data.Status

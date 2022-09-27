@@ -166,12 +166,10 @@ func APIGetSupportedToken(c *gin.Context) {
 							if err != nil {
 								swapContractID, err = getSwapContractID(utk.TokenID, netID, pappTokens)
 								if err != nil {
-									c.JSON(200, gin.H{"Error": err.Error()})
-									return
+									log.Println(err)
 								}
 							}
 						}
-
 					}
 					if swapContractID != "" {
 						utk.IsSwapable = true
@@ -189,8 +187,7 @@ func APIGetSupportedToken(c *gin.Context) {
 					if err == nil {
 						swapContractID, err = getSwapContractID(tk.TokenID, netID, pappTokens)
 						if err != nil {
-							c.JSON(200, gin.H{"Error": err.Error()})
-							return
+							log.Println(err)
 						}
 					}
 				}

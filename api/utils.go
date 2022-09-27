@@ -257,7 +257,7 @@ func getSwapContractID(tokenID string, network int, supportedTokenList []PappSup
 			}
 		}
 	}
-	return result, nil
+	return result, errors.New(fmt.Sprintf("contractID of token %v not found", tokenID))
 }
 
 func verifySlippage(slippage string) (*big.Float, error) {

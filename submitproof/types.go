@@ -31,10 +31,10 @@ type SubmitPappTxTask struct {
 }
 
 type SubmitRefundFeeTask struct {
-	IncReqTx       string
-	Token          string
-	OTA            string
-	OTASS          string
+	IncReqTx string
+	Token    string
+	OTA      string
+	// OTASS          string
 	PaymentAddress string
 	Amount         uint64
 	Time           time.Time

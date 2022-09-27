@@ -479,12 +479,14 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {
 	result := []QuoteDataResp{}
 	feeAddress := ""
+	feeAddressShardID := byte(0)
 	var err error
 	if incFeeKeySet != nil {
 		feeAddress, err = incFeeKeySet.GetPaymentAddress()
 		if err != nil {
 			return nil, err
 		}
+		feeAddressShardID, _ = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
 	}
 	log.Println("estimateSwapFee for", fromToken, toToken, amount, networkID)
 	networkName := wcommon.GetNetworkName(networkID)
@@ -538,6 +540,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			return nil, errors.New("token out contractID not found")
 		}
 	}
 
@@ -718,17 +722,18 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				pathsList = append(pathsList, v.String())
 			}
 			result = append(result, QuoteDataResp{
-				AppName:      appName,
-				AmountIn:     amount,
-				AmountInRaw:  quote.Data.AmountIn,
-				AmountOut:    pTkAmountFloatStr,
-				AmountOutRaw: fmt.Sprintf("%v", amountOutBig.Int64()),
-				Paths:        pathsList,
-				Fee:          fees,
-				Calldata:     calldata,
-				CallContract: contract,
-				FeeAddress:   feeAddress,
-				RouteDebug:   quote.Data.Route,
+				AppName:           appName,
+				AmountIn:          amount,
+				AmountInRaw:       quote.Data.AmountIn,
+				AmountOut:         pTkAmountFloatStr,
+				AmountOutRaw:      fmt.Sprintf("%v", amountOutBig.Int64()),
+				Paths:             pathsList,
+				Fee:               fees,
+				Calldata:          calldata,
+				CallContract:      contract,
+				FeeAddress:        feeAddress,
+				FeeAddressShardID: int(feeAddressShardID),
+				RouteDebug:        quote.Data.Route,
 			})
 		case "pancake":
 			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
@@ -831,16 +836,17 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			}
 
 			result = append(result, QuoteDataResp{
-				AppName:      appName,
-				AmountIn:     amount,
-				AmountOut:    pTkAmountFloatStr,
-				AmountOutRaw: fmt.Sprintf("%v", amountOutBig.Int64()),
-				Paths:        quote.Data.Route,
-				Fee:          fees,
-				Calldata:     calldata,
-				CallContract: contract,
-				FeeAddress:   feeAddress,
-				ImpactAmount: fmt.Sprintf("%.2f", quote.Data.Impact),
+				AppName:           appName,
+				AmountIn:          amount,
+				AmountOut:         pTkAmountFloatStr,
+				AmountOutRaw:      fmt.Sprintf("%v", amountOutBig.Int64()),
+				Paths:             quote.Data.Route,
+				Fee:               fees,
+				Calldata:          calldata,
+				CallContract:      contract,
+				FeeAddress:        feeAddress,
+				FeeAddressShardID: int(feeAddressShardID),
+				ImpactAmount:      fmt.Sprintf("%.2f", quote.Data.Impact),
 			})
 
 		case "curve":
@@ -929,13 +935,14 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			}
 
 			result = append(result, QuoteDataResp{
-				AppName:      appName,
-				AmountIn:     amount,
-				AmountOut:    amountOutDecimal.String(),
-				AmountOutRaw: amountOut.String(),
-				Fee:          fees,
-				CallContract: contract,
-				FeeAddress:   feeAddress,
+				AppName:           appName,
+				AmountIn:          amount,
+				AmountOut:         amountOutDecimal.String(),
+				AmountOutRaw:      amountOut.String(),
+				Fee:               fees,
+				CallContract:      contract,
+				FeeAddress:        feeAddress,
+				FeeAddressShardID: int(feeAddressShardID),
 			})
 		}
 	}

@@ -157,8 +157,11 @@ func APIGetSupportedToken(c *gin.Context) {
 						if err == nil {
 							swapContractID, err = getSwapContractID(tk.TokenID, netID, pappTokens)
 							if err != nil {
-								c.JSON(200, gin.H{"Error": err.Error()})
-								return
+								swapContractID, err = getSwapContractID(utk.TokenID, netID, pappTokens)
+								if err != nil {
+									c.JSON(200, gin.H{"Error": err.Error()})
+									return
+								}
 							}
 						}
 
@@ -437,7 +440,16 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 	pTokenContract1, err := getpTokenContractID(fromToken, networkID, spTkList)
 	if err != nil {
 		log.Println("err get pTokenContract1")
-		return nil, err
+		if len(fromTokenInfo.ListUnifiedToken) > 0 {
+			for _, cTk := range fromTokenInfo.ListUnifiedToken {
+				pTokenContract1, _ = getpTokenContractID(cTk.TokenID, networkID, spTkList)
+				if pTokenContract1 != nil {
+					break
+				}
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	pTokenContract2, err := getpTokenContractID(toToken, networkID, spTkList)

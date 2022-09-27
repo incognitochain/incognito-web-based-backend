@@ -112,6 +112,9 @@ func ConvertToNanoIncognitoToken(coinAmount *big.Float, pdecimal int64) *big.Flo
 func getpTokenContractID(tokenID string, networkID int, supportedTokenList []PappSupportedTokenData) (*PappSupportedTokenData, error) {
 	for _, v := range supportedTokenList {
 		vNetID, _ := common.GetNetworkIDFromCurrencyType(v.CurrencyType)
+		if v.CurrencyType == common.UnifiedCurrencyType {
+			vNetID = v.NetworkID
+		}
 		if v.ID == tokenID && vNetID == networkID {
 			return &v, nil
 		}
@@ -245,6 +248,9 @@ func getSwapContractID(tokenID string, network int, supportedTokenList []PappSup
 	for _, pTk := range supportedTokenList {
 		if pTk.ID == tokenID {
 			pNetID, _ := common.GetNetworkIDFromCurrencyType(pTk.CurrencyType)
+			if pTk.CurrencyType == common.UnifiedCurrencyType {
+				pNetID = pTk.NetworkID
+			}
 			if pNetID == network {
 				result = pTk.ContractIDGetRate
 				return result, nil

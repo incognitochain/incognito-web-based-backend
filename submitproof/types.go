@@ -15,14 +15,14 @@ type SubmitProofShieldTask struct {
 }
 
 type SubmitPappTxTask struct {
-	TxHash           string
-	TxRawData        []byte
-	IsPRVTx          bool
-	IsUnifiedToken   bool
-	FeeToken         string
-	FeeAmount        uint64
-	FeeRefundOTA     string
-	FeeRefundOTASS   string
+	TxHash         string
+	TxRawData      []byte
+	IsPRVTx        bool
+	IsUnifiedToken bool
+	FeeToken       string
+	FeeAmount      uint64
+	FeeRefundOTA   string
+	// FeeRefundOTASS   string
 	FeeRefundAddress string
 	BurntToken       string
 	BurntAmount      uint64
@@ -31,10 +31,10 @@ type SubmitPappTxTask struct {
 }
 
 type SubmitRefundFeeTask struct {
-	IncReqTx       string
-	Token          string
-	OTA            string
-	OTASS          string
+	IncReqTx string
+	Token    string
+	OTA      string
+	// OTASS          string
 	PaymentAddress string
 	Amount         uint64
 	Time           time.Time

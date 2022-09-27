@@ -44,6 +44,14 @@ func APIEstimateUnshield(c *gin.Context) {
 		return
 	}
 
+	if req.Network == "btc" {
+
+	}
+
+	if req.Network == "centralized" {
+
+	}
+
 	if req.ExpectedAmount > 0 && req.BurntAmount > 0 {
 		c.JSON(200, gin.H{"Error": errors.New("either ExpectedAmount or BurntAmount can > 0, not both")})
 		return
@@ -77,4 +85,12 @@ func APIEstimateUnshield(c *gin.Context) {
 		return
 	}
 	c.JSON(200, responseBodyData)
+}
+
+func getBTCUnshieldFee() {
+
+}
+
+func getCentralizedUnshieldFee() {
+
 }

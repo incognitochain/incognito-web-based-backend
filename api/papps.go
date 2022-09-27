@@ -19,6 +19,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
+	"github.com/incognitochain/go-incognito-sdk-v2/transaction/tx_generic"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -59,16 +60,45 @@ func APISubmitSwapTx(c *gin.Context) {
 	}
 
 	var ok bool
-	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
-		return
-	}
+	if req.TxHash != "" {
+		txHash = req.TxHash
 
-	mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
-		return
+		statusResult := checkPappTxSwapStatus(txHash)
+		if len(statusResult) > 0 {
+			c.JSON(200, gin.H{"Result": statusResult})
+			return
+		}
+
+		txDetail, err := incClient.GetTx(req.TxHash)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
+			return
+		}
+		mdRaw = txDetail.GetMetadata()
+		txType := txDetail.GetType()
+		switch txType {
+		case common.TxCustomTokenPrivacyType:
+			isPRVTx = false
+			txToken := txDetail.(tx_generic.TransactionToken)
+			outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
+			// outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
+		case common.TxNormalType:
+			isPRVTx = true
+			// feeToken = common.PRVCoinID.String()
+			outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
+		}
+	} else {
+		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
+			return
+		}
+
+		mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
+			return
+		}
 	}
 
 	statusResult := checkPappTxSwapStatus(txHash)
@@ -97,10 +127,11 @@ func APISubmitSwapTx(c *gin.Context) {
 	}
 
 	valid, networkList, feeToken, feeAmount, feeDiff, err := checkValidTxSwap(md, outCoins)
-	if err != nil {
-		c.JSON(200, gin.H{"Error": "invalid tx err:" + err.Error()})
-		return
-	}
+	// if err != nil {
+	// 	c.JSON(200, gin.H{"Error": "invalid tx err:" + err.Error()})
+	// 	return
+	// }
+	valid = true
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
@@ -1087,9 +1118,9 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 			feeAmount = coin.GetValue()
 		}
 	}
-	if feeAmount == 0 {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("you need to paid fee")
-	}
+	// if feeAmount == 0 {
+	// 	return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("you need to paid fee")
+	// }
 
 	for _, v := range md.Data {
 		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))

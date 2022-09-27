@@ -265,8 +265,8 @@ type SubmitTxListRequest struct {
 }
 
 type SubmitSwapTxRequest struct {
-	TxRaw string
-	// TxHash       string
+	TxRaw            string
+	TxHash           string
 	FeeRefundOTA     string
 	FeeRefundOTASS   string
 	FeeRefundAddress string

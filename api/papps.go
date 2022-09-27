@@ -65,8 +65,15 @@ func APISubmitSwapTx(c *gin.Context) {
 
 		statusResult := checkPappTxSwapStatus(txHash)
 		if len(statusResult) > 0 {
-			c.JSON(200, gin.H{"Result": statusResult})
-			return
+			if er, ok := statusResult["error"]; ok {
+				if er != "not found" {
+					c.JSON(200, gin.H{"Result": statusResult})
+					return
+				}
+			} else {
+				c.JSON(200, gin.H{"Result": statusResult})
+				return
+			}
 		}
 
 		txDetail, err := incClient.GetTx(req.TxHash)

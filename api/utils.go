@@ -248,6 +248,9 @@ func getSwapContractID(tokenID string, network int, supportedTokenList []PappSup
 	for _, pTk := range supportedTokenList {
 		if pTk.ID == tokenID {
 			pNetID, _ := common.GetNetworkIDFromCurrencyType(pTk.CurrencyType)
+			if pTk.CurrencyType == common.UnifiedCurrencyType {
+				pNetID = pTk.NetworkID
+			}
 			if pNetID == network {
 				result = pTk.ContractIDGetRate
 				return result, nil

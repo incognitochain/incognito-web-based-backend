@@ -74,10 +74,10 @@ type PappTxData struct {
 	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
 	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
 	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
-	FeeRefundOTASS   string   `json:"fee_refundotass" bson:"fee_refundotass"`
-	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
-	ShardID          int      `json:"shardid" bson:"shardid"`
-	Error            string   `json:"error" bson:"error"`
+	// FeeRefundOTASS   string   `json:"fee_refundotass" bson:"fee_refundotass"`
+	FeeRefundAddress string `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	ShardID          int    `json:"shardid" bson:"shardid"`
+	Error            string `json:"error" bson:"error"`
 }
 
 type PappVaultData struct {

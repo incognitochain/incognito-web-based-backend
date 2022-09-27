@@ -447,6 +447,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					break
 				}
 			}
+			if pTokenContract1 == nil {
+				return nil, errors.New("can't find contractID for token " + fromToken)
+			}
 		} else {
 			return nil, err
 		}

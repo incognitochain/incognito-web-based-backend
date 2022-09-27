@@ -26,6 +26,26 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		return
 	}
 	switch req.Network {
+	case "centralized":
+		re, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+			Post(config.ShieldService + "/ota/update-fee")
+		if err != nil {
+			c.JSON(200, gin.H{"Error": err.Error()})
+			return
+		}
+		var responseBodyData struct {
+			Result interface{}
+			Error  interface{}
+		}
+		err = json.Unmarshal(re.Body(), &responseBodyData)
+		if err != nil {
+			c.JSON(200, gin.H{"Error": err})
+			return
+		}
+		c.JSON(200, responseBodyData)
+		return
 	case "eth", "bsc", "plg", "ftm":
 		re, err := restyClient.R().
 			EnableTrace().

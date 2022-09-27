@@ -197,7 +197,7 @@ func getETHDepositProof(
 							continue
 						}
 						isRedeposit = true
-						otaStr = newOTA.String(false)
+						otaStr = newOTA.String()
 					}
 				}
 				unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)

@@ -7,6 +7,7 @@ type Config struct {
 	Mongodb         string
 	CoinserviceURL  string
 	FullnodeURL     string
+	FullnodeAuthKey string
 	ShieldService   string
 	BTCShieldPortal string
 	FaucetService   string

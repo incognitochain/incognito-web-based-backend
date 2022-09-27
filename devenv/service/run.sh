@@ -12,6 +12,7 @@ CONFIG_JSON=$(cat <<EOF
   "Mongodb": "$MONGO_DBNAME",
   "CoinserviceURL": "$COIN_SERVICE_URL",
   "FullnodeURL": "$FULLNODE_URL",
+  "FullnodeAuthKey": "$FULLNODE_AUTHKEY",
   "ShieldService": "$SHIELD_SERVICE_URL",
   "BTCShieldPortal":"$BTC_SHIELD_URL",
   "FaucetService": "$FAUCET_SERVICE_URL",

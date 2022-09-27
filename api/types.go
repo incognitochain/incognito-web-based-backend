@@ -92,6 +92,8 @@ type EstimateUnshieldRequest struct {
 	TokenID        string
 	ExpectedAmount uint64
 	BurntAmount    uint64
+
+	Network string
 }
 
 type EstimateUnshieldRespond struct {
@@ -188,6 +190,7 @@ type GenUnshieldAddressRequest struct {
 	IncognitoTx         string
 	UnifiedTokenID      string
 	SignPublicKeyEncode string
+	CurrencyType        int
 }
 
 type SubmitUnshieldTxRequest struct {
@@ -201,13 +204,27 @@ type SubmitUnshieldTxRequest struct {
 	ID               int
 	IncognitoTx      string
 	UserFeeSelection int
+
+	//centralized
+	PrivacyFee                      string
+	Address                         string
+	IncognitoTxToPayOutsideChainFee string
 }
 
 type GenShieldAddressRequest struct {
 	Network             string
 	AddressType         int
+	CurrencyType        int
 	PrivacyTokenAddress string
 	WalletAddress       string
+	RequestedAmount     string
+	PaymentAddress      string
+
+	BTCIncAddress string
+}
+type GenBTCShieldAddressRequest struct {
+	ShieldAddress string `json:"btcaddress"`
+	IncAddress    string `json:"incaddress"`
 }
 
 type SubmitShieldTx struct {
@@ -363,4 +380,52 @@ type StatusSwapTxDetail struct {
 	SellAmount uint64
 	BuyToken   string
 	Networks   []string
+}
+
+type PdexEstimateRespond struct {
+	SellAmount    float64
+	MaxGet        float64
+	Fee           uint64
+	Route         []string
+	TokenRoute    []string
+	IsSignificant bool
+	ImpactAmount  float64
+}
+
+type TradeDataRespond struct {
+	RequestTx           string
+	RespondTxs          []string
+	RespondTokens       []string
+	RespondAmounts      []uint64
+	WithdrawTxs         map[string]TradeWithdrawInfo
+	SellTokenID         string
+	BuyTokenID          string
+	Status              string
+	StatusCode          int
+	PairID              string
+	PoolID              string
+	MinAccept           uint64
+	Amount              uint64
+	Matched             uint64
+	Requestime          int64
+	NFTID               string
+	Receiver            string
+	Fee                 uint64
+	FeeToken            string
+	IsCompleted         bool
+	SellTokenBalance    uint64
+	BuyTokenBalance     uint64
+	SellTokenWithdrawed uint64
+	BuyTokenWithdrawed  uint64
+	TradingPath         []string
+}
+
+type TradeWithdrawInfo struct {
+	TokenIDs   []string
+	IsRejected bool
+	Responds   map[string]struct {
+		Amount    uint64
+		Status    int
+		RespondTx string
+	}
 }

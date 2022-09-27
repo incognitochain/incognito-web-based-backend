@@ -56,6 +56,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
+	r.GET("/validaddress", APIValidateAddress)
+
 	r.POST("/submitshieldtx", APISubmitShieldTx) //depercated
 
 	r.POST("/shieldstatus", APIGetShieldStatus)

@@ -73,8 +73,15 @@ func APISubmitSwapTx(c *gin.Context) {
 
 	statusResult := checkPappTxSwapStatus(txHash)
 	if len(statusResult) > 0 {
-		c.JSON(200, gin.H{"Result": statusResult})
-		return
+		if er, ok := statusResult["error"]; ok {
+			if er != "not found" {
+				c.JSON(200, gin.H{"Result": statusResult})
+				return
+			}
+		} else {
+			c.JSON(200, gin.H{"Result": statusResult})
+			return
+		}
 	}
 
 	if mdRaw == nil {
@@ -217,7 +224,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	switch req.Network {
 	case "inc", "eth", "bsc", "plg", "ftm":
 	default:
-		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(200, gin.H{"Error": errors.New("unsupported network")})
 		return
 	}
 
@@ -234,6 +241,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
 	var result EstimateSwapRespond
 	result.Networks = make(map[string]interface{})
 
@@ -255,6 +266,12 @@ func APIEstimateSwapFee(c *gin.Context) {
 			c.JSON(200, gin.H{"Error": err.Error()})
 			return
 		}
+	}
+
+	var pdexEstimate interface{}
+
+	if req.Network == "inc" {
+		pdexEstimate = estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
 	}
 
 	supportedNetworks := []int{}
@@ -355,6 +372,12 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 	if len(supportedNetworks) == 0 {
+		if req.Network == "inc" && pdexEstimate != nil {
+			result.Networks["inc"] = pdexEstimate
+			response.Result = result
+			c.JSON(200, response)
+			return
+		}
 		c.JSON(200, gin.H{"Error": NotTradeable.Error()})
 		return
 	}
@@ -377,10 +400,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
-	var response struct {
-		Result interface{}
-		Error  interface{}
-	}
 	networkErr := make(map[string]string)
 
 	for _, network := range supportedNetworks {
@@ -399,15 +418,62 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(200, response)
 		return
 	}
-	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) {
+	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) && pdexEstimate == nil {
 		c.JSON(200, gin.H{"Error": NotTradeable.Error()})
 		return
+	}
+	if pdexEstimate != nil {
+		result.Networks["inc"] = pdexEstimate
 	}
 
 	response.Result = result
 
 	c.JSON(200, response)
 
+}
+
+func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float, tkFromInfo *wcommon.TokenInfo) interface{} {
+	type APIRespond struct {
+		Result map[string]PdexEstimateRespond
+		Error  *string
+	}
+
+	amountBig, _ := new(big.Float).SetString(amount)
+	amountBig = amountBig.Mul(amountBig, new(big.Float).SetFloat64(math.Pow10(tkFromInfo.PDecimals)))
+
+	amountRaw, _ := amountBig.Uint64()
+	var responseBodyData APIRespond
+
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).
+		Get(config.CoinserviceURL + "/pdex/v3/estimatetrade?" + fmt.Sprintf("selltoken=%v&buytoken=%v&sellamount=%v", fromToken, toToken, amountRaw))
+	if err != nil {
+		log.Println("estimateSwapFeeWithPdex", err)
+		return nil
+	}
+	if responseBodyData.Error != nil {
+		log.Println("estimateSwapFeeWithPdex", errors.New(*responseBodyData.Error))
+		return nil
+	}
+
+	result := make(map[string]PdexEstimateRespond)
+
+	for feeby, v := range responseBodyData.Result {
+		amountOutBigFloat := new(big.Float).SetFloat64(v.MaxGet)
+		if slippage != nil {
+			sl := new(big.Float).SetFloat64(0.01)
+			sl = sl.Mul(sl, slippage)
+			sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
+			amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)
+			amountOutFloat, _ := amountOutBigFloat.Float64()
+			v.MaxGet = math.Floor(amountOutFloat)
+		}
+		result[feeby] = v
+	}
+
+	return result
 }
 
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {

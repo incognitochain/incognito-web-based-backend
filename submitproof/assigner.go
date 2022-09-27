@@ -3,7 +3,10 @@ package submitproof
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"math"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -23,12 +27,12 @@ func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 		return err
 	}
 
-	shieldTxTopic, err = startPubsubTopic(SHIELD_TX_TOPIC)
+	shieldTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + SHIELD_TX_TOPIC)
 	if err != nil {
 		panic(err)
 	}
 
-	pappTxTopic, err = startPubsubTopic(PAPP_TX_TOPIC)
+	pappTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + PAPP_TX_TOPIC)
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +81,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeOTASS string, refundFeeAddress string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -96,7 +100,6 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		FeeToken:         feeToken,
 		FeeAmount:        feeAmount,
 		FeeRefundOTA:     refundFeeOTA,
-		FeeRefundOTASS:   refundFeeOTASS,
 		FeeRefundAddress: refundFeeAddress,
 		BurntToken:       burntToken,
 		BurntAmount:      burntAmount,
@@ -118,6 +121,13 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		return nil, err
 	}
 	log.Println("publish msgID:", msgID)
+	go func() {
+		tkInfo, _ := getTokenInfo(feeToken)
+		amount := new(big.Float).SetUint64(feeAmount)
+		decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+		afl64, _ := amount.Mul(amount, decimal).Float64()
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` swaptx `%v` approved with fee `%f %v` 👌", txhash, afl64, tkInfo.Name))
+	}()
 
 	return "submitting", nil
 }
@@ -126,7 +136,6 @@ func SubmitTxFeeRefund(incReqTx, refundOTA, refundOTASS, paymentAddress, token s
 	task := SubmitRefundFeeTask{
 		IncReqTx:       incReqTx,
 		OTA:            refundOTA,
-		OTASS:          refundOTASS,
 		PaymentAddress: paymentAddress,
 		Amount:         amount,
 		Token:          token,

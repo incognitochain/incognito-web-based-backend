@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/pkg/errors"
 )
@@ -195,7 +197,7 @@ func getETHDepositProof(
 							continue
 						}
 						isRedeposit = true
-						otaStr = newOTA.String(false)
+						otaStr = newOTA.String()
 					}
 				}
 				unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
@@ -476,36 +478,36 @@ func getNonceByPrivateKey(c *ethclient.Client, senderPrivKey string) (uint64, er
 	return nonce, nil
 }
 
-// func genShardsAccount(mainAcc string) error {
-// 	incShardsAccount = make(map[int]string)
-// 	seed := mainAcc
-// 	shardsNum, err := incClient.GetActiveShard()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	child := 0
-// 	for {
-// 		nSeed := seed[:16] + strconv.Itoa(child)
-// 		wl, err := wallet.NewMasterKeyFromSeed([]byte(nSeed))
-// 		if err != nil {
-// 			log.Println(err, nSeed)
-// 			return err
-// 			// continue
-// 		}
-// 		pk := wl.KeySet.PaymentAddress.Pk
-// 		lastByte := pk[len(pk)-1]
-// 		shardid := int(lastByte) % shardsNum
+func genShardsAccount(mainAcc string) error {
+	incShardsAccount = make(map[int]string)
+	seed := mainAcc
+	shardsNum, err := incClient.GetActiveShard()
+	if err != nil {
+		return err
+	}
+	child := 0
+	for {
+		nSeed := seed[:16] + strconv.Itoa(child)
+		wl, err := wallet.NewMasterKeyFromSeed([]byte(nSeed))
+		if err != nil {
+			log.Println(err, nSeed)
+			return err
+			// continue
+		}
+		pk := wl.KeySet.PaymentAddress.Pk
+		lastByte := pk[len(pk)-1]
+		shardid := int(lastByte) % shardsNum
 
-// 		if _, exist := incShardsAccount[shardid]; !exist {
-// 			incShardsAccount[shardid] = wl.Base58CheckSerialize(wallet.PrivateKeyType)
-// 			log.Println("match found: ", shardid, incShardsAccount[shardid])
-// 		}
-// 		child++
-// 		if len(incShardsAccount) == shardsNum {
-// 			return nil
-// 		}
-// 	}
-// }
+		if _, exist := incShardsAccount[shardid]; !exist {
+			incShardsAccount[shardid] = wl.Base58CheckSerialize(wallet.PrivateKeyType)
+			log.Println("match found: ", shardid, incShardsAccount[shardid])
+		}
+		child++
+		if len(incShardsAccount) == shardsNum {
+			return nil
+		}
+	}
+}
 
 // // GenRandomWalletForShardID generates a random wallet for a specific shardID.
 // func GenRandomWalletForShardID(shardID byte) (*KeyWallet, error) {

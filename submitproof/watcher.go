@@ -148,7 +148,7 @@ func watchPendingFeeRefundTx() {
 							log.Println("DBUpdateRefundFeeRefundTx err:", err)
 							continue
 						}
-						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`\n", tx.RefundTx, tx.IncRequestTx))
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 					}
 				}
 
@@ -158,7 +158,7 @@ func watchPendingFeeRefundTx() {
 						log.Println("DBUpdateRefundFeeRefundTx err:", err)
 						continue
 					}
-					go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.RefundTx, tx.IncRequestTx))
+					go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 				}
 
 			}
@@ -189,11 +189,11 @@ func watchPappTxNeedFeeRefund() {
 				}
 			}
 			data := wcommon.RefundFeeData{
-				IncRequestTx:  tx.IncTx,
-				RefundAmount:  tx.FeeAmount,
-				RefundToken:   tx.FeeToken,
-				RefundOTA:     tx.FeeRefundOTA,
-				RefundOTASS:   tx.FeeRefundOTASS,
+				IncRequestTx: tx.IncTx,
+				RefundAmount: tx.FeeAmount,
+				RefundToken:  tx.FeeToken,
+				RefundOTA:    tx.FeeRefundOTA,
+				// RefundOTASS:   tx.FeeRefundOTASS,
 				RefundAddress: tx.FeeRefundAddress,
 				RefundStatus:  wcommon.StatusWaiting,
 			}
@@ -456,7 +456,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` rejected 😢\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
 		case 1:
 			for _, network := range tx.Networks {
 				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
@@ -468,7 +468,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted 👌\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
 		default:
 			if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
 				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")

@@ -1,17 +1,19 @@
 package common
 
 type Config struct {
-	Port           int
-	Mode           string
-	Mongo          string
-	Mongodb        string
-	CoinserviceURL string
-	FullnodeURL    string
-	ShieldService  string
-	FaucetService  string
-	NetworkID      string
-	CaptchaSecret  string
-	SlackMonitor   string
+	Port            int
+	Mode            string
+	Mongo           string
+	Mongodb         string
+	CoinserviceURL  string
+	FullnodeURL     string
+	FullnodeAuthKey string
+	ShieldService   string
+	BTCShieldPortal string
+	FaucetService   string
+	NetworkID       string
+	CaptchaSecret   string
+	SlackMonitor    string
 	// papps submit proof
 	IncKey string
 	EVMKey string

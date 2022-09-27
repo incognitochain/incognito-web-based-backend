@@ -189,11 +189,11 @@ func watchPappTxNeedFeeRefund() {
 				}
 			}
 			data := wcommon.RefundFeeData{
-				IncRequestTx:  tx.IncTx,
-				RefundAmount:  tx.FeeAmount,
-				RefundToken:   tx.FeeToken,
-				RefundOTA:     tx.FeeRefundOTA,
-				RefundOTASS:   tx.FeeRefundOTASS,
+				IncRequestTx: tx.IncTx,
+				RefundAmount: tx.FeeAmount,
+				RefundToken:  tx.FeeToken,
+				RefundOTA:    tx.FeeRefundOTA,
+				// RefundOTASS:   tx.FeeRefundOTASS,
 				RefundAddress: tx.FeeRefundAddress,
 				RefundStatus:  wcommon.StatusWaiting,
 			}

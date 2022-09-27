@@ -268,7 +268,6 @@ type SubmitSwapTxRequest struct {
 	TxRaw string
 	// TxHash       string
 	FeeRefundOTA     string
-	FeeRefundOTASS   string
 	FeeRefundAddress string
 }
 

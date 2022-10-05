@@ -101,6 +101,7 @@ retry:
 	if isSubmitted {
 		return "", "", "", "", errors.New(ProofAlreadySubmitError)
 	}
+
 	if linkedTokenID == "" && tokenID == "" {
 		tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
 		if err != nil {

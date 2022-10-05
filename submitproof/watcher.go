@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"strings"
 	"time"
@@ -100,10 +101,17 @@ func forwardCollectedFee() {
 				log.Println("GetAllUTXOsV2", err)
 				continue
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[WithdrawFee]` withdraw fee to central wallet token `%v` amount `%v` txhash `%v`", tokenID, amount, txhash))
+
+			go func(tkID string, tkAmount uint64) {
+				tkInfo, _ := getTokenInfo(tkID)
+				amount := new(big.Float).SetUint64(tkAmount)
+				decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+				afl64, _ := amount.Mul(amount, decimal).Float64()
+				slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%v` `%f` fee to central wallet txhash `%v`", tkInfo.Symbol, afl64, txhash))
+			}(tokenID, amount)
 		}
 
-		time.Sleep(15 * time.Minute)
+		time.Sleep(12 * time.Hour)
 	}
 }
 
@@ -217,7 +225,7 @@ func watchRedepositExternalTx() {
 		for _, tx := range txList {
 			networkID := wcommon.GetNetworkID(tx.Network)
 			if _, err := database.DBGetShieldTxStatusByExternalTx(tx.Txhash, networkID); err == mongo.ErrNoDocuments {
-				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit)
+				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit, false)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -238,7 +246,7 @@ func watchPendingExternalTx() {
 		for _, networkInfo := range networks {
 			currentEVMHeight, err := getEVMBlockHeight(networkInfo.Endpoints)
 			if err != nil {
-				log.Fatalln("getEVMBlockHeight err:", err)
+				log.Fatalln("getEVMBlockHeight err:", networkInfo.Network, err)
 			}
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {
@@ -291,6 +299,15 @@ func watchPendingShieldTx() {
 func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 	isInBlock, err := incClient.CheckTxInBlock(txdata.IncTx)
 	if err != nil {
+		if strings.Contains(err.Error(), "RPC returns an error:") {
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusSubmitFailed, err.Error())
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` submit shield failed 😵 inctx `%v` network `%v` externaltx `%v` \n", txdata.IncTx, txdata.NetworkID, txdata.ExternalTx))
+			return nil
+		}
 		log.Println("CheckTxInBlock err:", err)
 		return err
 	}
@@ -342,7 +359,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 			return nil
 		}
 	}
-	return errors.New("tx not finalized")
+	return nil
 }
 
 func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uint64, finalizeRange uint64, endpoints []string) error {
@@ -411,7 +428,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				if err != nil {
 					return err
 				}
-				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit)
+				_, err := SubmitShieldProof(tx.Txhash, networkID, "", TxTypeRedeposit, false)
 				if err != nil {
 					return err
 				}
@@ -442,6 +459,15 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 func processPendingSwapTx(tx wcommon.PappTxData) error {
 	txDetail, err := incClient.GetTxDetail(tx.IncTx)
 	if err != nil {
+		if strings.Contains(err.Error(), "RPC returns an error:") {
+			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusSubmitFailed, err.Error())
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submit swaptx failed 😵 `%v` \n", tx.IncTx))
+			return nil
+		}
 		return err
 	}
 	if txDetail.IsInBlock {
@@ -523,7 +549,9 @@ func watchEVMAccountBalance() {
 				log.Printf("network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64())
 
 				if txLeft.Uint64() <= wcommon.MinEVMTxs {
-					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64()))
+					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64()))
+				} else {
+					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64()))
 				}
 
 				break

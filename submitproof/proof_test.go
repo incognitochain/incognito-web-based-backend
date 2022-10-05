@@ -87,9 +87,9 @@ func TestSubmitProof(t *testing.T) {
 
 func TestRedpositEvent(t *testing.T) {
 
-	endpoint := "https://matic-mumbai.chainstacklabs.com"
+	endpoint := "https://goerli.infura.io/v3/3544588d65864af7aaab0e945ec54a01"
 	// endpoint := "https://data-seed-prebsc-1-s1.binance.org:8545"
-	txStr := "0x85ca18aaa57f2c553e5ec4fa0abf9c5744976d5eaf17f2ae93d48b2fb278dbe4"
+	txStr := "0xf89601bf682fad2016abab397fb554f3b3efca4cb217de791250148f28374da0"
 	evmClient, _ := ethclient.Dial(endpoint)
 
 	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount, logResult, status, err := getETHDepositProof(evmClient, txStr)

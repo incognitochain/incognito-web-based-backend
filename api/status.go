@@ -3,7 +3,10 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
+	"math"
+	"math/big"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -251,5 +254,37 @@ func getPdexSwapTxStatus(txhash string) map[string]interface{} {
 	result["inc_request_tx_status"] = swapResult.Status
 	result["inc_respond_tx"] = swapResult.RespondTxs[0]
 
+	if swapResult.Status == "accepted" {
+		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, swapResult.Amount, swapResult.RespondAmounts[0])
+		result["swap_detail"] = swapDetail
+	}
+
+	return result
+}
+
+func buildSwapDetail(tokenIn, tokenOut string, inAmount uint64, outAmount uint64) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	tokenInInfo, err := getTokenInfo(tokenIn)
+	if err != nil {
+		return nil
+	}
+	tokenOutInfo, err := getTokenInfo(tokenOut)
+	if err != nil {
+		return nil
+	}
+
+	inAmountBig := new(big.Float).SetUint64(inAmount)
+	inDecimal := new(big.Float).SetFloat64(math.Pow10(-tokenInInfo.PDecimals))
+	inAmountfl64, _ := inAmountBig.Mul(inAmountBig, inDecimal).Float64()
+
+	outAmountBig := new(big.Float).SetUint64(outAmount)
+	outDecimal := new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
+	outAmountfl64, _ := outAmountBig.Mul(outAmountBig, outDecimal).Float64()
+
+	result["token_in"] = tokenIn
+	result["token_out"] = tokenOut
+	result["in_amount"] = fmt.Sprintf("%f", inAmountfl64)
+	result["out_amount"] = fmt.Sprintf("%f", outAmountfl64)
 	return result
 }

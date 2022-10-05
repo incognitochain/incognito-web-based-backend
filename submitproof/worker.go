@@ -60,9 +60,16 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		if err != nil {
 			panic(err)
 		}
-		err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
-		if err != nil {
-			return err
+		if cfg.FullnodeAuthKey != "" {
+			err = incClient.AuthorizedSubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType), cfg.FullnodeAuthKey, 0, false)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -71,10 +78,18 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		if err != nil {
 			panic(err)
 		}
-		err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
-		if err != nil {
-			return err
+		if cfg.FullnodeAuthKey != "" {
+			err = incClient.AuthorizedSubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType), cfg.FullnodeAuthKey, 0, false)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
+			if err != nil {
+				return err
+			}
 		}
+
 		// err = genShardsAccount(config.IncKey)
 		// if err != nil {
 		// 	return err
@@ -96,18 +111,20 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 	log.Println("Done submit keys")
 
 	var shieldSub *pubsub.Subscription
-	shieldSub, err = psclient.CreateSubscription(context.Background(), serviceID.String()+"_shield",
+	shieldSubID := cfg.NetworkID + "_" + serviceID.String() + "_shield"
+	shieldSub, err = psclient.CreateSubscription(context.Background(), shieldSubID,
 		pubsub.SubscriptionConfig{Topic: shieldTxTopic})
 	if err != nil {
-		shieldSub = psclient.Subscription(serviceID.String() + "_shield")
+		shieldSub = psclient.Subscription(shieldSubID)
 	}
 	log.Println("shieldSub.ID()", shieldSub.ID())
 
 	var pappSub *pubsub.Subscription
-	pappSub, err = psclient.CreateSubscription(context.Background(), serviceID.String()+"_papp",
+	pappSubID := cfg.NetworkID + "_" + serviceID.String() + "_papp"
+	pappSub, err = psclient.CreateSubscription(context.Background(), pappSubID,
 		pubsub.SubscriptionConfig{Topic: pappTxTopic})
 	if err != nil {
-		pappSub = psclient.Subscription(serviceID.String() + "_papp")
+		pappSub = psclient.Subscription(pappSubID)
 	}
 	log.Println("pappSub.ID()", pappSub.ID())
 
@@ -139,19 +156,28 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 		log.Println("ProcessShieldRequest error decoding message", err)
 		return
 	}
-
-	if time.Since(task.Time) > time.Hour {
+	if time.Since(m.PublishTime) > time.Hour {
 		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, "timeout")
 		if errdb != nil {
 			log.Println("DBUpdateShieldTxStatus error:", errdb)
 			return
 		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` shield/redeposit timeout 😵 exttx `%v` network `%v`\n", task.TxHash, task.NetworkID))
 		return
 	}
 
 	t := time.Now().Unix()
 	key := keyList[t%int64(len(keyList))]
 	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.TxHash, task.TokenID, task.NetworkID, key)
+	if err != nil {
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[submitProof]` create tx failed `%v`, tokenID `%v`, networkID `%v`, error: `%v`\n", task.TxHash, task.TokenID, task.NetworkID, err))
+		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
+		if errdb != nil {
+			log.Println("DBUpdateShieldTxStatus error:", errdb)
+			return
+		}
+		return
+	}
 
 	errdb := database.DBUpdateShieldOnChainTxInfo(task.TxHash, task.NetworkID, paymentAddr, incTx, tokenID, linkedTokenID)
 	if errdb != nil {
@@ -161,17 +187,6 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	err = database.DBUpdateExternalTxSubmitedRedeposit(task.TxHash, true)
 	if err != nil {
 		log.Println("DBUpdateExternalTxSubmitedRedeposit error:", err)
-		return
-	}
-	// }
-
-	if err != nil {
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[submitProof]` txhash `%v`, tokenID `%v`, networkID `%v`, error: `%v`\n", task.TxHash, task.TokenID, task.NetworkID, err))
-		errdb := database.DBUpdateShieldTxStatus(task.TxHash, task.NetworkID, wcommon.StatusSubmitFailed, err.Error())
-		if errdb != nil {
-			log.Println("DBUpdateShieldTxStatus error:", errdb)
-			return
-		}
 		return
 	}
 
@@ -246,6 +261,8 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		FeeAmount:        task.FeeAmount,
 		BurntToken:       task.BurntToken,
 		BurntAmount:      task.BurntAmount,
+		ReceiveToken:     task.ReceiveToken,
+		ReceiveAmount:    task.ReceiveAmount,
 		Networks:         task.Networks,
 		FeeRefundOTA:     task.FeeRefundOTA,
 		FeeRefundAddress: task.FeeRefundAddress,
@@ -304,6 +321,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			m.Nack()
 			return
 		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submit swaptx failed 😵 `%v`", task.TxHash))
 		m.Ack()
 		return
 	} else {

@@ -19,7 +19,6 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
-	"github.com/incognitochain/go-incognito-sdk-v2/transaction/tx_generic"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -37,12 +36,12 @@ func APISubmitSwapTx(c *gin.Context) {
 	var req SubmitSwapTxRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
 	if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
-		c.JSON(http.StatusOK, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
 		return
 	}
 
@@ -55,58 +54,58 @@ func APISubmitSwapTx(c *gin.Context) {
 	var rawTxBytes []byte
 
 	if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
-		c.JSON(http.StatusOK, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
 		return
 	}
 
 	var ok bool
-	if req.TxHash != "" {
-		txHash = req.TxHash
+	// if req.TxHash != "" {
+	// 	txHash = req.TxHash
 
-		statusResult := checkPappTxSwapStatus(txHash)
-		if len(statusResult) > 0 {
-			if er, ok := statusResult["error"]; ok {
-				if er != "not found" {
-					c.JSON(200, gin.H{"Result": statusResult})
-					return
-				}
-			} else {
-				c.JSON(200, gin.H{"Result": statusResult})
-				return
-			}
-		}
+	// 	statusResult := checkPappTxSwapStatus(txHash)
+	// 	if len(statusResult) > 0 {
+	// 		if er, ok := statusResult["error"]; ok {
+	// 			if er != "not found" {
+	// 				c.JSON(200, gin.H{"Result": statusResult})
+	// 				return
+	// 			}
+	// 		} else {
+	// 			c.JSON(200, gin.H{"Result": statusResult})
+	// 			return
+	// 		}
+	// 	}
 
-		txDetail, err := incClient.GetTx(req.TxHash)
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
-			return
-		}
-		mdRaw = txDetail.GetMetadata()
-		txType := txDetail.GetType()
-		switch txType {
-		case common.TxCustomTokenPrivacyType:
-			isPRVTx = false
-			txToken := txDetail.(tx_generic.TransactionToken)
-			outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
-			// outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-		case common.TxNormalType:
-			isPRVTx = true
-			// feeToken = common.PRVCoinID.String()
-			outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-		}
-	} else {
-		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash")})
-			return
-		}
-
-		mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{"Error": err.Error()})
-			return
-		}
+	// 	txDetail, err := incClient.GetTx(req.TxHash)
+	// 	if err != nil {
+	// 		c.JSON(http.StatusBadRequest, gin.H{"Error":  err.Error()})
+	// 		return
+	// 	}
+	// 	mdRaw = txDetail.GetMetadata()
+	// 	txType := txDetail.GetType()
+	// 	switch txType {
+	// 	case common.TxCustomTokenPrivacyType:
+	// 		isPRVTx = false
+	// 		txToken := txDetail.(tx_generic.TransactionToken)
+	// 		outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
+	// 		// outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
+	// 	case common.TxNormalType:
+	// 		isPRVTx = true
+	// 		// feeToken = common.PRVCoinID.String()
+	// 		outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
+	// 	}
+	// } else {
+	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		return
 	}
+
+	mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	// }
 
 	statusResult := checkPappTxSwapStatus(txHash)
 	if len(statusResult) > 0 {
@@ -122,36 +121,36 @@ func APISubmitSwapTx(c *gin.Context) {
 	}
 
 	if mdRaw == nil {
-		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
 		return
 	}
 	md, ok = mdRaw.(*bridge.BurnForCallRequest)
 	if !ok {
-		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
 		return
 	}
 
 	burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid tx metadata type")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
 		return
 	}
 	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, feeDiff, err := checkValidTxSwap(md, outCoins)
-	// if err != nil {
-	// 	c.JSON(200, gin.H{"Error": "invalid tx err:" + err.Error()})
-	// 	return
-	// }
-	valid = true
+	valid, networkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err := checkValidTxSwap(md, outCoins)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+		return
+	}
+	// valid = true
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress)
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, receiveToken, receiveAmount, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress)
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
 		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
@@ -167,112 +166,47 @@ func APIGetVaultState(c *gin.Context) {
 		SetResult(&responseBodyData).
 		Get(config.CoinserviceURL + "/bridge/aggregatestate")
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(200, responseBodyData)
-}
-
-func APIGetSupportedToken(c *gin.Context) {
-	pappTokens, err := getPappSupportedTokenList()
-	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
-		return
-	}
-
-	tokenList, err := retrieveTokenList()
-	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
-		return
-	}
-	var result []wcommon.TokenInfo
-	dupChecker := make(map[string]struct{})
-
-	for _, tk := range tokenList {
-		if _, exist := dupChecker[tk.TokenID]; !exist {
-			if tk.CurrencyType == wcommon.UnifiedCurrencyType {
-				tk.IsSwapable = true
-				newUTkList := []wcommon.TokenInfo{}
-				for _, utk := range tk.ListUnifiedToken {
-					var swapContractID string
-					if wcommon.IsNativeCurrency(utk.CurrencyType) {
-						swapContractID = utk.ContractID
-					} else {
-						netID, err := wcommon.GetNetworkIDFromCurrencyType(utk.CurrencyType)
-						if err == nil {
-							swapContractID, err = getSwapContractID(tk.TokenID, netID, pappTokens)
-							if err != nil {
-								swapContractID, err = getSwapContractID(utk.TokenID, netID, pappTokens)
-								if err != nil {
-									log.Println(err)
-								}
-							}
-						}
-					}
-					if swapContractID != "" {
-						utk.IsSwapable = true
-						utk.ContractIDSwap = swapContractID
-					}
-					newUTkList = append(newUTkList, utk)
-				}
-				tk.ListUnifiedToken = newUTkList
-			} else {
-				var swapContractID string
-				if wcommon.IsNativeCurrency(tk.CurrencyType) {
-					swapContractID = tk.ContractID
-				} else {
-					netID, err := wcommon.GetNetworkIDFromCurrencyType(tk.CurrencyType)
-					if err == nil {
-						swapContractID, err = getSwapContractID(tk.TokenID, netID, pappTokens)
-						if err != nil {
-							log.Println(err)
-						}
-					}
-				}
-				if swapContractID != "" {
-					tk.IsSwapable = true
-					tk.ContractIDSwap = swapContractID
-				}
-			}
-			result = append(result, tk)
-			dupChecker[tk.TokenID] = struct{}{}
-		}
-
-	}
-
-	var response struct {
-		Result interface{}
-		Error  interface{}
-	}
-	response.Result = result
-
-	c.JSON(200, response)
 }
 
 func APIEstimateSwapFee(c *gin.Context) {
 	var req EstimateSwapRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	switch req.Network {
-	case "inc", "eth", "bsc", "plg", "ftm":
+	case "inc", "eth", "bsc", "plg":
 	default:
-		c.JSON(200, gin.H{"Error": errors.New("unsupported network")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "unsupported network"})
+		return
+	}
+
+	_, ok := new(big.Float).SetString(req.Amount)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Amount isn't a valid number"})
+		return
+	}
+
+	_, ok = new(big.Float).SetString(req.Slippage)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Slippage isn't a valid number"})
 		return
 	}
 
 	slippage, err := verifySlippage(req.Slippage)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
 	networkID := wcommon.GetNetworkID(req.Network)
-
 	if networkID == -1 {
-		c.JSON(200, gin.H{"error": "invalid network"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid network"})
 		return
 	}
 
@@ -282,31 +216,32 @@ func APIEstimateSwapFee(c *gin.Context) {
 	}
 	var result EstimateSwapRespond
 	result.Networks = make(map[string]interface{})
+	result.NetworksError = make(map[string]interface{})
 
 	tkFromInfo, err := getTokenInfo(req.FromToken)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
 	tkToInfo, err := getTokenInfo(req.ToToken)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	tkToNetworkID := 0
 	if tkToInfo.CurrencyType != wcommon.UnifiedCurrencyType {
-		tkToNetworkID, err = getNetworkIDFromCurrencyType(tkToInfo.CurrencyType)
-		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
-			return
-		}
+		tkToNetworkID, _ = getNetworkIDFromCurrencyType(tkToInfo.CurrencyType)
 	}
 
-	var pdexEstimate interface{}
+	networkErr := make(map[string]interface{})
+	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		pdexEstimate = estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		if pdexresult != nil {
+			pdexEstimate = append(pdexEstimate, *pdexresult)
+		}
 	}
 
 	supportedNetworks := []int{}
@@ -316,7 +251,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		amount := new(big.Float)
 		amount, errBool := amount.SetString(req.Amount)
 		if !errBool {
-			c.JSON(200, gin.H{"Error": errors.New("invalid amount")})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
 			return
 		}
 		dm := new(big.Float)
@@ -329,32 +264,34 @@ func APIEstimateSwapFee(c *gin.Context) {
 				//check all vaults
 				isEnoughVault, err := checkEnoughVault(req.FromToken, v.TokenID, amountUint64)
 				if err != nil {
-					c.JSON(200, gin.H{"Error": err.Error()})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 					return
 				}
 				if isEnoughVault {
 					supportedOutNetworks = append(supportedOutNetworks, v.NetworkID)
 				} else {
 					outofVaultNetworks = append(outofVaultNetworks, v.NetworkID)
+					networkErr[wcommon.GetNetworkName(v.NetworkID)] = "not enough token in vault"
 				}
 			} else {
 				//check 1 vault only
 				if networkID == v.NetworkID {
 					isEnoughVault, err := checkEnoughVault(req.FromToken, v.TokenID, amountUint64)
 					if err != nil {
-						c.JSON(200, gin.H{"Error": err.Error()})
+						c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 						return
 					}
 					if isEnoughVault {
 						supportedOutNetworks = append(supportedOutNetworks, v.NetworkID)
 					} else {
 						outofVaultNetworks = append(outofVaultNetworks, v.NetworkID)
+						networkErr[wcommon.GetNetworkName(v.NetworkID)] = "not enough token in vault"
 					}
 				}
 			}
 		}
 		if len(supportedOutNetworks) == 0 {
-			c.JSON(200, gin.H{"Error": "The amount exceeds the swap limit. Please retry with another token or switch to other pApps"})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "The amount exceeds the swap limit. Please retry with another token or switch to other pApps"})
 			return
 		}
 		fmt.Println("pass check vault", "supportedOutNetworks", supportedOutNetworks)
@@ -375,90 +312,97 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	} else {
 		supportedOutNetworks := []int{}
-		tkFromNetworkID, err := getNetworkIDFromCurrencyType(tkFromInfo.CurrencyType)
-		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
-			return
-		}
-		if networkID == tkFromNetworkID {
-			supportedOutNetworks = append(supportedOutNetworks, tkFromNetworkID)
-		} else {
-			if networkID == 0 {
+		tkFromNetworkID, _ := getNetworkIDFromCurrencyType(tkFromInfo.CurrencyType)
+		if tkFromNetworkID > 0 {
+			if networkID == tkFromNetworkID {
 				supportedOutNetworks = append(supportedOutNetworks, tkFromNetworkID)
 			} else {
-				c.JSON(200, gin.H{"Error": "No supported networks found"})
-				return
+				if networkID == 0 {
+					supportedOutNetworks = append(supportedOutNetworks, tkFromNetworkID)
+				} else {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": "No supported networks found"})
+					return
+				}
 			}
-		}
 
-		// check supported to token
-		for _, spNetID := range supportedOutNetworks {
-			if tkToInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-				for _, v := range tkToInfo.ListUnifiedToken {
-					if v.NetworkID == spNetID {
+			// check supported to token
+			for _, spNetID := range supportedOutNetworks {
+				if tkToInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+					for _, v := range tkToInfo.ListUnifiedToken {
+						if v.NetworkID == spNetID {
+							supportedNetworks = append(supportedNetworks, spNetID)
+						}
+					}
+				} else {
+					if tkToNetworkID == spNetID {
 						supportedNetworks = append(supportedNetworks, spNetID)
 					}
-				}
-			} else {
-				if tkToNetworkID == spNetID {
-					supportedNetworks = append(supportedNetworks, spNetID)
 				}
 			}
 		}
 	}
 	if len(supportedNetworks) == 0 {
-		if req.Network == "inc" && pdexEstimate != nil {
+		for net, v := range networkErr {
+			result.NetworksError[net] = v
+		}
+		if req.Network == "inc" && len(pdexEstimate) != 0 {
 			result.Networks["inc"] = pdexEstimate
 			response.Result = result
 			c.JSON(200, response)
 			return
 		}
-		c.JSON(200, gin.H{"Error": NotTradeable.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": NotTradeable.Error()})
 		return
 	}
 
 	networksInfo, err := getBridgeNetworkInfos()
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
 	spTkList, err := getPappSupportedTokenList()
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-
-	networkErr := make(map[string]string)
 
 	for _, network := range supportedNetworks {
 		data, err := estimateSwapFee(req.FromToken, req.ToToken, req.Amount, network, spTkList, networksInfo, networkFees, tkFromInfo, slippage)
 		if err != nil {
 			networkErr[wcommon.GetNetworkName(network)] = err.Error()
-			// result.Networks[wcommon.GetNetworkName(network)] = err.Error()
 		} else {
 			result.Networks[wcommon.GetNetworkName(network)] = data
 		}
 	}
 
-	if req.Network != "inc" && len(networkErr) == 1 {
-		result.Networks[req.Network] = map[string]interface{}{"error": networkErr[req.Network]}
-		response.Result = result
-		c.JSON(200, response)
-		return
+	for net, v := range networkErr {
+		result.NetworksError[net] = v
 	}
-	if req.Network == "inc" && len(networkErr) == len(supportedNetworks) && pdexEstimate == nil {
-		c.JSON(200, gin.H{"Error": NotTradeable.Error()})
-		return
-	}
-	if pdexEstimate != nil {
+
+	// if req.Network != "inc" && len(networkErr) == 1 {
+	// 	response.Result = result
+	// 	response.Error = NotTradeable.Error()
+	// 	c.JSON(200, response)
+	// 	return
+	// }
+	// if req.Network == "inc" && len(networkErr) == len(supportedNetworks) && pdexEstimate == nil {
+	// 	response.Result = result
+	// 	response.Error = NotTradeable.Error()
+	// 	c.JSON(200, response)
+	// 	return
+	// }
+	if len(pdexEstimate) != 0 {
 		result.Networks["inc"] = pdexEstimate
+	}
+	if len(result.Networks) == 0 && len(pdexEstimate) == 0 {
+		response.Error = NotTradeable.Error()
 	}
 
 	response.Result = result
@@ -467,7 +411,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 }
 
-func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float, tkFromInfo *wcommon.TokenInfo) interface{} {
+func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float, tkFromInfo *wcommon.TokenInfo) *QuoteDataResp {
 	type APIRespond struct {
 		Result map[string]PdexEstimateRespond
 		Error  *string
@@ -493,22 +437,40 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 		return nil
 	}
 
-	result := make(map[string]PdexEstimateRespond)
-
-	for feeby, v := range responseBodyData.Result {
-		amountOutBigFloat := new(big.Float).SetFloat64(v.MaxGet)
-		if slippage != nil {
-			sl := new(big.Float).SetFloat64(0.01)
-			sl = sl.Mul(sl, slippage)
-			sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
-			amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)
-			amountOutFloat, _ := amountOutBigFloat.Float64()
-			v.MaxGet = math.Floor(amountOutFloat)
-		}
-		result[feeby] = v
+	pdexResult := PdexEstimateRespond{}
+	v, ok := responseBodyData.Result["FeeToken"]
+	if !ok {
+		return nil
 	}
 
-	return result
+	amountOutBigFloat := new(big.Float).SetFloat64(v.MaxGet)
+	if slippage != nil {
+		sl := new(big.Float).SetFloat64(0.01)
+		sl = sl.Mul(sl, slippage)
+		sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
+		amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)
+		amountOutFloat, _ := amountOutBigFloat.Float64()
+		v.MaxGet = math.Floor(amountOutFloat)
+	}
+	pdexResult = v
+
+	tkToInfo, _ := getTokenInfo(toToken)
+	amountOutBig := new(big.Float).SetFloat64(pdexResult.MaxGet)
+	amountOutBig = amountOutBig.Mul(amountOutBig, new(big.Float).SetFloat64(math.Pow10(-tkToInfo.PDecimals)))
+	amountOut, _ := amountOutBig.Float64()
+
+	result := QuoteDataResp{
+		AppName:      "pdex",
+		AmountIn:     amount,
+		AmountInRaw:  fmt.Sprintf("%v", amountRaw),
+		AmountOut:    fmt.Sprintf("%f", amountOut),
+		AmountOutRaw: fmt.Sprintf("%f", pdexResult.MaxGet),
+		Paths:        pdexResult.TokenRoute,
+		ImpactAmount: fmt.Sprintf("%f", pdexResult.ImpactAmount),
+		Fee:          []PappNetworkFee{{TokenID: fromToken, Amount: pdexResult.Fee}},
+	}
+
+	return &result
 }
 
 func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {
@@ -576,7 +538,15 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err
 			}
 		} else {
-			return nil, errors.New("token out contractID not found")
+			for _, cTk := range toTokenInfo.ListUnifiedToken {
+				pTokenContract2, _ = getpTokenContractID(cTk.TokenID, networkID, spTkList)
+				if pTokenContract2 != nil {
+					break
+				}
+			}
+			if pTokenContract2 == nil {
+				return nil, errors.New("can't find contractID for token " + fromToken)
+			}
 		}
 	}
 
@@ -885,7 +855,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			})
 
 		case "curve":
-			poolList, err := getCurvePoolIndex()
+			fmt.Println("curve", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
+			poolList, err := getCurvePoolIndex(config.ShieldService)
 			if err != nil {
 				return nil, err
 			}
@@ -906,10 +877,12 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			amountBigFloat := ConvertToNanoIncognitoToken(amountFloat, int64(pTokenContract1.Decimals)) //amount *big.Float, decimal int64, return *big.Float
 			log.Println("amountBigFloat: ", amountBigFloat.String())
 
-			// convert float to bigin:
-			amountBigInt, _ := amountBigFloat.Int(nil)
+			//fee 0.04%
+			realAmountIn := amountBigFloat
+			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9996))
 
-			log.Println("amountBigInt: ", amountBigInt)
+			// convert float to bigin:
+			amountBigInt, _ := realAmountIn.Int(nil)
 
 			if amountBigInt == nil {
 				return nil, errors.New("invalid amount")
@@ -925,6 +898,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err
 			}
 			var amountOut *big.Int
+			var calldata string
 
 			for _, endpoint := range networkInfo.Endpoints {
 				evmClient, err := ethclient.Dial(endpoint)
@@ -936,12 +910,28 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				if err != nil {
 					log.Println(err)
 					continue
+				} else {
+					amountOutBigFloat := new(big.Float).SetInt(amountOut)
+					if slippage != nil {
+						sl := new(big.Float).SetFloat64(0.01)
+						sl = sl.Mul(sl, slippage)
+						sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
+						amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)
+					}
+					amountOutBigFloat.Int(amountOut)
+					calldata, err = papps.BuildCurveCallData(amountBigInt, amountOut, i, j, curvePool)
+					if err != nil {
+						log.Println("Error building call data: ", err)
+						err1 := errors.New("Error building call data: " + err.Error())
+						return nil, err1
+					}
+					break
 				}
 			}
 
-			expectOutputAmountBigFloat := new(big.Float)
-			expectOutputAmountBigFloat, _ = expectOutputAmountBigFloat.SetString(amountOut.String())
-			amountOutDecimal := ConvertToNanoIncognitoToken(expectOutputAmountBigFloat, int64(pTokenContract2.Decimals))
+			amountOutFloat := new(big.Float)
+			amountOutFloat, _ = amountOutFloat.SetString(amountOut.String())
+			pTokenAmount := new(big.Float).Mul(amountOutFloat, big.NewFloat(math.Pow10(-pTokenContract2.Decimals)))
 
 			fees := []PappNetworkFee{}
 
@@ -968,14 +958,14 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
 			}
-
 			result = append(result, QuoteDataResp{
 				AppName:           appName,
 				AmountIn:          amount,
-				AmountOut:         amountOutDecimal.String(),
+				AmountOut:         pTokenAmount.String(),
 				AmountOutRaw:      amountOut.String(),
 				Fee:               fees,
 				CallContract:      contract,
+				Calldata:          calldata,
 				FeeAddress:        feeAddress,
 				FeeAddressShardID: int(feeAddressShardID),
 			})
@@ -1145,30 +1135,34 @@ func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
 	return result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool, []string, string, uint64, int64, error) {
+func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool, []string, string, uint64, int64, string, uint64, error) {
 	var feeAmount uint64
 	var feeToken string
 
 	var requireFee uint64
 	var requireFeeToken string
+
+	var receiveToken string
+	var receiveAmount uint64
+
 	var result bool
 	feeDiff := int64(-1)
 	callNetworkList := []string{}
 	spTkList, err := getPappSupportedTokenList()
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 	}
 	networkInfo, err := getBridgeNetworkInfos()
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 	}
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 	}
 	tokenInfo, err := getTokenInfo(md.BurnTokenID.String())
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 	}
 
 	// burnTokenAssetTag := crypto.HashToPoint(md.BurnTokenID[:])
@@ -1181,7 +1175,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 				assetTag := c.GetAssetTag()
 				blinder, err := coin.ComputeAssetTagBlinder(rK)
 				if err != nil {
-					return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+					return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 				}
 				rawAssetTag := new(crypto.Point).Sub(
 					assetTag,
@@ -1193,44 +1187,52 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 
 			coin, err := c.Decrypt(&incFeeKeySet.KeySet)
 			if err != nil {
-				return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+				return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 			}
 			feeAmount = coin.GetValue()
 		}
 	}
-	// if feeAmount == 0 {
-	// 	return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("you need to paid fee")
-	// }
+	if feeAmount == 0 {
+		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, errors.New("you need to paid fee")
+	}
 
 	for _, v := range md.Data {
 		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))
-		receiveTokenID, err := getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList)
+		receiveToken, err = getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList)
 		if err != nil {
-			return result, callNetworkList, feeToken, feeAmount, feeDiff, err
+			return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
 		}
 		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
 		burnAmountStr := fmt.Sprintf("%f", burnAmountFloat)
-		quoteDatas, err := estimateSwapFee(md.BurnTokenID.String(), receiveTokenID, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo, nil)
+		quoteDatas, err := estimateSwapFee(md.BurnTokenID.String(), receiveToken, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo, nil)
 		if err != nil {
 			log.Println("estimateSwapFee error", err)
-			return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("can't validate fee at the moment, please try again later")
+			return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, errors.New("can't validate fee at the moment, please try again later")
 		}
 
 		for _, quote := range quoteDatas {
 			if strings.EqualFold(quote.CallContract, "0x"+v.ExternalCallAddress) {
 				requireFeeToken = quote.Fee[0].TokenID
 				requireFee = quote.Fee[0].Amount
+
+				switch quote.AppName {
+				case "curve":
+				case "uniswap":
+				case "pancake":
+
+				}
+
 				if feeToken != requireFeeToken {
-					return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
+					return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
 				}
 				for _, fee := range quote.Fee {
 					if fee.TokenID == feeToken {
 						feeDiff = int64(feeAmount) - int64(fee.Amount)
 						if feeDiff < 0 {
-							feeDiffFloat := float64(-feeDiff)
+							feeDiffFloat := math.Abs(float64(feeDiff))
 							diffPercent := feeDiffFloat / float64(fee.Amount) * 100
 							if diffPercent > wcommon.PercentFeeDiff {
-								return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
+								return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
 							}
 						}
 					}
@@ -1239,12 +1241,12 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 		}
 	}
 	if requireFeeToken == "" {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, errors.New("invalid ExternalCallAddress")
+		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, errors.New("invalid ExternalCallAddress")
 	}
 
 	result = true
 
-	return result, callNetworkList, feeToken, feeAmount, feeDiff, nil
+	return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, nil
 }
 
 func buildPancakeTokenMap() (map[string]PancakeTokenMapItem, error) {
@@ -1300,7 +1302,7 @@ func cacheCurvePoolIndex() {
 	}
 }
 
-func getCurvePoolIndex() ([]CurvePoolIndex, error) {
+func getCurvePoolIndex(endpoint string) ([]CurvePoolIndex, error) {
 	var responseBodyData struct {
 		Result []CurvePoolIndex
 		Error  *struct {
@@ -1308,27 +1310,21 @@ func getCurvePoolIndex() ([]CurvePoolIndex, error) {
 			Message string
 		} `json:"Error"`
 	}
-
-	err := cacheGet(cacheSupportedPappsTokensKey, &responseBodyData)
+	re, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		Get(endpoint + "/trade/curve-pool-indices")
 	if err != nil {
-		re, err := restyClient.R().
-			EnableTrace().
-			SetHeader("Content-Type", "application/json").
-			Get(config.ShieldService + "/trade/supported-tokens")
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(re.Body(), &responseBodyData)
-		if err != nil {
-			return nil, err
-		}
-
-		if responseBodyData.Error != nil {
-			return nil, errors.New(responseBodyData.Error.Message)
-		}
-		return responseBodyData.Result, nil
+		return nil, err
+	}
+	err = json.Unmarshal(re.Body(), &responseBodyData)
+	if err != nil {
+		return nil, err
 	}
 
+	if responseBodyData.Error != nil {
+		return nil, errors.New(responseBodyData.Error.Message)
+	}
 	return responseBodyData.Result, nil
 
 }

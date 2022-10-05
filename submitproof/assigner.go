@@ -40,9 +40,9 @@ func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 	return nil
 }
 
-func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype string) (interface{}, error) {
+func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype string, retry bool) (interface{}, error) {
 	if networkID == 0 {
-		return "", errors.New("unsported network")
+		return "", errors.New("unsupported network")
 	}
 
 	currentStatus, err := database.DBGetShieldTxStatusByExternalTx(txhash, networkID)
@@ -52,7 +52,9 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 		}
 	}
 	if currentStatus != "" {
-		return currentStatus, nil
+		if currentStatus != common.StatusSubmitFailed || !retry {
+			return currentStatus, nil
+		}
 	}
 
 	task := SubmitProofShieldTask{
@@ -60,7 +62,6 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 		NetworkID: networkID,
 		TokenID:   tokenID,
 		Metatype:  txtype,
-		Time:      time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
 
@@ -81,7 +82,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, receiveToken string, receiveAmount uint64, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -103,6 +104,8 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		FeeRefundAddress: refundFeeAddress,
 		BurntToken:       burntToken,
 		BurntAmount:      burntAmount,
+		ReceiveToken:     receiveToken,
+		ReceiveAmount:    receiveAmount,
 		Networks:         networks,
 		Time:             time.Now(),
 	}
@@ -126,7 +129,7 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		amount := new(big.Float).SetUint64(feeAmount)
 		decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
 		afl64, _ := amount.Mul(amount, decimal).Float64()
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` swaptx `%v` approved with fee `%f %v` 👌", txhash, afl64, tkInfo.Name))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` swaptx `%v` approved with fee `%f %v` 👌", txhash, afl64, tkInfo.Symbol))
 	}()
 
 	return "submitting", nil

@@ -140,12 +140,12 @@ func (t *HelpTestSuite) TestSwapFlowUniSwapRedepositWrongFee() {
 	}
 	incFeeKeySet = wl
 
-	valid, networkList, feeToken, feeAmount, feeDiff, err := checkValidTxSwap(md2, outCoins)
+	valid, networkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err := checkValidTxSwap(md2, outCoins)
 	if err != nil {
 		t.T().Fatal(err)
 	}
 
-	t.T().Logf("valid %v, networkList %v, feeToken %v, feeAmount %v, feeDiff %v", valid, networkList, feeToken, feeAmount, feeDiff)
+	t.T().Logf("valid %v, networkList %v, feeToken %v, feeAmount %v, receiveToken %v, receiveAmount %v, feeDiff %v", valid, networkList, feeToken, feeAmount, receiveToken, receiveAmount, feeDiff)
 	// tx, _ := transaction.DeserializeTransactionJSON(txRaw)
 	// t.T().Log(tx.TokenVersion2)
 }

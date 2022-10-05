@@ -19,10 +19,26 @@ func DBCreateDefaultNetworkInfo(network string) {
 	if !checkPappsEndpointExist() {
 		createDefaultPappsEndpoint(isTestnet)
 	}
+
+	if !checkPappVaultDataExist() {
+		createDefaultVaultData(isTestnet)
+	}
 }
 
 func checkBridgeNetworkDataExist() bool {
 	len, err := mgm.Coll(&common.BridgeNetworkData{}).EstimatedDocumentCount(context.Background())
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	if len == 0 {
+		return false
+	}
+	return true
+}
+
+func checkPappVaultDataExist() bool {
+	len, err := mgm.Coll(&common.PappVaultData{}).EstimatedDocumentCount(context.Background())
 	if err != nil {
 		log.Println(err)
 		return false
@@ -58,6 +74,25 @@ func createDefaultBridgeData(isTestnet bool) {
 	}
 
 	_, err := mgm.Coll(&common.BridgeNetworkData{}).InsertMany(context.Background(), docs)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func createDefaultVaultData(isTestnet bool) {
+
+	docs := []interface{}{}
+	if isTestnet {
+		for _, data := range common.TestnetIncognitoVault {
+			docs = append(docs, data)
+		}
+	} else {
+		for _, data := range common.MainnetIncognitoVault {
+			docs = append(docs, data)
+		}
+	}
+
+	_, err := mgm.Coll(&common.PappVaultData{}).InsertMany(context.Background(), docs)
 	if err != nil {
 		log.Println(err)
 	}

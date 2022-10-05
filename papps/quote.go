@@ -219,3 +219,30 @@ func BuildCallDataPancake(paths []common.Address, srcQty *big.Int, expectedOut *
 
 	return result, err
 }
+
+func BuildCurveCallData(
+	srcQty *big.Int,
+	expectOutputAmount *big.Int,
+	i *big.Int,
+	j *big.Int,
+	curvePool common.Address) (string, error) {
+
+	var result string
+	var input []byte
+
+	isUnderlying := true
+	tradeAbi, err := abi.JSON(strings.NewReader(pcurve.PcurveMetaData.ABI))
+	if err != nil {
+		return result, err
+	}
+
+	if isUnderlying {
+		input, err = tradeAbi.Pack("exchangeUnderlying", i, j, srcQty, expectOutputAmount, curvePool)
+	} else {
+		input, err = tradeAbi.Pack("exchange", i, j, srcQty, expectOutputAmount, curvePool)
+	}
+
+	result = hex.EncodeToString(input)
+
+	return result, err
+}

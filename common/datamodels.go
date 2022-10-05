@@ -70,14 +70,15 @@ type PappTxData struct {
 	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
 	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
 	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
+	ReceiveToken     string   `json:"receivetoken" bson:"receivetoken"`
+	ReceiveAmount    uint64   `json:"receiveamount" bson:"receiveamount"`
 	Status           string   `json:"status" bson:"status"`
 	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
 	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
 	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
-	// FeeRefundOTASS   string   `json:"fee_refundotass" bson:"fee_refundotass"`
-	FeeRefundAddress string `json:"fee_refundaddress" bson:"fee_refundaddress"`
-	ShardID          int    `json:"shardid" bson:"shardid"`
-	Error            string `json:"error" bson:"error"`
+	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	ShardID          int      `json:"shardid" bson:"shardid"`
+	Error            string   `json:"error" bson:"error"`
 }
 
 type PappVaultData struct {
@@ -96,7 +97,7 @@ type EVMProofRecordData struct {
 	ContractID       string `json:"contractid" bson:"contractid"`
 	PaymentAddr      string `json:"paymentaddr" bson:"paymentaddr"`
 	IsRedeposit      bool   `json:"isredeposit" bson:"isredeposit"`
-	IsTxPass         bool   `json:"istxpass" bson:"isredeposit"`
+	IsTxPass         bool   `json:"istxpass" bson:"istxpass"`
 	OTAStr           string `json:"otaStr" bson:"otaStr"`
 	Amount           uint64 `json:"amount" bson:"amount"`
 	Network          string `json:"network" bson:"network"`

@@ -11,21 +11,21 @@ type SubmitProofShieldTask struct {
 	NetworkID int
 	TokenID   string
 	Metatype  string
-	Time      time.Time
 }
 
 type SubmitPappTxTask struct {
-	TxHash         string
-	TxRawData      []byte
-	IsPRVTx        bool
-	IsUnifiedToken bool
-	FeeToken       string
-	FeeAmount      uint64
-	FeeRefundOTA   string
-	// FeeRefundOTASS   string
+	TxHash           string
+	TxRawData        []byte
+	IsPRVTx          bool
+	IsUnifiedToken   bool
+	FeeToken         string
+	FeeAmount        uint64
+	FeeRefundOTA     string
 	FeeRefundAddress string
 	BurntToken       string
 	BurntAmount      uint64
+	ReceiveToken     string
+	ReceiveAmount    uint64
 	Networks         []string
 	Time             time.Time
 }

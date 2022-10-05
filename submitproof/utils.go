@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/adjust/rmq/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -114,6 +115,7 @@ func getETHDepositProof(
 			}
 		}
 		receipts = append(receipts, siblingReceipt)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	receiptList := types.Receipts(receipts)
@@ -138,89 +140,88 @@ func getETHDepositProof(
 	// 	return nil, "", 0, nil, "", err
 	// }
 
-	for _, v := range receiptList {
-		for _, d := range v.Logs {
-			switch len(d.Data) {
-			// case 32:
-			// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
-			// 	if err != nil {
-			// 		fmt.Println("Unpack", err)
-			// 		continue
-			// 	}
-			// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
-			// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
-			// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
-			// 		fmt.Println("len(unpackResult)", err)
-			// 		continue
-			// 	}
-			// 	fmt.Println("32", d.Address.String())
-			// case 96:
-			// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
-			// 	if err != nil {
-			// 		fmt.Println("Unpack2", err)
-			// 		continue
-			// 	}
-			// 	if len(unpackResult) < 3 {
-			// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-			// 		fmt.Println("len(unpackResult)2", err)
-			// 		continue
-			// 	}
-			// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
-			// event indexed both from and to
-			case 256, 288:
-				if contractID == "" {
-					unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
-					if err != nil {
-						unpackResult, err = vaultABI.Unpack("Deposit", d.Data)
-						if err != nil {
-							log.Println("unpackResult3 err", err)
-							continue
-						}
-					}
-					if len(unpackResult) < 3 {
-						err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-						log.Println("len(unpackResult) err", err)
-						return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
-					}
-					contractID = unpackResult[0].(common.Address).String()
-					amount := unpackResult[2].(*big.Int)
-					shieldAmount = amount.Uint64()
-
-					var ok bool
-					paymentaddress, ok = unpackResult[1].(string)
-					if !ok {
-						OTAReceiver := unpackResult[1].([]byte)
-						newOTA := coin.OTAReceiver{}
-						err = newOTA.SetBytes(OTAReceiver)
-						if err != nil {
-							log.Println("unpackResult4 err", err)
-							continue
-						}
-						isRedeposit = true
-						otaStr = newOTA.String()
-					}
-				}
-				unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
+	// for _, v := range receiptList {
+	for _, d := range txReceipt.Logs {
+		switch len(d.Data) {
+		// case 32:
+		// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
+		// 	if err != nil {
+		// 		fmt.Println("Unpack", err)
+		// 		continue
+		// 	}
+		// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
+		// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
+		// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
+		// 		fmt.Println("len(unpackResult)", err)
+		// 		continue
+		// 	}
+		// 	fmt.Println("32", d.Address.String())
+		// case 96:
+		// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
+		// 	if err != nil {
+		// 		fmt.Println("Unpack2", err)
+		// 		continue
+		// 	}
+		// 	if len(unpackResult) < 3 {
+		// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+		// 		fmt.Println("len(unpackResult)2", err)
+		// 		continue
+		// 	}
+		// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
+		// event indexed both from and to
+		case 256, 288:
+			// if contractID == "" {
+			unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
+			if err != nil {
+				unpackResult, err = vaultABI.Unpack("Deposit", d.Data)
 				if err != nil {
-					log.Println("unpackResult2 err", err)
+					log.Println("unpackResult3 err", err)
 					continue
-				} else {
-					logResult = fmt.Sprintf("%s", unpackResult)
-					log.Println("logResult", logResult)
-				}
-			default:
-				unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
-				if err != nil {
-					log.Println("unpackResult2 err", err)
-					continue
-				} else {
-					logResult = fmt.Sprintf("%s", unpackResult)
-					log.Println("logResult", logResult)
 				}
 			}
+			if len(unpackResult) < 3 {
+				err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+				log.Println("len(unpackResult) err", err)
+				return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+			}
+			contractID = unpackResult[0].(common.Address).String()
+			amount := unpackResult[2].(*big.Int)
+			shieldAmount = amount.Uint64()
+			var ok bool
+			paymentaddress, ok = unpackResult[1].(string)
+			if !ok {
+				OTAReceiver := unpackResult[1].([]byte)
+				newOTA := coin.OTAReceiver{}
+				err = newOTA.SetBytes(OTAReceiver)
+				if err != nil {
+					log.Println("unpackResult4 err", err)
+					continue
+				}
+				isRedeposit = true
+				otaStr = newOTA.String()
+			}
+			// }
+			unpackResult, err = vaultABI.Unpack("ExecuteFnLog", d.Data)
+			if err != nil {
+				log.Println("unpackResult2 err", err)
+				continue
+			} else {
+				logResult = fmt.Sprintf("%s", unpackResult)
+				log.Println("logResult", logResult)
+			}
+		default:
+			unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
+			if err != nil {
+				log.Println("unpackResult2 err", err)
+				continue
+			} else {
+				logResult = fmt.Sprintf("%s", unpackResult)
+				log.Println("logResult", logResult)
+			}
 		}
-
 	}
+
+	// }
 	// StackTrie requires values to be inserted in increasing hash order, which is not the
 	// order that `list` provides hashes in. This insertion sequence ensures that the
 	// order is correct.

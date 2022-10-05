@@ -19,7 +19,7 @@ const (
 )
 
 const (
-	EVMGasLimit = 600000
+	EVMGasLimit = 2000000
 	MinEVMTxs   = uint64(10)
 )
 
@@ -160,13 +160,35 @@ var MainnetBridgeNetworkData = []BridgeNetworkData{
 var MainnetPappsEndpointData = []PAppsEndpointData{
 	{
 		Network:      "plg",
-		ExchangeApps: map[string]string{"uniswap": "uniswapep:3000"},
-		AppContracts: map[string]string{"uniswap": ""},
+		ExchangeApps: map[string]string{"uniswap": "uniswapep:3000", "curve": ""},
+		AppContracts: map[string]string{"uniswap": "0xCC8c88e9Dae72fa07aC077933a2E73d146FECdf0", "curve": "0x55b08b7c1ecdc1931660b18fe2d46ce7b20613e2"},
 	},
 	{
 		Network:      "bsc",
 		ExchangeApps: map[string]string{"pancake": "pancakeswapep:3000"},
-		AppContracts: map[string]string{"pancake": ""},
+		AppContracts: map[string]string{"pancake": "0x95Cd8898917c7216Da0517aAB6A115d7A7b6CA90"},
+	},
+	{
+		Network:      "eth",
+		ExchangeApps: map[string]string{"uniswap": "uniswapep_eth:3000"},
+		AppContracts: map[string]string{"uniswap": "0xe38e54B2d6B1FCdfaAe8B674bF36ca62429fdBDe"},
+	},
+}
+
+var MainnetIncognitoVault = []PappVaultData{
+	{
+		Network:         "bsc",
+		Type:            1,
+		ContractAddress: "0xFe24f30d6683410d6daA5B5a950d518a6c58A6a1",
+	},
+	{
+		Network:         "eth",
+		Type:            1,
+		ContractAddress: "0x4f7903Ae97f1aD3665093417007d06e83b43C00C",
+	},
+	{Network: "plg",
+		Type:            1,
+		ContractAddress: "0x4f7903Ae97f1aD3665093417007d06e83b43C00C",
 	},
 }
 
@@ -206,5 +228,22 @@ var TestnetPappsEndpointData = []PAppsEndpointData{
 		Network:      "bsc",
 		ExchangeApps: map[string]string{"pancake": "pancakeswapep:3000"},
 		AppContracts: map[string]string{"pancake": "0x0e2923c21E2C5A2BDD18aa460B3FdDDDaDb0aE18"},
+	},
+}
+
+var TestnetIncognitoVault = []PappVaultData{
+	{
+		Network:         "bsc",
+		Type:            1,
+		ContractAddress: "0x3534C0a523b3A862c06C8CAF61de230f9b408f51",
+	},
+	{
+		Network:         "eth",
+		Type:            1,
+		ContractAddress: "0xc157CC3077ddfa425bae12d2F3002668971A4e3d",
+	},
+	{Network: "plg",
+		Type:            1,
+		ContractAddress: "0x76318093c374e39B260120EBFCe6aBF7f75c8D28",
 	},
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -14,7 +15,7 @@ func APIGenUnshieldAddress(c *gin.Context) {
 	var req GenUnshieldAddressRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -24,7 +25,7 @@ func APIGenUnshieldAddress(c *gin.Context) {
 	case "eth", "bsc", "plg", "ftm":
 		genUnshieldAddress(c, req)
 	default:
-		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
 		return
 	}
 }
@@ -36,6 +37,8 @@ func genCentralizedUnshieldAddress(c *gin.Context, req GenUnshieldAddressRequest
 		PrivacyTokenAddress: req.PrivacyTokenAddress,
 		WalletAddress:       req.WalletAddress,
 		PaymentAddress:      req.PaymentAddress,
+		RequestedAmount:     req.RequestedAmount,
+		IncognitoAmount:     req.IncognitoAmount,
 	}
 	genCentralizedShieldAddress(c, reqWarpped)
 }
@@ -47,7 +50,7 @@ retry:
 		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
 		Post(config.ShieldService + "/" + req.Network + "/estimate-fees")
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	var responseBodyData struct {
@@ -59,18 +62,18 @@ retry:
 	}
 	err = json.Unmarshal(re.Body(), &responseBodyData)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 		return
 	}
 
 	if responseBodyData.Error != nil {
 		if responseBodyData.Error.Code != 401 {
-			c.JSON(200, gin.H{"Error": responseBodyData.Error})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
 			return
 		} else {
 			err = requestUSAToken(config.ShieldService)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err.Error()})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 				return
 			}
 			goto retry
@@ -85,7 +88,7 @@ func APIGenShieldAddress(c *gin.Context) {
 	var req GenShieldAddressRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	if req.WalletAddress == "" {
@@ -100,7 +103,7 @@ func APIGenShieldAddress(c *gin.Context) {
 	case "eth", "bsc", "plg", "ftm":
 		genEVMShieldAddress(c, req)
 	default:
-		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
 		return
 	}
 }
@@ -143,7 +146,7 @@ func genBTCOTMultisigAddress(incAddress string) (string, error) {
 func genBTCShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
 	btcOT, err := genBTCOTMultisigAddress(req.BTCIncAddress)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -161,7 +164,7 @@ func genBTCShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
 		SetHeader("Content-Type", "application/json").SetBody(btcReq).SetResult(&responseBodyData).
 		Post(config.BTCShieldPortal + "/addportalshieldingaddress")
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	if responseBodyData.Result == true {
@@ -173,7 +176,7 @@ func genBTCShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
 			return
 		}
 	}
-	c.JSON(200, gin.H{"Error": responseBodyData.Error})
+	c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
 }
 
 func genCentralizedShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
@@ -183,7 +186,7 @@ retry:
 		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
 		Post(config.ShieldService + "/ota/generate")
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	var responseBodyData struct {
@@ -195,17 +198,17 @@ retry:
 	}
 	err = json.Unmarshal(re.Body(), &responseBodyData)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 		return
 	}
 	if responseBodyData.Error != nil {
 		if responseBodyData.Error.Code != 401 {
-			c.JSON(200, gin.H{"Error": responseBodyData.Error})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
 			return
 		} else {
 			err = requestUSAToken(config.ShieldService)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err.Error()})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 				return
 			}
 			goto retry
@@ -222,7 +225,7 @@ retry:
 		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
 		Post(config.ShieldService + "/" + req.Network + "/generate")
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	var responseBodyData struct {
@@ -234,17 +237,17 @@ retry:
 	}
 	err = json.Unmarshal(re.Body(), &responseBodyData)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 		return
 	}
 	if responseBodyData.Error != nil {
 		if responseBodyData.Error.Code != 401 {
-			c.JSON(200, gin.H{"Error": responseBodyData.Error})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
 			return
 		} else {
 			err = requestUSAToken(config.ShieldService)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err.Error()})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 				return
 			}
 			goto retry
@@ -263,7 +266,7 @@ retry:
 		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).
 		Get(config.ShieldService + "/ota/valid/" + currencytype + "/" + address)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	var responseBodyData struct {
@@ -275,17 +278,17 @@ retry:
 	}
 	err = json.Unmarshal(re.Body(), &responseBodyData)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 		return
 	}
 	if responseBodyData.Error != nil {
 		if responseBodyData.Error.Code != 401 {
-			c.JSON(200, gin.H{"Error": responseBodyData.Error})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
 			return
 		} else {
 			err = requestUSAToken(config.ShieldService)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err.Error()})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 				return
 			}
 			goto retry

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 	var req SubmitUnshieldTxRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	err = requestUSAToken(config.ShieldService)
@@ -32,7 +33,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
 			Post(config.ShieldService + "/ota/update-fee")
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
 		var responseBodyData struct {
@@ -41,7 +42,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		}
 		err = json.Unmarshal(re.Body(), &responseBodyData)
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 			return
 		}
 		c.JSON(200, responseBodyData)
@@ -52,7 +53,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
 			Post(config.ShieldService + "/" + req.Network + "/add-tx-withdraw")
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
 		var responseBodyData struct {
@@ -61,7 +62,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		}
 		err = json.Unmarshal(re.Body(), &responseBodyData)
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 			return
 		}
 		c.JSON(200, responseBodyData)
@@ -70,13 +71,13 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		if req.ID == 0 && req.PaymentAddress == "" && req.WalletAddress != "" && req.IncognitoTx != "" {
 			txdetail, err := getTxDetails(req.IncognitoTx)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 				return
 			}
 
 			ID, PaymentAddress, PrivacyTokenAddress, IncognitoAmount, Network, err := extractUnshieldInfoField(txdetail)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 				return
 			}
 			newReq := SubmitUnshieldTxRequest{
@@ -100,7 +101,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 					SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(newReq).
 					Post(config.ShieldService + "/" + Network + "/add-tx-withdraw")
 				if err != nil {
-					c.JSON(200, gin.H{"Error": err.Error()})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 					return
 				}
 				var responseBodyData struct {
@@ -109,17 +110,17 @@ func APISubmitUnshieldTx(c *gin.Context) {
 				}
 				err = json.Unmarshal(re.Body(), &responseBodyData)
 				if err != nil {
-					c.JSON(200, gin.H{"Error": err})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 					return
 				}
 				c.JSON(200, responseBodyData)
 				return
 			default:
-				c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
 				return
 			}
 		}
-		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
 		return
 	}
 }
@@ -128,7 +129,7 @@ func APISubmitShieldTx(c *gin.Context) {
 	var req SubmitShieldTx
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -136,22 +137,22 @@ func APISubmitShieldTx(c *gin.Context) {
 		if ok, err := VerifyCaptcha(req.Captcha, config.CaptchaSecret); !ok {
 			if err != nil {
 				log.Println("VerifyCaptcha", err)
-				c.JSON(200, gin.H{"Error": err})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 				return
 			}
-			c.JSON(200, gin.H{"Error": errors.New("invalid captcha")})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid captcha")})
 			return
 		}
 
 	}
 
 	if req.Txhash == "" {
-		c.JSON(200, gin.H{"Error": errors.New("invalid params").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid params").Error()})
 		return
 	}
-	status, err := submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID, submitproof.TxTypeShielding)
+	status, err := submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID, submitproof.TxTypeShielding, false)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"Result": status})

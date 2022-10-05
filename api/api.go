@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	gincache "github.com/gin-contrib/cache"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -32,6 +34,7 @@ func StartAPIservice(cfg common.Config) {
 	if err != nil {
 		panic(err)
 	}
+	store := persistence.NewInMemoryStore(time.Second)
 
 	go cacheVaultState()
 	go cacheSupportedPappsTokens()
@@ -79,7 +82,7 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup := r.Group("/admin")
 	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)
 	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
-	adminGroup.GET("/retryshield")
+	adminGroup.POST("/retryshield", gincache.CachePage(store, time.Minute, APIRetryShieldTx))
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.POST("/submitshieldtx", APISubmitShieldTx)
 

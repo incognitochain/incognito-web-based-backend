@@ -53,7 +53,8 @@ type EstimateSwapRequest struct {
 }
 
 type EstimateSwapRespond struct {
-	Networks map[string]interface{}
+	Networks      map[string]interface{}
+	NetworksError map[string]interface{}
 }
 
 type QuoteDataResp struct {
@@ -219,6 +220,7 @@ type GenShieldAddressRequest struct {
 	PrivacyTokenAddress string
 	WalletAddress       string
 	RequestedAmount     string
+	IncognitoAmount     string
 	PaymentAddress      string
 
 	BTCIncAddress string

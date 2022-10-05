@@ -238,10 +238,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		if pdexresult != nil {
-			pdexEstimate = append(pdexEstimate, *pdexresult)
-		}
+		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		// if pdexresult != nil {
+		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
+		// }
 	}
 
 	supportedNetworks := []int{}
@@ -466,6 +466,7 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 		AmountOut:    fmt.Sprintf("%f", amountOut),
 		AmountOutRaw: fmt.Sprintf("%f", pdexResult.MaxGet),
 		Paths:        pdexResult.TokenRoute,
+		PoolPairs:    pdexResult.Route,
 		ImpactAmount: fmt.Sprintf("%f", pdexResult.ImpactAmount),
 		Fee:          []PappNetworkFee{{TokenID: fromToken, Amount: pdexResult.Fee}},
 	}
@@ -545,7 +546,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				}
 			}
 			if pTokenContract2 == nil {
-				return nil, errors.New("can't find contractID for token " + fromToken)
+				return nil, errors.New("can't find contractID for token " + toToken)
 			}
 		}
 	}
@@ -608,18 +609,21 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			data, err := papps.UniswapQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, realAmountInStr, networkChainId, true, endpoint)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 			quote, feePaths, err := uniswapDataExtractor(data)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 			fees := []PappNetworkFee{}
 
 			estGasUsedStr := quote.Data.EstimatedGasUsed
 			estGasUsed, err := strconv.ParseUint(estGasUsedStr, 10, 64)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 			estGasUsed += 200000
 			if isUnifiedNativeToken {
@@ -753,22 +757,26 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			tokenMap, err := buildPancakeTokenMap()
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 
 			tokenMapBytes, err := json.Marshal(tokenMap)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 
 			log.Println("tokenMapBytes", string(tokenMapBytes))
 			data, err := papps.PancakeQuote(pTokenContract1.ContractID, pTokenContract2.ContractID, realAmountInStr, networkChainId, pTokenContract1.Symbol, pTokenContract2.Symbol, pTokenContract1.Decimals, pTokenContract2.Decimals, false, endpoint, string(tokenMapBytes))
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 			quote, err := pancakeDataExtractor(data)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 			fees := []PappNetworkFee{}
 			// estGasUsedStr := quote.Data.EstimatedGasUsed
@@ -776,7 +784,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			// if err != nil {
 			// 	return nil, err
 			// }
-			estGasUsed := uint64(wcommon.EVMGasLimit)
+			estGasUsed := uint64(wcommon.EVMGasLimitPancake)
 			if isUnifiedNativeToken {
 				fees = append(fees, PappNetworkFee{
 					Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
@@ -858,15 +866,18 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			fmt.Println("curve", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			poolList, err := getCurvePoolIndex(config.ShieldService)
 			if err != nil {
-				return nil, err
+				log.Println("curve", err)
+				continue
 			}
 			token1PoolIndex, curvePoolAddress1, err := getTokenCurvePoolIndex(pTokenContract1.ContractIDGetRate, poolList)
 			if err != nil {
-				return nil, err
+				log.Println("curve", err)
+				continue
 			}
 			token2PoolIndex, _, err := getTokenCurvePoolIndex(pTokenContract2.ContractIDGetRate, poolList)
 			if err != nil {
-				return nil, err
+				log.Println("curve", err)
+				continue
 			}
 
 			amountFloat := new(big.Float)
@@ -895,7 +906,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			networkInfo, err := database.DBGetBridgeNetworkInfo(networkName)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
 			var amountOut *big.Int
 			var calldata string
@@ -967,6 +979,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				CallContract:      contract,
 				Calldata:          calldata,
 				FeeAddress:        feeAddress,
+				Paths:             []string{pTokenContract1.ContractIDGetRate, pTokenContract2.ContractIDGetRate},
 				FeeAddressShardID: int(feeAddressShardID),
 			})
 		}

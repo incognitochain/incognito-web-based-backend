@@ -171,37 +171,40 @@ func getETHDepositProof(
 		// event indexed both from and to
 		case 256, 288:
 			// if contractID == "" {
-			unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
-			if err != nil {
-				unpackResult, err = vaultABI.Unpack("Deposit", d.Data)
+			if paymentaddress == "" && otaStr == "" {
+				unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
 				if err != nil {
-					log.Println("unpackResult3 err", err)
-					continue
+					unpackResult, err = vaultABI.Unpack("Deposit", d.Data)
+					if err != nil {
+						log.Println("unpackResult3 err", err)
+						continue
+					}
+				}
+				if len(unpackResult) < 3 {
+					err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+					log.Println("len(unpackResult) err", err)
+					return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+				}
+				contractID = unpackResult[0].(common.Address).String()
+				amount := unpackResult[2].(*big.Int)
+				shieldAmount = amount.Uint64()
+				var ok bool
+				paymentaddress, ok = unpackResult[1].(string)
+				if !ok {
+					OTAReceiver := unpackResult[1].([]byte)
+					newOTA := coin.OTAReceiver{}
+					err = newOTA.SetBytes(OTAReceiver)
+					if err != nil {
+						log.Println("unpackResult4 err", err)
+						continue
+					}
+					isRedeposit = true
+					otaStr = newOTA.String()
 				}
 			}
-			if len(unpackResult) < 3 {
-				err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-				log.Println("len(unpackResult) err", err)
-				return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
-			}
-			contractID = unpackResult[0].(common.Address).String()
-			amount := unpackResult[2].(*big.Int)
-			shieldAmount = amount.Uint64()
-			var ok bool
-			paymentaddress, ok = unpackResult[1].(string)
-			if !ok {
-				OTAReceiver := unpackResult[1].([]byte)
-				newOTA := coin.OTAReceiver{}
-				err = newOTA.SetBytes(OTAReceiver)
-				if err != nil {
-					log.Println("unpackResult4 err", err)
-					continue
-				}
-				isRedeposit = true
-				otaStr = newOTA.String()
-			}
+
 			// }
-			unpackResult, err = vaultABI.Unpack("ExecuteFnLog", d.Data)
+			unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
 			if err != nil {
 				log.Println("unpackResult2 err", err)
 				continue
@@ -272,7 +275,8 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 	contractID = strings.ToLower(contractID)
 	if contractID == EthNativeAddrStr {
 		for _, token := range tokenList {
-			if token.IsBridge && token.Verified && token.NetworkID == networkID {
+			tokenNetwork, _ := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
+			if token.IsBridge && token.Verified && tokenNetwork == networkID && wcommon.IsNativeCurrency(token.CurrencyType) {
 				linkedTokenID = token.TokenID
 				if token.MovedUnifiedToken {
 					for _, pUtokenInfo := range tokenList {

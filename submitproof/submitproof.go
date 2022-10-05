@@ -103,6 +103,7 @@ retry:
 	}
 
 	if linkedTokenID == "" && tokenID == "" {
+		log.Println("findTokenByContractID", proofRecord.ContractID, networkID)
 		tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
 		if err != nil {
 			log.Println("findTokenByContractID error:", err)

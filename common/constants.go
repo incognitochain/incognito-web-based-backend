@@ -19,8 +19,9 @@ const (
 )
 
 const (
-	EVMGasLimit = 2000000
-	MinEVMTxs   = uint64(10)
+	EVMGasLimit        = 2000000
+	EVMGasLimitPancake = 600000
+	MinEVMTxs          = uint64(10)
 )
 
 const (
@@ -179,16 +180,16 @@ var MainnetIncognitoVault = []PappVaultData{
 	{
 		Network:         "bsc",
 		Type:            1,
-		ContractAddress: "0xFe24f30d6683410d6daA5B5a950d518a6c58A6a1",
+		ContractAddress: "0x43D037A562099A4C2c95b1E2120cc43054450629",
 	},
 	{
 		Network:         "eth",
 		Type:            1,
-		ContractAddress: "0x4f7903Ae97f1aD3665093417007d06e83b43C00C",
+		ContractAddress: "0x43D037A562099A4C2c95b1E2120cc43054450629",
 	},
 	{Network: "plg",
 		Type:            1,
-		ContractAddress: "0x4f7903Ae97f1aD3665093417007d06e83b43C00C",
+		ContractAddress: "0x43D037A562099A4C2c95b1E2120cc43054450629",
 	},
 }
 

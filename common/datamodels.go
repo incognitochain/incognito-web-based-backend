@@ -36,17 +36,9 @@ type BridgeNetworkData struct {
 
 type PappSupportedTokenData struct {
 	mgm.DefaultModel `bson:",inline"`
-	TokenID          string  `bson:"tokenid"`
-	ContractID       string  `bson:"contractid"`
-	Protocol         string  `bson:"protocol"`
-	Verify           bool    `bson:"verify"`
-	NetworkID        int     `bson:"networkid"`
-	CurrencyType     int     `bson:"currencytype"`
-	Name             string  `bson:"name"`
-	Symbol           string  `bson:"symbol"`
-	PricePrv         float64 `bson:"price_prv"`
-	Decimals         int     `bson:"decimals"`
-	PDecimals        int     `bson:"pdecimals"`
+	TokenID          string `bson:"tokenid"`
+	ContractID       string `bson:"contractid"`
+	Verify           bool   `bson:"verify"`
 }
 
 type ExternalTxStatus struct {
@@ -58,6 +50,7 @@ type ExternalTxStatus struct {
 	Type               int    `json:"type" bson:"type"`
 	Error              string `json:"error" bson:"error"`
 	OtherInfo          string `json:"otherinfo" bson:"otherinfo"`
+	Nonce              uint64 `json:"nonce" bson:"nonce"`
 	WillRedeposit      bool   `json:"will_redeposit" bson:"will_redeposit"`
 	RedepositSubmitted bool   `json:"redeposit_submitted" bson:"redeposit_submitted"`
 }

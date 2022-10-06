@@ -23,13 +23,13 @@ import (
 // }
 
 func APIGetSupportedToken(c *gin.Context) {
-	pappTokens, err := getPappSupportedTokenList()
+
+	tokenList, err := retrieveTokenList()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-
-	tokenList, err := retrieveTokenList()
+	pappTokens, err := getPappSupportedTokenList(tokenList)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return

@@ -156,3 +156,23 @@ func DBCreateIndex() error {
 
 	return nil
 }
+
+func DBCreatePappSupportTokenIndex() error {
+	pappTokenModel := []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{Key: "tokenid", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "networkid", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "protocol", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.PappSupportedTokenData{}).Indexes().CreateMany(context.Background(), pappTokenModel)
+	if err != nil {
+		log.Println("failed to index tokens")
+		return err
+	}
+	return nil
+}

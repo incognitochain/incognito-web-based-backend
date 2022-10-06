@@ -44,6 +44,11 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 		return err
 	}
 
+	err = DBCreatePappSupportTokenIndex()
+	if err != nil {
+		return err
+	}
+
 	DBCreateDefaultNetworkInfo(network)
 
 	return nil

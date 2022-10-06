@@ -315,3 +315,9 @@ func DBGetPappVaultData(network string, pappType int) (*common.PappVaultData, er
 
 	return &result, nil
 }
+
+func DBGetPappSupportedToken() ([]common.PappVaultData, error) {
+	var result []common.PappVaultData
+
+	return result
+}

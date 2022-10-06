@@ -474,7 +474,7 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 	return &result
 }
 
-func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {
+func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []wcommon.PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {
 	result := []QuoteDataResp{}
 	feeAddress := ""
 	feeAddressShardID := byte(0)
@@ -869,12 +869,12 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				log.Println("curve", err)
 				continue
 			}
-			token1PoolIndex, curvePoolAddress1, err := getTokenCurvePoolIndex(pTokenContract1.ContractIDGetRate, poolList)
+			token1PoolIndex, curvePoolAddress1, err := getTokenCurvePoolIndex(pTokenContract1.ContractID, poolList)
 			if err != nil {
 				log.Println("curve", err)
 				continue
 			}
-			token2PoolIndex, _, err := getTokenCurvePoolIndex(pTokenContract2.ContractIDGetRate, poolList)
+			token2PoolIndex, _, err := getTokenCurvePoolIndex(pTokenContract2.ContractID, poolList)
 			if err != nil {
 				log.Println("curve", err)
 				continue
@@ -979,7 +979,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				CallContract:      contract,
 				Calldata:          calldata,
 				FeeAddress:        feeAddress,
-				Paths:             []string{pTokenContract1.ContractIDGetRate, pTokenContract2.ContractIDGetRate},
+				Paths:             []string{pTokenContract1.ContractID, pTokenContract2.ContractID},
 				FeeAddressShardID: int(feeAddressShardID),
 			})
 		}
@@ -1102,7 +1102,7 @@ func retrieveTokenList() ([]wcommon.TokenInfo, error) {
 	return responseBodyData.Result, nil
 }
 
-func getPappSupportedTokenList() ([]PappSupportedTokenData, error) {
+func getPappSupportedTokenList() ([]wcommon.PappSupportedTokenData, error) {
 
 	var responseBodyData struct {
 		Result []PappSupportedTokenData
@@ -1112,27 +1112,23 @@ func getPappSupportedTokenList() ([]PappSupportedTokenData, error) {
 		} `json:"Error"`
 	}
 
-	err := cacheGet(cacheSupportedPappsTokensKey, &responseBodyData)
+	re, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		Get(config.ShieldService + "/trade/supported-tokens")
 	if err != nil {
-		re, err := restyClient.R().
-			EnableTrace().
-			SetHeader("Content-Type", "application/json").
-			Get(config.ShieldService + "/trade/supported-tokens")
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(re.Body(), &responseBodyData)
-		if err != nil {
-			return nil, err
-		}
-
-		if responseBodyData.Error != nil {
-			return nil, errors.New(responseBodyData.Error.Message)
-		}
-		return responseBodyData.Result, nil
+		return nil, err
+	}
+	err = json.Unmarshal(re.Body(), &responseBodyData)
+	if err != nil {
+		return nil, err
 	}
 
-	return responseBodyData.Result, nil
+	if responseBodyData.Error != nil {
+		return nil, errors.New(responseBodyData.Error.Message)
+	}
+
+	return transformShieldServicePappSupportedTokenToNative(responseBodyData.Result), nil
 }
 
 func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
@@ -1271,7 +1267,7 @@ func buildPancakeTokenMap() (map[string]PancakeTokenMapItem, error) {
 
 	for _, token := range tokenList {
 		if token.Protocol == "pancake" {
-			contractID := strings.ToLower(token.ContractIDGetRate)
+			contractID := strings.ToLower(token.ContractID)
 			// if contractID == strings.ToLower("0x64544969ed7EBf5f083679233325356EbE738930") || contractID == strings.ToLower("0xeD24FC36d5Ee211Ea25A80239Fb8C4Cfd80f12Ee") {
 			// 	continue
 			// }

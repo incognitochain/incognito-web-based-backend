@@ -109,20 +109,20 @@ func ConvertToNanoIncognitoToken(coinAmount *big.Float, pdecimal int64) *big.Flo
 	return new(big.Float).Mul(coinAmount, value)
 }
 
-func getpTokenContractID(tokenID string, networkID int, supportedTokenList []PappSupportedTokenData) (*PappSupportedTokenData, error) {
+func getpTokenContractID(tokenID string, networkID int, supportedTokenList []common.PappSupportedTokenData) (*common.PappSupportedTokenData, error) {
 	for _, v := range supportedTokenList {
 		vNetID, _ := common.GetNetworkIDFromCurrencyType(v.CurrencyType)
 		if v.CurrencyType == common.UnifiedCurrencyType {
 			vNetID = v.NetworkID
 		}
-		if v.ID == tokenID && vNetID == networkID {
+		if v.TokenID == tokenID && vNetID == networkID {
 			return &v, nil
 		}
 	}
 	return nil, errors.New("can't find contractID for token " + tokenID)
 }
 
-func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData) (string, error) {
+func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []common.PappSupportedTokenData) (string, error) {
 	if !strings.Contains(contractID, "0x") {
 		contractID = "0x" + contractID
 	}
@@ -131,15 +131,15 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 		nativeCtype := common.GetNativeNetworkCurrencyType(networkName)
 		for _, v := range supportedTokenList {
 			if v.CurrencyType == nativeCtype {
-				return v.ID, nil
+				return v.TokenID, nil
 			}
 		}
 	}
 	contractID = strings.ToLower(contractID)
 	for _, v := range supportedTokenList {
-		v.ContractIDGetRate = strings.ToLower(v.ContractIDGetRate)
-		if v.ContractIDGetRate == contractID && v.NetworkID == networkID {
-			return v.ID, nil
+		v.ContractID = strings.ToLower(v.ContractID)
+		if v.ContractID == contractID && v.NetworkID == networkID {
+			return v.TokenID, nil
 		}
 	}
 	return "", errors.New("can't find tokenID for contract " + contractID)
@@ -183,7 +183,7 @@ func pancakeDataExtractor(data []byte) (*PancakeQuote, error) {
 	return &result, nil
 }
 
-func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyType int) (*PappSupportedTokenData, error) {
+func getNativeTokenData(tokenList []common.PappSupportedTokenData, nativeTokenCurrencyType int) (*common.PappSupportedTokenData, error) {
 	for _, token := range tokenList {
 		if token.CurrencyType == nativeTokenCurrencyType {
 			return &token, nil
@@ -243,16 +243,16 @@ func getNetworkIDFromCurrencyType(currencyType int) (int, error) {
 	return netID, nil
 }
 
-func getSwapContractID(tokenID string, network int, supportedTokenList []PappSupportedTokenData) (string, error) {
+func getSwapContractID(tokenID string, network int, supportedTokenList []common.PappSupportedTokenData) (string, error) {
 	var result string
 	for _, pTk := range supportedTokenList {
-		if pTk.ID == tokenID {
+		if pTk.TokenID == tokenID {
 			pNetID, _ := common.GetNetworkIDFromCurrencyType(pTk.CurrencyType)
 			if pTk.CurrencyType == common.UnifiedCurrencyType {
 				pNetID = pTk.NetworkID
 			}
 			if pNetID == network {
-				result = pTk.ContractIDGetRate
+				result = pTk.ContractID
 				return result, nil
 			}
 		}
@@ -295,4 +295,24 @@ func getParentUToken(tokenID string) (*common.TokenInfo, error) {
 		}
 	}
 	return nil, errors.New("can't find parent unified token")
+}
+
+func transformShieldServicePappSupportedTokenToNative(list []PappSupportedTokenData) []common.PappSupportedTokenData {
+	var result []common.PappSupportedTokenData
+	for _, v := range list {
+		result = append(result, common.PappSupportedTokenData{
+			TokenID:      v.ID,
+			CurrencyType: v.CurrencyType,
+			ContractID:   v.ContractIDGetRate,
+			Verify:       v.Verify,
+			Protocol:     v.Protocol,
+			NetworkID:    v.NetworkID,
+			Name:         v.Name,
+			Symbol:       v.Symbol,
+			Decimals:     v.Decimals,
+			PDecimals:    v.PDecimals,
+			PricePrv:     v.PricePrv,
+		})
+	}
+	return result
 }

@@ -34,18 +34,20 @@ type BridgeNetworkData struct {
 	ConfirmationBlocks int      `json:"confirmationblocks" bson:"confirmationblocks"`
 }
 
-// type PappSupportedTokenData struct {
-// 	mgm.DefaultModel  `bson:",inline"`
-// 	TokenID           string `json:"tokenid" bson:"tokenid"`
-// 	ContractID        string `json:"contractid" bson:"contractid"`
-// 	ContractIDGetRate string `json:"contractid_getrate" bson:"contractid_getrate"`
-// 	Protocol          string `json:"protocol" bson:"protocol"`
-// 	Verify            bool   `json:"verify" bson:"verify"`
-// 	IsPopular         bool   `json:"ispopular" bson:"ispopular"`
-// 	Priority          int    `json:"priority" bson:"priority"`
-// 	DappID            int    `json:"dappid" bson:"dappid"`
-// 	NetworkID         int    `json:"networkid" bson:"networkid"`
-// }
+type PappSupportedTokenData struct {
+	mgm.DefaultModel `bson:",inline"`
+	TokenID          string  `bson:"tokenid"`
+	ContractID       string  `bson:"contractid"`
+	Protocol         string  `bson:"protocol"`
+	Verify           bool    `bson:"verify"`
+	NetworkID        int     `bson:"networkid"`
+	CurrencyType     int     `bson:"currencytype"`
+	Name             string  `bson:"name"`
+	Symbol           string  `bson:"symbol"`
+	PricePrv         float64 `bson:"price_prv"`
+	Decimals         int     `bson:"decimals"`
+	PDecimals        int     `bson:"pdecimals"`
+}
 
 type ExternalTxStatus struct {
 	mgm.DefaultModel   `bson:",inline"`

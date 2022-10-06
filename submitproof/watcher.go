@@ -546,12 +546,15 @@ func watchEVMAccountBalance() {
 				feeLeft = feeLeft.Div(feeLeft, gasPriceBig)
 				txLeft := feeLeft.Div(feeLeft, gasLimitBig)
 
+				feeFloat := new(big.Float).SetInt(feeLeft)
+				feeFloat.Mul(feeFloat, new(big.Float).SetFloat64(math.Pow10(-18)))
+
 				log.Printf("network %v estimted has %v txs left (\n", networkInfo.Network, txLeft.Uint64())
 
 				if txLeft.Uint64() <= wcommon.MinEVMTxs {
-					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64()))
+					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left (%f) \n", networkInfo.Network, txLeft.Uint64(), feeFloat))
 				} else {
-					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left\n", networkInfo.Network, txLeft.Uint64()))
+					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left (%f)\n", networkInfo.Network, txLeft.Uint64(), feeFloat))
 				}
 
 				break

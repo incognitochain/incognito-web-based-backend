@@ -1128,7 +1128,12 @@ func getPappSupportedTokenList() ([]wcommon.PappSupportedTokenData, error) {
 		return nil, errors.New(responseBodyData.Error.Message)
 	}
 
-	return transformShieldServicePappSupportedTokenToNative(responseBodyData.Result), nil
+	result, err := database.DBGetPappSupportedToken()
+	if err != nil {
+		return nil, err
+	}
+	result = append(result, transformShieldServicePappSupportedTokenToNative(responseBodyData.Result)...)
+	return result, nil
 }
 
 func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {

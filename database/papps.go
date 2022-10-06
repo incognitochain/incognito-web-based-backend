@@ -316,10 +316,10 @@ func DBGetPappVaultData(network string, pappType int) (*common.PappVaultData, er
 	return &result, nil
 }
 
-func DBGetPappSupportedToken() ([]common.PappVaultData, error) {
-	var result []common.PappVaultData
+func DBGetPappSupportedToken() ([]common.PappSupportedTokenData, error) {
+	var result []common.PappSupportedTokenData
 	filter := bson.M{}
-	err := mgm.Coll(&common.PappVaultData{}).SimpleFindWithCtx(context.Background(), &result, filter)
+	err := mgm.Coll(&common.PappSupportedTokenData{}).SimpleFindWithCtx(context.Background(), &result, filter)
 	if err != nil {
 		return nil, err
 	}

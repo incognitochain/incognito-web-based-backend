@@ -221,6 +221,7 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken)
 	if err != nil {
 		log.Println("createOutChainSwapTx error", err)
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` failed", task.IncTxhash, task.Network))
 		m.Ack()
 		return
 	}
@@ -389,12 +390,6 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 			continue
 		}
 
-		// nonce, err := getNonceByPrivateKey(evmClient, config.EVMKey)
-		// if err != nil {
-		// 	log.Println(err)
-		// 	continue
-		// }
-
 		auth, err := bind.NewKeyedTransactorWithChainID(privKey, networkChainIdInt)
 		if err != nil {
 			log.Println(err)
@@ -417,6 +412,7 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 		result.Type = wcommon.PappTypeSwap
 		result.Network = network
 		result.IncRequestTx = incTxHash
+		result.Nonce = tx.Nonce()
 		break
 	}
 

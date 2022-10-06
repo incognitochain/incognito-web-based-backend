@@ -139,7 +139,18 @@ func APISubmitSwapTx(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err := checkValidTxSwap(md, outCoins)
+	tokenList, err := retrieveTokenList()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	pappTokens, err := getPappSupportedTokenList(tokenList)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	valid, networkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err := checkValidTxSwap(md, outCoins, pappTokens)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -361,7 +372,13 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 
-	spTkList, err := getPappSupportedTokenList()
+	tokenList, err := retrieveTokenList()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	spTkList, err := getPappSupportedTokenList(tokenList)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -474,7 +491,7 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 	return &result
 }
 
-func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []wcommon.PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {
+func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList []PappSupportedTokenData, networksInfo []wcommon.BridgeNetworkData, networkFees *wcommon.ExternalNetworksFeeData, fromTokenInfo *wcommon.TokenInfo, slippage *big.Float) ([]QuoteDataResp, error) {
 	result := []QuoteDataResp{}
 	feeAddress := ""
 	feeAddressShardID := byte(0)
@@ -755,7 +772,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			realAmountInFloat, _ := realAmountIn.Float64()
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
 
-			tokenMap, err := buildPancakeTokenMap()
+			tokenMap, err := buildPancakeTokenMap(spTkList)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -1102,7 +1119,7 @@ func retrieveTokenList() ([]wcommon.TokenInfo, error) {
 	return responseBodyData.Result, nil
 }
 
-func getPappSupportedTokenList() ([]wcommon.PappSupportedTokenData, error) {
+func getPappSupportedTokenList(tokenList []wcommon.TokenInfo) ([]PappSupportedTokenData, error) {
 
 	var responseBodyData struct {
 		Result []PappSupportedTokenData
@@ -1127,12 +1144,16 @@ func getPappSupportedTokenList() ([]wcommon.PappSupportedTokenData, error) {
 	if responseBodyData.Error != nil {
 		return nil, errors.New(responseBodyData.Error.Message)
 	}
+	result := []PappSupportedTokenData{}
 
-	result, err := database.DBGetPappSupportedToken()
+	dblist, err := database.DBGetPappSupportedToken()
 	if err != nil {
 		return nil, err
 	}
-	result = append(result, transformShieldServicePappSupportedTokenToNative(responseBodyData.Result)...)
+
+	result = append(result, responseBodyData.Result...)
+	result = append(result, transformShieldServicePappSupportedToken(dblist, tokenList)...)
+
 	return result, nil
 }
 
@@ -1149,7 +1170,7 @@ func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
 	return result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool, []string, string, uint64, int64, string, uint64, error) {
+func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkList []PappSupportedTokenData) (bool, []string, string, uint64, int64, string, uint64, error) {
 	var feeAmount uint64
 	var feeToken string
 
@@ -1162,10 +1183,6 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 	var result bool
 	feeDiff := int64(-1)
 	callNetworkList := []string{}
-	spTkList, err := getPappSupportedTokenList()
-	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
-	}
 	networkInfo, err := getBridgeNetworkInfos()
 	if err != nil {
 		return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err
@@ -1263,25 +1280,21 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin) (bool
 	return result, callNetworkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, nil
 }
 
-func buildPancakeTokenMap() (map[string]PancakeTokenMapItem, error) {
+func buildPancakeTokenMap(tokenList []PappSupportedTokenData) (map[string]PancakeTokenMapItem, error) {
 	result := make(map[string]PancakeTokenMapItem)
-	tokenList, err := getPappSupportedTokenList()
-	if err != nil {
-		return nil, err
-	}
 
 	for _, token := range tokenList {
 		if token.Protocol == "pancake" {
 			contractID := strings.ToLower(token.ContractID)
-			// if contractID == strings.ToLower("0x64544969ed7EBf5f083679233325356EbE738930") || contractID == strings.ToLower("0xeD24FC36d5Ee211Ea25A80239Fb8C4Cfd80f12Ee") {
-			// 	continue
+			// if contractID == strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd") || contractID == strings.ToLower("0x7ef95a0fee0dd31b22626fa2e10ee6a223f8a684") || contractID == strings.ToLower("0x8babbb98678facc7342735486c851abd7a0d17ca") || contractID == strings.ToLower("0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7") || contractID == strings.ToLower("0x8a9424745056Eb399FD19a0EC26A14316684e274") || contractID == strings.ToLower("0xDAcbdeCc2992a63390d108e8507B98c7E2B5584a") {
+			// 	result[contractID] = PancakeTokenMapItem{
+			// 		Decimals: token.Decimals,
+			// 		Symbol:   token.Symbol,
+			// 	}
 			// }
-			//
-			if contractID == strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd") || contractID == strings.ToLower("0x7ef95a0fee0dd31b22626fa2e10ee6a223f8a684") || contractID == strings.ToLower("0x8babbb98678facc7342735486c851abd7a0d17ca") || contractID == strings.ToLower("0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7") || contractID == strings.ToLower("0x8a9424745056Eb399FD19a0EC26A14316684e274") || contractID == strings.ToLower("0xDAcbdeCc2992a63390d108e8507B98c7E2B5584a") {
-				result[contractID] = PancakeTokenMapItem{
-					Decimals: token.Decimals,
-					Symbol:   token.Symbol,
-				}
+			result[contractID] = PancakeTokenMapItem{
+				Decimals: token.Decimals,
+				Symbol:   token.Symbol,
 			}
 		}
 	}

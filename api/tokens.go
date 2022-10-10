@@ -22,6 +22,26 @@ import (
 // 	c.JSON(200, responseBodyData)
 // }
 
+func APIGetSupportedTokenInternal(c *gin.Context) {
+	tokenList, err := retrieveTokenList()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	pappTokens, err := getPappSupportedTokenList(tokenList)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
+	response.Result = pappTokens
+
+	c.JSON(200, response)
+}
+
 func APIGetSupportedToken(c *gin.Context) {
 
 	tokenList, err := retrieveTokenList()
@@ -59,6 +79,7 @@ func APIGetSupportedToken(c *gin.Context) {
 						}
 					}
 					if swapContractID != "" {
+						utk.ContractID = swapContractID
 						utk.IsSwapable = true
 						utk.ContractIDSwap = swapContractID
 					}
@@ -79,6 +100,7 @@ func APIGetSupportedToken(c *gin.Context) {
 					}
 				}
 				if swapContractID != "" {
+					tk.ContractID = swapContractID
 					tk.IsSwapable = true
 					tk.ContractIDSwap = swapContractID
 				}

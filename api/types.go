@@ -433,3 +433,7 @@ type TradeWithdrawInfo struct {
 		RespondTx string
 	}
 }
+
+type RetrySwapTx struct {
+	Txs []string
+}

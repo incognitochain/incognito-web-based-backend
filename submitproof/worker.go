@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -218,11 +219,52 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 		return
 	}
 
+	if time.Since(m.PublishTime) > time.Hour {
+		status := wcommon.ExternalTxStatus{
+			IncRequestTx: task.IncTxhash,
+			Type:         wcommon.PappTypeSwap,
+			Status:       wcommon.StatusSubmitFailed,
+			Network:      task.Network,
+			Error:        "timeout",
+		}
+		err = database.DBSaveExternalTxStatus(&status)
+		if err != nil {
+			writeErr, ok := err.(mongo.WriteException)
+			if !ok {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+			if !writeErr.HasErrorCode(11000) {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx timeout 😵 inctx `%v` network `%v`\n", task.IncTxhash, task.Network))
+		return
+	}
+
+	_, err = database.DBGetExternalTxStatusByIncTx(task.IncTxhash, task.Network)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			log.Println("DBGetExternalTxStatusByIncTx err", err)
+			m.Nack()
+			return
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v`", task.IncTxhash, task.Network))
+	} else {
+		if task.IsRetry {
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` retry submitProofTx `%v` for network `%v` 🫡", task.IncTxhash, task.Network))
+		}
+	}
+
 	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken)
 	if err != nil {
 		log.Println("createOutChainSwapTx error", err)
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` failed", task.IncTxhash, task.Network))
-		m.Ack()
+		time.Sleep(30 * time.Second)
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` failed 😵 err: %v", task.IncTxhash, task.Network, err))
+		m.Nack()
 		return
 	}
 
@@ -230,16 +272,17 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
 		if !ok {
-			log.Println("DBAddPappTxData err", err)
-			m.Ack()
+			log.Println("DBSaveExternalTxStatus err", err)
+			m.Nack()
 			return
 		}
 		if !writeErr.HasErrorCode(11000) {
-			log.Println("DBAddPappTxData err", err)
-			m.Ack()
+			log.Println("DBSaveExternalTxStatus err", err)
+			m.Nack()
 			return
 		}
 	}
+
 	m.Ack()
 }
 
@@ -273,12 +316,12 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		writeErr, ok := err.(mongo.WriteException)
 		if !ok {
 			log.Println("DBAddPappTxData err", err)
-			m.Ack()
+			m.Nack()
 			return
 		}
 		if !writeErr.HasErrorCode(11000) {
 			log.Println("DBAddPappTxData err", err)
-			m.Ack()
+			m.Nack()
 			return
 		}
 	}
@@ -369,6 +412,10 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
 	}
 
+	if len(proof.InstRoots) == 0 {
+		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
+	}
+
 	privKey, _ := crypto.HexToECDSA(config.EVMKey)
 
 	for _, endpoint := range networkInfo.Endpoints {
@@ -400,18 +447,29 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
 
 		auth.GasPrice = gasPrice
-		auth.GasLimit = wcommon.EVMGasLimit
+		if network == "eth" {
+			auth.GasLimit = wcommon.EVMGasLimitETH
+		} else {
+			if network == "bsc" {
+				auth.GasLimit = wcommon.EVMGasLimitPancake
+			}
+			auth.GasLimit = wcommon.EVMGasLimit
+		}
+
+		result.Type = wcommon.PappTypeSwap
+		result.Network = network
+		result.IncRequestTx = incTxHash
 
 		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 		if err != nil {
 			log.Println(err)
+			if strings.Contains(err.Error(), "insufficient funds") {
+				return nil, errors.New("submit tx outchain failed err insufficient funds")
+			}
 			continue
 		}
 		result.Txhash = tx.Hash().String()
 		result.Status = wcommon.StatusPending
-		result.Type = wcommon.PappTypeSwap
-		result.Network = network
-		result.IncRequestTx = incTxHash
 		result.Nonce = tx.Nonce()
 		break
 	}

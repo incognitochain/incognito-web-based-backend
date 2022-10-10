@@ -19,7 +19,8 @@ const (
 )
 
 const (
-	EVMGasLimit        = 2000000
+	EVMGasLimit        = 1500000
+	EVMGasLimitETH     = 800000
 	EVMGasLimitPancake = 600000
 	MinEVMTxs          = uint64(10)
 )

@@ -484,6 +484,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			}
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
 		case 1:
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
 			for _, network := range tx.Networks {
 				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
 				if err != nil {
@@ -494,7 +495,6 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
 		default:
 			if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
 				err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
@@ -539,15 +539,16 @@ func watchEVMAccountBalance() {
 				gasPrice, ok := feeData.GasPrice[networkInfo.Network]
 				if !ok {
 					log.Printf("network %v have no gasprice\n", networkInfo.Network)
+					continue
 				}
 				gasPriceBig := new(big.Int).SetUint64(gasPrice)
 				gasLimitBig := new(big.Int).SetUint64(wcommon.EVMGasLimit)
 
-				feeLeft = feeLeft.Div(feeLeft, gasPriceBig)
-				txLeft := feeLeft.Div(feeLeft, gasLimitBig)
-
 				feeFloat := new(big.Float).SetInt(feeLeft)
 				feeFloat.Mul(feeFloat, new(big.Float).SetFloat64(math.Pow10(-18)))
+
+				feeLeft = feeLeft.Div(feeLeft, gasPriceBig)
+				txLeft := feeLeft.Div(feeLeft, gasLimitBig)
 
 				log.Printf("network %v estimted has %v txs left (\n", networkInfo.Network, txLeft.Uint64())
 
@@ -583,6 +584,20 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 
 	for _, v := range txList {
 		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txRefundFeeWaitList, err := database.DBGetPendingFeeRefundTx(0)
+	if err != nil {
+		log.Println("DBGetPappTxNeedFeeRefund err:", err)
+	}
+
+	for _, tx := range txRefundFeeWaitList {
+		status := tx.RefundStatus
+		switch status {
+		case wcommon.StatusWaiting:
+			// _, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundOTASS, tx.RefundAddress, tx.RefundToken, tx.RefundAmount)
+			result[tx.RefundToken] += tx.RefundAmount
+		}
 	}
 
 	return result, nil

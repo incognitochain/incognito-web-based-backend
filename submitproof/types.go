@@ -44,6 +44,7 @@ type SubmitPappProofOutChainTask struct {
 	IncTxhash      string
 	Network        string
 	IsUnifiedToken bool
+	IsRetry        bool
 	Time           time.Time
 }
 

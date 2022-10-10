@@ -123,6 +123,9 @@ func getpTokenContractID(tokenID string, networkID int, supportedTokenList []Pap
 }
 
 func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData) (string, error) {
+	if contractID == "" {
+		return "", errors.New("contractID cannot be empty")
+	}
 	if !strings.Contains(contractID, "0x") {
 		contractID = "0x" + contractID
 	}
@@ -189,7 +192,7 @@ func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyT
 			return &token, nil
 		}
 	}
-	return nil, errors.New("token not found")
+	return nil, errors.New("token native not found")
 }
 
 func checkEnoughVault(unifiedTokenID string, tokenID string, amount uint64) (bool, error) {

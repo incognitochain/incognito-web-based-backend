@@ -6,8 +6,8 @@ import (
 )
 
 func TestRedpositEvent(t *testing.T) {
-	u := "https://testnet.incognito.org/fullnode"
-	tx := "317214f2d884e926f65d42b19a4f358994fa8f0fb532c0401e41353da7b8d8fa"
+	u := "https://lb-fullnode.incognito.org/fullnode"
+	tx := "cbf034678320566417c6fd8b683373ea5a29244082f512d217925c47f60a076e"
 	p, e := GetAndDecodeBurnProofUnifiedToken(u, tx, 0)
 	if e != nil {
 		t.Fatal(e)

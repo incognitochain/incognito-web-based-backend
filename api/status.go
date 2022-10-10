@@ -96,6 +96,8 @@ func APIGetPendingShieldTx(c *gin.Context) {
 
 }
 
+func APIGetPendingSwapTx(c *gin.Context) {}
+
 func APIGetUnshieldStatus(c *gin.Context) {
 
 }

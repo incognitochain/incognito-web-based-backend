@@ -249,10 +249,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		// if pdexresult != nil {
-		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
-		// }
+		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		if pdexresult != nil {
+			pdexEstimate = append(pdexEstimate, *pdexresult)
+		}
 	}
 
 	supportedNetworks := []int{}
@@ -643,6 +643,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				continue
 			}
 			estGasUsed += 200000
+			estGasUsed = estGasUsed + estGasUsed/3*2
 			if isUnifiedNativeToken {
 				fees = append(fees, PappNetworkFee{
 					Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
@@ -661,7 +662,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					})
 				}
 			}
-			if estGasUsed > wcommon.EVMGasLimit {
+			if estGasUsed > wcommon.EVMGasLimitETH {
 				return nil, errors.New("estimated used gas exceed gas limit")
 			}
 			fees = append(fees, PappNetworkFee{
@@ -761,6 +762,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				FeeAddressShardID: int(feeAddressShardID),
 				RouteDebug:        quote.Data.Route,
 			})
+			log.Println("done estimate uniswap")
 		case "pancake":
 			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			realAmountIn := amountFloat
@@ -821,7 +823,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				}
 			}
 
-			log.Println("len(quote.Data.Outputs)", len(quote.Data.Outputs), quote.Data.Outputs)
+			log.Println("len(quote.Data.Outputs)", len(quote.Data.Outputs), quote.Data.Outputs, quote.Data.Outputs[len(quote.Data.Outputs)-1])
 
 			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
 			if slippage != nil {
@@ -830,8 +832,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				sl = new(big.Float).Sub(new(big.Float).SetFloat64(1), sl)
 				amountOutBigFloat = amountOutBigFloat.Mul(amountOutBigFloat, sl)
 			}
-			outInt64, _ := amountOutBigFloat.Int64()
-			amountOutBig := big.NewInt(outInt64)
+			amountOutBig, _ := amountOutBigFloat.Int(nil)
+
+			log.Println("outInt64", amountOutBigFloat.String())
 
 			paths := []ethcommon.Address{}
 
@@ -879,6 +882,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				ImpactAmount:      fmt.Sprintf("%.2f", quote.Data.Impact),
 			})
 
+			log.Println("done estimate pancake")
 		case "curve":
 			fmt.Println("curve", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			poolList, err := getCurvePoolIndex(config.ShieldService)
@@ -999,6 +1003,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				Paths:             []string{pTokenContract1.ContractID, pTokenContract2.ContractID},
 				FeeAddressShardID: int(feeAddressShardID),
 			})
+			log.Println("done estimate curve")
 		}
 	}
 	if len(result) == 0 {
@@ -1284,7 +1289,7 @@ func buildPancakeTokenMap(tokenList []PappSupportedTokenData) (map[string]Pancak
 	result := make(map[string]PancakeTokenMapItem)
 
 	for _, token := range tokenList {
-		if token.Protocol == "pancake" {
+		if token.Protocol == "pancake" && token.Verify {
 			contractID := strings.ToLower(token.ContractID)
 			// if contractID == strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd") || contractID == strings.ToLower("0x7ef95a0fee0dd31b22626fa2e10ee6a223f8a684") || contractID == strings.ToLower("0x8babbb98678facc7342735486c851abd7a0d17ca") || contractID == strings.ToLower("0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7") || contractID == strings.ToLower("0x8a9424745056Eb399FD19a0EC26A14316684e274") || contractID == strings.ToLower("0xDAcbdeCc2992a63390d108e8507B98c7E2B5584a") {
 			// 	result[contractID] = PancakeTokenMapItem{
@@ -1292,6 +1297,7 @@ func buildPancakeTokenMap(tokenList []PappSupportedTokenData) (map[string]Pancak
 			// 		Symbol:   token.Symbol,
 			// 	}
 			// }
+
 			result[contractID] = PancakeTokenMapItem{
 				Decimals: token.Decimals,
 				Symbol:   token.Symbol,
@@ -1391,4 +1397,14 @@ func extractDataFromRawTx(txraw []byte) (metadataCommon.Metadata, bool, []coin.C
 	}
 
 	return mdRaw, isPRVTx, outCoins, txHash, nil
+}
+
+func getFee() []PappNetworkFee {
+	var fee []PappNetworkFee
+
+	return fee
+}
+
+func APIRetrySwapTx(c *gin.Context) {
+
 }

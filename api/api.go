@@ -82,9 +82,12 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup := r.Group("/admin")
 	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)
 	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
+	adminGroup.GET("/pendingswaptx")
 	adminGroup.POST("/retryshield", gincache.CachePage(store, time.Minute, APIRetryShieldTx))
+	adminGroup.POST("/retryswaptx", gincache.CachePage(store, time.Minute, APIRetrySwapTx))
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.POST("/submitshieldtx", APISubmitShieldTx)
+	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

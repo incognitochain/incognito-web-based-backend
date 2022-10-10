@@ -36,9 +36,9 @@ type BridgeNetworkData struct {
 
 type PappSupportedTokenData struct {
 	mgm.DefaultModel `bson:",inline"`
-	TokenID          string `bson:"tokenid"`
-	ContractID       string `bson:"contractid"`
-	Verify           bool   `bson:"verify"`
+	TokenID          string `json:"tokenid" bson:"tokenid"`
+	ContractID       string `json:"contractid" bson:"contractid"`
+	Verify           bool   `json:"verify" bson:"verify"`
 }
 
 type ExternalTxStatus struct {

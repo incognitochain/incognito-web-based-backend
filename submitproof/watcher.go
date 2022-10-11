@@ -388,6 +388,18 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			isRedeposit := false
 			for _, d := range txReceipt.Logs {
 				switch len(d.Data) {
+				case 96:
+					unpackResult, err := vaultABI.Unpack("Withdraw", d.Data)
+					if err != nil {
+						fmt.Println("Unpack2", err)
+						continue
+					}
+					if len(unpackResult) < 3 {
+						err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+						fmt.Println("len(unpackResult)2", err)
+						continue
+					}
+					fmt.Println("96", unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
 				case 256, 288:
 					unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
 					if err != nil {
@@ -485,15 +497,19 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
 		case 1:
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
-			for _, network := range tx.Networks {
-				_, err := SendOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken)
-				if err != nil {
-					return err
-				}
-			}
 			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
 			if err != nil {
 				return err
+			}
+			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusSubmitting)
+			if err != nil {
+				return err
+			}
+			for _, network := range tx.Networks {
+				_, err := SubmitOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken, false)
+				if err != nil {
+					return err
+				}
 			}
 		default:
 			if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {

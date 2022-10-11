@@ -27,7 +27,6 @@ CONFIG_JSON=$(cat <<EOF
 EOF
 )
 
-echo $CONFIG_JSON
 printf "$CONFIG_JSON" > cfg.json
 
 # "$@" to pass through all arguments to script

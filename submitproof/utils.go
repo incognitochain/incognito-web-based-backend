@@ -157,7 +157,7 @@ func getETHDepositProof(
 		// 	}
 		// 	fmt.Println("32", d.Address.String())
 		// case 96:
-		// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
+		// 	unpackResult, err := vaultABI.Unpack("Withdraw", d.Data)
 		// 	if err != nil {
 		// 		fmt.Println("Unpack2", err)
 		// 		continue
@@ -167,7 +167,7 @@ func getETHDepositProof(
 		// 		fmt.Println("len(unpackResult)2", err)
 		// 		continue
 		// 	}
-		// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
+		// 	fmt.Println("96", d.Address.String(), unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
 		// event indexed both from and to
 		case 256, 288:
 			// if contractID == "" {

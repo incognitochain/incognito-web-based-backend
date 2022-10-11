@@ -249,10 +249,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		if pdexresult != nil {
-			pdexEstimate = append(pdexEstimate, *pdexresult)
-		}
+		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		// if pdexresult != nil {
+		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
+		// }
 	}
 
 	supportedNetworks := []int{}
@@ -474,13 +474,13 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 	tkToInfo, _ := getTokenInfo(toToken)
 	amountOutBig := new(big.Float).SetFloat64(pdexResult.MaxGet)
 	amountOutBig = amountOutBig.Mul(amountOutBig, new(big.Float).SetFloat64(math.Pow10(-tkToInfo.PDecimals)))
-	amountOut, _ := amountOutBig.Float64()
+	amountOut := amountOutBig.String()
 
 	result := QuoteDataResp{
 		AppName:      "pdex",
 		AmountIn:     amount,
 		AmountInRaw:  fmt.Sprintf("%v", amountRaw),
-		AmountOut:    fmt.Sprintf("%f", amountOut),
+		AmountOut:    fmt.Sprintf("%v", amountOut),
 		AmountOutRaw: fmt.Sprintf("%f", pdexResult.MaxGet),
 		Paths:        pdexResult.TokenRoute,
 		PoolPairs:    pdexResult.Route,
@@ -1406,5 +1406,16 @@ func getFee() []PappNetworkFee {
 }
 
 func APIRetrySwapTx(c *gin.Context) {
+
+	type Request struct {
+		TxList []string
+	}
+
+	var req Request
+	err := c.MustBindWith(&req, binding.JSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
 
 }

@@ -241,6 +241,20 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 				return
 			}
 		}
+		err = database.DBUpdatePappTxSubmitOutchainStatus(task.IncTxhash, wcommon.StatusSubmitFailed)
+		if err != nil {
+			writeErr, ok := err.(mongo.WriteException)
+			if !ok {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+			if !writeErr.HasErrorCode(11000) {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+		}
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx timeout 😵 inctx `%v` network `%v`\n", task.IncTxhash, task.Network))
 		return
 	}
@@ -262,9 +276,9 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken)
 	if err != nil {
 		log.Println("createOutChainSwapTx error", err)
-		time.Sleep(30 * time.Second)
+		time.Sleep(15 * time.Second)
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` failed 😵 err: %v", task.IncTxhash, task.Network, err))
-		m.Nack()
+		m.Ack()
 		return
 	}
 
@@ -310,6 +324,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		Networks:         task.Networks,
 		FeeRefundOTA:     task.FeeRefundOTA,
 		FeeRefundAddress: task.FeeRefundAddress,
+		OutchainStatus:   wcommon.StatusWaiting,
 	}
 	err = database.DBSavePappTxData(data)
 	if err != nil {

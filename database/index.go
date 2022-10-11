@@ -121,6 +121,9 @@ func DBCreateIndex() error {
 		{
 			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "refundsubmitted", Value: bsonx.Int32(1)}},
 		},
+		{
+			Keys: bsonx.Doc{{Key: "outchain_status", Value: bsonx.Int32(1)}},
+		},
 	}
 	_, err = mgm.Coll(&common.PappTxData{}).Indexes().CreateMany(context.Background(), pappsModel)
 	if err != nil {

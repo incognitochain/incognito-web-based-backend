@@ -163,7 +163,7 @@ func SubmitTxFeeRefund(incReqTx, refundOTA, refundOTASS, paymentAddress, token s
 	return "submitting", nil
 }
 
-func SendOutChainPappTx(incTxHash string, network string, isUnifiedToken bool) (interface{}, error) {
+func SubmitOutChainPappTx(incTxHash string, network string, isUnifiedToken bool, retry bool) (interface{}, error) {
 	currentStatus, err := database.DBGetExternalTxStatusByIncTx(incTxHash, network)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -171,13 +171,16 @@ func SendOutChainPappTx(incTxHash string, network string, isUnifiedToken bool) (
 		}
 	}
 	if currentStatus != "" {
-		return currentStatus, nil
+		if currentStatus != common.StatusSubmitFailed || !retry {
+			return currentStatus, nil
+		}
 	}
 
 	task := SubmitPappProofOutChainTask{
 		IncTxhash:      incTxHash,
 		Network:        network,
 		IsUnifiedToken: isUnifiedToken,
+		IsRetry:        retry,
 		Time:           time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)

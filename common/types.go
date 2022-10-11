@@ -67,8 +67,10 @@ type TokenInfo struct {
 }
 
 type ExternalTxSwapResult struct {
-	LogResult   string
-	IsRedeposit bool
-	IsReverted  bool
-	IsFailed    bool
+	LogResult     string
+	IsRedeposit   bool
+	IsReverted    bool
+	IsFailed      bool
+	TokenContract string
+	Amount        uint64
 }

@@ -23,37 +23,24 @@ import (
 // }
 
 func APIGetSupportedTokenInternal(c *gin.Context) {
-	tokenList, err := retrieveTokenList()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
-	pappTokens, err := getPappSupportedTokenList(tokenList)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
+	spTkList := getSupportedTokenList()
 	var response struct {
 		Result interface{}
 		Error  interface{}
 	}
-	response.Result = pappTokens
+	response.Result = spTkList
 
 	c.JSON(200, response)
 }
 
 func APIGetSupportedToken(c *gin.Context) {
-
 	tokenList, err := retrieveTokenList()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	pappTokens, err := getPappSupportedTokenList(tokenList)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
+	pappTokens := getSupportedTokenList()
+
 	var result []wcommon.TokenInfo
 	dupChecker := make(map[string]struct{})
 
@@ -108,7 +95,6 @@ func APIGetSupportedToken(c *gin.Context) {
 			result = append(result, tk)
 			dupChecker[tk.TokenID] = struct{}{}
 		}
-
 	}
 
 	var response struct {

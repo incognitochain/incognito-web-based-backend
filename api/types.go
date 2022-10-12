@@ -210,6 +210,7 @@ type SubmitUnshieldTxRequest struct {
 
 	//centralized
 	PrivacyFee                      string
+	TokenFee                        string
 	Address                         string
 	IncognitoTxToPayOutsideChainFee string
 }

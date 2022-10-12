@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -111,10 +112,15 @@ func getBTCUnshieldFee(c *gin.Context) {
 		Error  interface{}
 	}
 	methodRPC := "getportalv4params"
-	beaconHeight := "0"
+	beaconHeight, err := getCurrentBeaconHeight(config.FullnodeURL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	beaconHeightStr := fmt.Sprintf("%v", beaconHeight)
 	reqRPC := genRPCBody(methodRPC, []interface{}{
 		map[string]interface{}{
-			"BeaconHeight": beaconHeight,
+			"BeaconHeight": beaconHeightStr,
 		},
 	})
 

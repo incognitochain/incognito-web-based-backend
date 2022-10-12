@@ -618,7 +618,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 	amountBigFloat := ConvertToNanoIncognitoToken(amountFloat, int64(pTokenContract1.Decimals)) //amount *big.Float, decimal int64, return *big.Float
 	amountInBig, _ := amountBigFloat.Int(nil)
 
-	additionalTokenInFee := amountInBig.Div(amountInBig, new(big.Int).SetUint64(1000))
+	amountInBig0 := new(big.Int).Set(amountInBig)
+
+	additionalTokenInFee := amountInBig0.Div(amountInBig0, new(big.Int).SetUint64(1000))
 
 	toTokenDecimal := big.NewFloat(math.Pow10(-pTokenContract2.Decimals))
 
@@ -657,8 +659,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			estGasUsed += 200000
 			estGasUsed = estGasUsed + estGasUsed/3*2
 
-			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
-			rate := new(big.Float).Quo(amountOutBigFloat, amountBigFloat)
+			amountOutBigFloat0, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountBigFloat))
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
@@ -710,7 +712,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err
 			}
 
-			amountOutBigFloat, _ = new(big.Float).SetString(quote.Data.AmountOutRaw)
+			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
 			if slippage != nil {
 				sl := new(big.Float).SetFloat64(0.01)
 				sl = sl.Mul(sl, slippage)
@@ -834,8 +836,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			// }
 			estGasUsed := uint64(wcommon.EVMGasLimitPancake)
 
-			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
-			rate := new(big.Float).Quo(amountOutBigFloat, amountBigFloat)
+			amountOutBigFloat0, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
+			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountBigFloat))
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
@@ -860,7 +862,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			log.Println("len(quote.Data.Outputs)", len(quote.Data.Outputs), quote.Data.Outputs, quote.Data.Outputs[len(quote.Data.Outputs)-1])
 
-			amountOutBigFloat, _ = new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
+			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
 			if slippage != nil {
 				sl := new(big.Float).SetFloat64(0.01)
 				sl = sl.Mul(sl, slippage)
@@ -1003,8 +1005,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			estGasUsed := uint64(wcommon.EVMGasLimit)
 
-			amountOutBigFloat := new(big.Float).SetInt(amountOut)
-			rate := new(big.Float).Quo(amountOutBigFloat, amountBigFloat)
+			amountOutBigFloat0 := new(big.Float).SetInt(amountOut)
+			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountBigFloat))
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
@@ -1447,8 +1449,15 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 		gasFeeFloat := new(big.Float).SetUint64(feeAmount)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, toTokenDecimal)
-		gasFeeInt := gasFeeFloat.String()
 
+		nativeDecimal := math.Pow10(-nativeToken.PDecimals)
+
+		tdecimal, _ := toTokenDecimal.Float64()
+
+		dcrate := new(big.Float).SetFloat64(nativeDecimal / tdecimal)
+		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, dcrate)
+
+		gasFeeInt := gasFeeFloat.String()
 		fees = append(fees, PappNetworkFee{
 			Amount:           feeAmount,
 			TokenID:          fromToken,
@@ -1472,7 +1481,6 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 		dcrate := new(big.Float).SetFloat64(nativeDecimal / tdecimal)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, dcrate)
 		gasFeeIntToToken := gasFeeFloat.String()
-
 		if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType || isFeeWhitelist {
 			fees = append(fees, PappNetworkFee{
 				Amount:           feeAmount,

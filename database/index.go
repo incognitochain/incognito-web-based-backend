@@ -166,10 +166,10 @@ func DBCreatePappSupportTokenIndex() error {
 			Keys: bsonx.Doc{{Key: "tokenid", Value: bsonx.Int32(1)}},
 		},
 		{
-			Keys: bsonx.Doc{{Key: "networkid", Value: bsonx.Int32(1)}},
+			Keys: bsonx.Doc{{Key: "contractid", Value: bsonx.Int32(1)}},
 		},
 		{
-			Keys: bsonx.Doc{{Key: "protocol", Value: bsonx.Int32(1)}},
+			Keys: bsonx.Doc{{Key: "verify", Value: bsonx.Int32(1)}},
 		},
 	}
 	_, err := mgm.Coll(&common.PappSupportedTokenData{}).Indexes().CreateMany(context.Background(), pappTokenModel)

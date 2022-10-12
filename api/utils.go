@@ -377,3 +377,24 @@ func transformShieldServicePappSupportedToken(list []common.PappSupportedTokenDa
 	}
 	return result
 }
+
+func getCurrentBeaconHeight(rpcURL string) (uint64, error) {
+	var responseRPCData struct {
+		Result struct {
+			BeaconHeight uint64
+		}
+		Error interface{}
+	}
+	methodRPC := "getbeaconbeststate"
+	reqRPC := genRPCBody(methodRPC, []interface{}{})
+
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseRPCData).SetBody(reqRPC).
+		Post(rpcURL)
+	if err != nil {
+		return 0, err
+	}
+	return responseRPCData.Result.BeaconHeight, nil
+}

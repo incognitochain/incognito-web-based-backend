@@ -171,14 +171,15 @@ func getETHDepositProof(
 		// event indexed both from and to
 		case 256, 288:
 			// if contractID == "" {
+			topicHash := strings.ToLower(d.Topics[0].String())
+			if !strings.Contains(topicHash, "00b45d95b5117447e2fafe7f34def913ff3ba220e4b8688acf37ae2328af7a3d") {
+				continue
+			}
 			if paymentaddress == "" && otaStr == "" {
 				unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
 				if err != nil {
-					unpackResult, err = vaultABI.Unpack("Deposit", d.Data)
-					if err != nil {
-						log.Println("unpackResult3 err", err)
-						continue
-					}
+					log.Println("unpackResult3 err", err)
+					continue
 				}
 				if len(unpackResult) < 3 {
 					err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
@@ -201,16 +202,6 @@ func getETHDepositProof(
 					isRedeposit = true
 					otaStr = newOTA.String()
 				}
-			}
-
-			// }
-			unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
-			if err != nil {
-				log.Println("unpackResult2 err", err)
-				continue
-			} else {
-				logResult = fmt.Sprintf("%s", unpackResult)
-				log.Println("logResult", logResult)
 			}
 		default:
 			unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)

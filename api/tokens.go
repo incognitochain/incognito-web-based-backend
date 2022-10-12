@@ -45,6 +45,9 @@ func APIGetSupportedToken(c *gin.Context) {
 	dupChecker := make(map[string]struct{})
 
 	for _, tk := range tokenList {
+		if !tk.Verified {
+			continue
+		}
 		if _, exist := dupChecker[tk.TokenID]; !exist {
 			if tk.CurrencyType == wcommon.UnifiedCurrencyType {
 				tk.IsSwapable = true

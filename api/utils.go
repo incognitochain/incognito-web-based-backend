@@ -377,3 +377,43 @@ func transformShieldServicePappSupportedToken(list []common.PappSupportedTokenDa
 	}
 	return result
 }
+
+func retrieveFeeTokenWhiteList() (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	cacheKey := "feetokenwhitelist"
+
+	err := cacheGet(cacheKey, result)
+	if err != nil {
+		var responseBodyData struct {
+			Result []struct {
+				TokenID string
+			}
+			Error *struct {
+				Code    int
+				Message string
+			} `json:"Error"`
+		}
+
+		re, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").
+			Get(config.ShieldService + "/service/shield/whitelist-token-fee")
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(re.Body(), &responseBodyData)
+		if err != nil {
+			return nil, err
+		}
+
+		if responseBodyData.Error != nil {
+			return nil, errors.New(responseBodyData.Error.Message)
+		}
+		for _, v := range responseBodyData.Result {
+			result[v.TokenID] = nil
+		}
+		cacheStore(cacheKey, result)
+	}
+
+	return result, nil
+}

@@ -401,6 +401,10 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					}
 					fmt.Println("96", unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
 				case 256, 288:
+					topicHash := strings.ToLower(d.Topics[0].String())
+					if !strings.Contains(topicHash, "00b45d95b5117447e2fafe7f34def913ff3ba220e4b8688acf37ae2328af7a3d") {
+						continue
+					}
 					unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
 					if err != nil {
 						log.Println("unpackResult err", err)

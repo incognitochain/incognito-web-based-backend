@@ -181,7 +181,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 	switch req.Network {
-	case "inc", "eth", "bsc", "plg":
+	case "inc", "eth", "bsc", "plg", "ftm":
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "unsupported network"})
 		return
@@ -784,8 +784,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				RouteDebug:        quote.Data.Route,
 			})
 			log.Println("done estimate uniswap")
-		case "pancake":
-			fmt.Println("pancake", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
+		case "pancake", "spooky":
+			fmt.Println(appName, networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			realAmountIn := amountFloat
 			if strings.Contains(config.NetworkID, "testnet") {
 				realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.998))
@@ -795,10 +795,19 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			realAmountInFloat, _ := realAmountIn.Float64()
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
 
-			tokenMap, err := buildPancakeTokenMap(spTkList)
-			if err != nil {
-				log.Println(err)
-				continue
+			tokenMap := make(map[string]PancakeTokenMapItem)
+			if appName == "pancake" {
+				tokenMap, err = buildPancakeTokenMap(spTkList)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+			} else {
+				tokenMap, err = buildSpookyTokenMap(spTkList)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
 			}
 
 			tokenMapBytes, err := json.Marshal(tokenMap)
@@ -1328,6 +1337,23 @@ func buildPancakeTokenMap(tokenList []PappSupportedTokenData) (map[string]Pancak
 			// 		Symbol:   token.Symbol,
 			// 	}
 			// }
+
+			result[contractID] = PancakeTokenMapItem{
+				Decimals: token.Decimals,
+				Symbol:   token.Symbol,
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func buildSpookyTokenMap(tokenList []PappSupportedTokenData) (map[string]PancakeTokenMapItem, error) {
+	result := make(map[string]PancakeTokenMapItem)
+
+	for _, token := range tokenList {
+		if (token.CurrencyType == wcommon.FTM || token.CurrencyType == wcommon.FTM_ERC20) && token.Verify {
+			contractID := strings.ToLower(token.ContractID)
 
 			result[contractID] = PancakeTokenMapItem{
 				Decimals: token.Decimals,

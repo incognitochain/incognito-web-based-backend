@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"syscall"
 
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/api"
@@ -16,6 +18,9 @@ var serviceID uuid.UUID
 
 func init() {
 	id := uuid.New()
+	log.SetPrefix(fmt.Sprintf("pid:%d ", syscall.Getpid()))
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	serviceID = id
 }
 

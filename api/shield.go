@@ -105,11 +105,12 @@ func getBTCUnshieldFee(c *gin.Context) {
 		return
 	}
 	unshieldFee := responseBodyData.Result
-	minUnshield := ""
 
 	var responseRPCData struct {
-		Result interface{}
-		Error  interface{}
+		Result struct {
+			MinUnshieldAmts map[string]uint64
+		}
+		Error interface{}
 	}
 	methodRPC := "getportalv4params"
 	beaconHeight, err := getCurrentBeaconHeight(config.FullnodeURL)
@@ -136,7 +137,9 @@ func getBTCUnshieldFee(c *gin.Context) {
 
 	result := make(map[string]interface{})
 	result["Fee"] = unshieldFee
-	result["MinUnshield"] = minUnshield
+	for _, v := range responseRPCData.Result.MinUnshieldAmts {
+		result["MinUnshield"] = v
+	}
 
 	c.JSON(200, gin.H{"Result": result})
 }

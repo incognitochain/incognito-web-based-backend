@@ -125,6 +125,7 @@ var (
 		NETWORK_PLG_ID: {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
 		NETWORK_BSC_ID: {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
 		NETWORK_ETH_ID: {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
+		NETWORK_FTM_ID: {strings.ToLower("0x077faB8F7f79178F6718BDfdFfd5c3b8D787AED5"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
 	}
 )
 
@@ -218,6 +219,12 @@ var TestnetBridgeNetworkData = []BridgeNetworkData{
 			"https://data-seed-prebsc-1-s1.binance.org:8545",
 		},
 	},
+	{
+		Network:            "ftm",
+		ChainID:            "4002",
+		ConfirmationBlocks: 5,
+		Endpoints:          []string{"https://rpc.testnet.fantom.network"},
+	},
 }
 
 var TestnetPappsEndpointData = []PAppsEndpointData{
@@ -230,6 +237,11 @@ var TestnetPappsEndpointData = []PAppsEndpointData{
 		Network:      "bsc",
 		ExchangeApps: map[string]string{"pancake": "pancakeswapep:3000"},
 		AppContracts: map[string]string{"pancake": "0x0e2923c21E2C5A2BDD18aa460B3FdDDDaDb0aE18"},
+	},
+	{
+		Network:      "ftm",
+		ExchangeApps: map[string]string{"spooky": "spookyswapep:3000"},
+		AppContracts: map[string]string{"spooky": "0x14D0cf3bC307aA15DA40Aa4c8cc2A2a81eF96B3a"},
 	},
 }
 
@@ -244,7 +256,13 @@ var TestnetIncognitoVault = []PappVaultData{
 		Type:            1,
 		ContractAddress: "0xc157CC3077ddfa425bae12d2F3002668971A4e3d",
 	},
-	{Network: "plg",
+	{
+		Network:         "plg",
+		Type:            1,
+		ContractAddress: "0x76318093c374e39B260120EBFCe6aBF7f75c8D28",
+	},
+	{
+		Network:         "ftm",
 		Type:            1,
 		ContractAddress: "0x76318093c374e39B260120EBFCe6aBF7f75c8D28",
 	},

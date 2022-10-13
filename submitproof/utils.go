@@ -156,18 +156,18 @@ func getETHDepositProof(
 		// 		continue
 		// 	}
 		// 	fmt.Println("32", d.Address.String())
-		// case 96:
-		// 	unpackResult, err := vaultABI.Unpack("Withdraw", d.Data)
-		// 	if err != nil {
-		// 		fmt.Println("Unpack2", err)
-		// 		continue
-		// 	}
-		// 	if len(unpackResult) < 3 {
-		// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-		// 		fmt.Println("len(unpackResult)2", err)
-		// 		continue
-		// 	}
-		// 	fmt.Println("96", d.Address.String(), unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
+		case 96:
+			unpackResult, err := vaultABI.Unpack("Withdraw", d.Data)
+			if err != nil {
+				fmt.Println("Unpack2", err)
+				continue
+			}
+			if len(unpackResult) < 3 {
+				err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+				fmt.Println("len(unpackResult)2", err)
+				continue
+			}
+			fmt.Println("96", d.Address.String(), unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
 		// event indexed both from and to
 		case 256, 288:
 			// if contractID == "" {

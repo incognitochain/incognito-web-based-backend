@@ -437,6 +437,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						log.Println("len(unpackResult) err", err)
 						continue
 					}
+					tokenContract = unpackResult[0].(common.Address).String()
+					amount = unpackResult[2].(*big.Int).Uint64()
 					isRedeposit = true
 				default:
 					unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data) // same as Redeposit

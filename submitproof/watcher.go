@@ -59,6 +59,7 @@ func forwardCollectedFee() {
 		// 	log.Println("GetActiveShard", err)
 		// 	continue
 		// }
+		time.Sleep(5 * time.Second)
 		pendingToken, err := getPendingPappsFee(-1)
 		if err != nil {
 			log.Println("getPendingPappsFee", err)
@@ -95,7 +96,24 @@ func forwardCollectedFee() {
 			}
 		}
 
+		collectFeeTk := make(map[string]float64)
+		for tkID, tkAmount := range amountToSend {
+			tkInfo, _ := getTokenInfo(tkID)
+			amount := new(big.Float).SetUint64(tkAmount)
+			decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+			afl64, _ := amount.Mul(amount, decimal).Float64()
+			collectFeeTk[tkInfo.Name] = afl64
+		}
+
+		collectFeeTkBytes, err := json.MarshalIndent(collectFeeTk, "", "\t")
+		if err != nil {
+			log.Println("GetAllUTXOsV2", err)
+			continue
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` we have collected\n %v", string(collectFeeTkBytes)))
+
 		for tokenID, amount := range amountToSend {
+			time.Sleep(30 * time.Second)
 			txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
 			if err != nil {
 				log.Println("GetAllUTXOsV2", err)
@@ -110,8 +128,8 @@ func forwardCollectedFee() {
 				slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%v` `%f` fee to central wallet txhash `%v`", tkInfo.Symbol, afl64, txhash))
 			}(tokenID, amount)
 		}
+		time.Sleep(6 * time.Hour)
 
-		time.Sleep(12 * time.Hour)
 	}
 }
 

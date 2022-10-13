@@ -96,12 +96,21 @@ func forwardCollectedFee() {
 			}
 		}
 
-		amountToSendBytes, err := json.MarshalIndent(amountToSend, "", "\t")
+		collectFeeTk := make(map[string]float64)
+		for tkID, tkAmount := range amountToSend {
+			tkInfo, _ := getTokenInfo(tkID)
+			amount := new(big.Float).SetUint64(tkAmount)
+			decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+			afl64, _ := amount.Mul(amount, decimal).Float64()
+			collectFeeTk[tkInfo.Name] = afl64
+		}
+
+		collectFeeTkBytes, err := json.MarshalIndent(collectFeeTk, "", "\t")
 		if err != nil {
 			log.Println("GetAllUTXOsV2", err)
 			continue
 		}
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` we have collected %v", string(amountToSendBytes)))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` we have collected\n %v", string(collectFeeTkBytes)))
 
 		for tokenID, amount := range amountToSend {
 			time.Sleep(30 * time.Second)

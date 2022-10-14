@@ -44,20 +44,24 @@ const (
 )
 
 const (
-	NETWORK_INC = "inc"
-	NETWORK_ETH = "eth"
-	NETWORK_BSC = "bsc"
-	NETWORK_PLG = "plg"
-	NETWORK_FTM = "ftm"
+	NETWORK_INC    = "inc"
+	NETWORK_ETH    = "eth"
+	NETWORK_BSC    = "bsc"
+	NETWORK_PLG    = "plg"
+	NETWORK_FTM    = "ftm"
+	NETWORK_AVAX   = "avax"
+	NETWORK_AURORA = "aurora"
 )
 
 const (
-	NativeCurrencyTypePRV = 0
-	NativeCurrencyTypeETH = 1
-	NativeCurrencyTypeBSC = 7
-	NativeCurrencyTypePLG = 19
-	NativeCurrencyTypeFTM = 21
-	UnifiedCurrencyType   = 25
+	NativeCurrencyTypePRV    = 0
+	NativeCurrencyTypeETH    = 1
+	NativeCurrencyTypeBSC    = 7
+	NativeCurrencyTypePLG    = 19
+	NativeCurrencyTypeFTM    = 21
+	NativeCurrencyTypeAVAX   = 28
+	NativeCurrencyTypeAURORA = 30
+	UnifiedCurrencyType      = 25
 )
 
 const (
@@ -66,6 +70,8 @@ const (
 	NETWORK_BSC_ID
 	NETWORK_PLG_ID
 	NETWORK_FTM_ID
+	NETWORK_AVAX_ID
+	NETWORK_AURORA_ID
 )
 
 const (
@@ -103,6 +109,12 @@ const (
 
 	// pUnifined token:
 	UNIFINE_TOKEN //25
+
+	AVAX       //28
+	AVAX_ERC20 //29
+
+	AURORA_ETH   //30
+	AURORA_ERC20 //31
 )
 
 var (
@@ -117,6 +129,10 @@ var (
 		PLG_ERC20:     NETWORK_PLG_ID,
 		FTM:           NETWORK_FTM_ID,
 		FTM_ERC20:     NETWORK_FTM_ID,
+		AVAX:          NETWORK_AVAX_ID,
+		AVAX_ERC20:    NETWORK_AVAX_ID,
+		AURORA_ETH:    NETWORK_AURORA_ID,
+		AURORA_ERC20:  NETWORK_AURORA_ID,
 	}
 )
 
@@ -126,6 +142,7 @@ var (
 		NETWORK_BSC_ID: {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
 		NETWORK_ETH_ID: {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
 		NETWORK_FTM_ID: {strings.ToLower("0xf1277d1Ed8AD466beddF92ef448A132661956621"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
+		//Todo add avax and aurora
 	}
 )
 

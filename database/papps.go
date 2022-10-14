@@ -124,7 +124,7 @@ func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string)
 
 func DBSaveExternalTxStatus(txdata *common.ExternalTxStatus) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: txdata.IncRequestTx}}
-	update := bson.M{"$set": bson.M{"txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type}}
+	update := bson.M{"$set": bson.M{"created_at": time.Now(), "txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
@@ -176,7 +176,7 @@ func DBGetPappWaitingSubmitOutchain(offset, limit int64) ([]common.PappTxData, e
 
 func DBSavePappTxData(txdata common.PappTxData) error {
 	filter := bson.M{"inctx": bson.M{operator.Eq: txdata.IncTx}}
-	update := bson.M{"$set": bson.M{"status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "burnttoken": txdata.BurntToken, "burntamount": txdata.BurntAmount, "receivetoken": txdata.ReceiveToken, "receiveamount": txdata.ReceiveAmount, "isunifiedtoken": txdata.IsUnifiedToken, "fee_refundota": txdata.FeeRefundOTA, "fee_refundaddress": txdata.FeeRefundAddress, "refundsubmitted": txdata.RefundSubmitted, "outchain_status": txdata.OutchainStatus}}
+	update := bson.M{"$set": bson.M{"created_at": time.Now(), "status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "burnttoken": txdata.BurntToken, "burntamount": txdata.BurntAmount, "receivetoken": txdata.ReceiveToken, "receiveamount": txdata.ReceiveAmount, "isunifiedtoken": txdata.IsUnifiedToken, "fee_refundota": txdata.FeeRefundOTA, "fee_refundaddress": txdata.FeeRefundAddress, "refundsubmitted": txdata.RefundSubmitted, "outchain_status": txdata.OutchainStatus}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {

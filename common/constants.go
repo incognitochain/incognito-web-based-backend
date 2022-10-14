@@ -125,7 +125,7 @@ var (
 		NETWORK_PLG_ID: {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
 		NETWORK_BSC_ID: {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
 		NETWORK_ETH_ID: {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
-		NETWORK_FTM_ID: {strings.ToLower("0x077faB8F7f79178F6718BDfdFfd5c3b8D787AED5"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
+		NETWORK_FTM_ID: {strings.ToLower("0xf1277d1Ed8AD466beddF92ef448A132661956621"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
 	}
 )
 

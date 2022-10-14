@@ -17,6 +17,10 @@ func GetNativeNetworkCurrencyType(network string) int {
 		return NativeCurrencyTypePLG
 	case "ftm":
 		return NativeCurrencyTypeFTM
+	case "avax":
+		return NativeCurrencyTypeAVAX
+	case "aurora":
+		return NativeCurrencyTypeAURORA
 	}
 	return -1
 }
@@ -30,6 +34,10 @@ func IsNativeCurrency(currencyType int) bool {
 	case NativeCurrencyTypePLG:
 		return true
 	case NativeCurrencyTypeFTM:
+		return true
+	case NativeCurrencyTypeAVAX:
+		return true
+	case NativeCurrencyTypeAURORA:
 		return true
 	}
 	return false
@@ -47,6 +55,10 @@ func GetNetworkID(network string) int {
 		return NETWORK_PLG_ID
 	case "ftm":
 		return NETWORK_FTM_ID
+	case "avax":
+		return NETWORK_AVAX_ID
+	case "aurora":
+		return NETWORK_AURORA_ID
 	}
 	return -1
 }
@@ -63,6 +75,10 @@ func GetNetworkName(network int) string {
 		return NETWORK_PLG
 	case 4:
 		return NETWORK_FTM
+	case 5:
+		return NETWORK_AVAX
+	case 6:
+		return NETWORK_AURORA
 	}
 	return ""
 }

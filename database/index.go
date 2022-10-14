@@ -93,6 +93,9 @@ func DBCreateIndex() error {
 			Keys: bsonx.Doc{{Key: "increquesttx", Value: bsonx.Int32(1)}},
 		},
 		{
+			Keys: bsonx.Doc{{Key: "created_at", Value: bsonx.Int32(1)}},
+		},
+		{
 			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "network", Value: bsonx.Int32(1)}},
 		},
 		{
@@ -114,6 +117,9 @@ func DBCreateIndex() error {
 		{
 			Keys: bsonx.Doc{{Key: "externaltx", Value: bsonx.Int32(1)}},
 			// Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "created_at", Value: bsonx.Int32(1)}},
 		},
 		{
 			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "type", Value: bsonx.Int32(1)}},

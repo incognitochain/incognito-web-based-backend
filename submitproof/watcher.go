@@ -406,6 +406,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				return err
 			}
 			isRedeposit := false
+			tokenContract := ""
+			amount := uint64(0)
 			for _, d := range txReceipt.Logs {
 				switch len(d.Data) {
 				case 96:
@@ -420,6 +422,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						continue
 					}
 					fmt.Println("96", unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
+					tokenContract = unpackResult[1].(common.Address).String()
+					amount = unpackResult[2].(*big.Int).Uint64()
 				case 256, 288:
 					topicHash := strings.ToLower(d.Topics[0].String())
 					if !strings.Contains(topicHash, "00b45d95b5117447e2fafe7f34def913ff3ba220e4b8688acf37ae2328af7a3d") {
@@ -435,6 +439,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						log.Println("len(unpackResult) err", err)
 						continue
 					}
+					tokenContract = unpackResult[0].(common.Address).String()
+					amount = unpackResult[2].(*big.Int).Uint64()
 					isRedeposit = true
 				default:
 					unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data) // same as Redeposit
@@ -447,10 +453,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				}
 			}
 			otherInfo := wcommon.ExternalTxSwapResult{
-				LogResult:   logResult,
-				IsRedeposit: isRedeposit,
-				IsReverted:  (len(txReceipt.Logs) >= 2) && (len(txReceipt.Logs) <= 3),
-				IsFailed:    (txReceipt.Status == 0),
+				LogResult:     logResult,
+				IsRedeposit:   isRedeposit,
+				IsReverted:    (len(txReceipt.Logs) >= 2) && (len(txReceipt.Logs) <= 3),
+				IsFailed:      (txReceipt.Status == 0),
+				TokenContract: tokenContract,
+				Amount:        amount,
 			}
 
 			otherInfoBytes, _ := json.MarshalIndent(otherInfo, "", "\t")

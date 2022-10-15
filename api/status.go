@@ -96,13 +96,16 @@ func APIGetPendingShieldTx(c *gin.Context) {
 
 }
 
-func APIGetPendingSwapTx(c *gin.Context) {}
+func APIGetPendingSwapTx(c *gin.Context) {
+
+}
 
 func APIGetUnshieldStatus(c *gin.Context) {
 
 }
 
 func APIGetShieldStatus(c *gin.Context) {
+	//Todo: implement
 	var req SubmitTxListRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -119,8 +122,11 @@ func APIGetSwapTxStatus(c *gin.Context) {
 		return
 	}
 	result := make(map[string]interface{})
+
+	spTkList := getSupportedTokenList()
+
 	for _, txHash := range req.TxList {
-		statusResult := checkPappTxSwapStatus(txHash)
+		statusResult := checkPappTxSwapStatus(txHash, spTkList)
 		if len(statusResult) == 0 {
 			statusResult["error"] = "tx not found"
 			result[txHash] = statusResult
@@ -131,7 +137,7 @@ func APIGetSwapTxStatus(c *gin.Context) {
 	c.JSON(200, gin.H{"Result": result})
 }
 
-func checkPappTxSwapStatus(txhash string) map[string]interface{} {
+func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map[string]interface{} {
 	result := make(map[string]interface{})
 	data, err := database.DBGetPappTxData(txhash)
 	if err != nil {
@@ -212,6 +218,18 @@ func checkPappTxSwapStatus(txhash string) map[string]interface{} {
 							}
 						}
 					}
+				}
+				if networkResult["swap_outcome"] == "success" {
+					if outchainTxResult.TokenContract != "" {
+						outTokenID, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList)
+						if err != nil {
+							result["error"] = err.Error()
+							continue
+						}
+						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, data.BurntAmount, outchainTxResult.Amount)
+						result["swap_detail"] = swapDetail
+					}
+
 				}
 			}
 			networkList = append(networkList, networkResult)

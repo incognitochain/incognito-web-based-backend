@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -91,7 +92,7 @@ func APIEstimateUnshield(c *gin.Context) {
 
 func getBTCUnshieldFee(c *gin.Context) {
 	var responseBodyData struct {
-		Result interface{}
+		Result float64
 		Error  interface{}
 	}
 	_, err := restyClient.R().
@@ -103,7 +104,44 @@ func getBTCUnshieldFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(200, responseBodyData)
+	unshieldFee := responseBodyData.Result
+
+	var responseRPCData struct {
+		Result struct {
+			MinUnshieldAmts map[string]uint64
+		}
+		Error interface{}
+	}
+	methodRPC := "getportalv4params"
+	beaconHeight, err := getCurrentBeaconHeight(config.FullnodeURL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	beaconHeightStr := fmt.Sprintf("%v", beaconHeight)
+	reqRPC := genRPCBody(methodRPC, []interface{}{
+		map[string]interface{}{
+			"BeaconHeight": beaconHeightStr,
+		},
+	})
+
+	_, err = restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseRPCData).SetBody(reqRPC).
+		Post(config.FullnodeURL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	result := make(map[string]interface{})
+	result["Fee"] = unshieldFee
+	for _, v := range responseRPCData.Result.MinUnshieldAmts {
+		result["MinUnshield"] = v
+	}
+
+	c.JSON(200, gin.H{"Result": result})
 }
 
 func APIRetryShieldTx(c *gin.Context) {

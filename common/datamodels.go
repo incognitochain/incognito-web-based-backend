@@ -57,24 +57,23 @@ type ExternalTxStatus struct {
 
 type PappTxData struct {
 	mgm.DefaultModel `bson:",inline"`
-	IncTx            string   `json:"inctx" bson:"inctx"`
-	Networks         []string `json:"networks" bson:"networks"`
-	Type             int      `json:"type" bson:"type"`
-	IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
-	FeeToken         string   `json:"feetoken" bson:"feetoken"`
-	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
-	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
-	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
-	ReceiveToken     string   `json:"receivetoken" bson:"receivetoken"`
-	ReceiveAmount    uint64   `json:"receiveamount" bson:"receiveamount"`
-	Status           string   `json:"status" bson:"status"`
-	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
-	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
-	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
-	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
-	ShardID          int      `json:"shardid" bson:"shardid"`
-	OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
-	Error            string   `json:"error" bson:"error"`
+	IncTx            string        `json:"inctx" bson:"inctx"`
+	Networks         []string      `json:"networks" bson:"networks"`
+	Type             int           `json:"type" bson:"type"`
+	IncTxData        string        `json:"inctxdata" bson:"inctxdata"`
+	FeeToken         string        `json:"feetoken" bson:"feetoken"`
+	FeeAmount        uint64        `json:"feeamount" bson:"feeamount"`
+	BurntAmount      uint64        `json:"burntamount" bson:"burntamount"`
+	BurntToken       string        `json:"burnttoken" bson:"burnttoken"`
+	PappSwapInfo     *PappSwapInfo `json:"pappswapinfo" bson:"pappswapinfo"`
+	Status           string        `json:"status" bson:"status"`
+	IsUnifiedToken   bool          `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	RefundSubmitted  bool          `json:"refundsubmitted" bson:"refundsubmitted"`
+	FeeRefundOTA     string        `json:"fee_refundota" bson:"fee_refundota"`
+	FeeRefundAddress string        `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	ShardID          int           `json:"shardid" bson:"shardid"`
+	OutchainStatus   string        `json:"outchain_status" bson:"outchain_status"`
+	Error            string        `json:"error" bson:"error"`
 }
 
 type PappVaultData struct {

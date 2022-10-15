@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -281,7 +282,9 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 		m.Ack()
 		return
 	}
+	go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
 
+	m.Ack()
 	err = database.DBSaveExternalTxStatus(status)
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
@@ -319,8 +322,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		FeeAmount:        task.FeeAmount,
 		BurntToken:       task.BurntToken,
 		BurntAmount:      task.BurntAmount,
-		ReceiveToken:     task.ReceiveToken,
-		ReceiveAmount:    task.ReceiveAmount,
+		PappSwapInfo:     task.PappSwapInfo,
 		Networks:         task.Networks,
 		FeeRefundOTA:     task.FeeRefundOTA,
 		FeeRefundAddress: task.FeeRefundAddress,
@@ -391,6 +393,14 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			return
 		}
 	}
+	go func() {
+		slackep := os.Getenv("SLACK_SWAP_ALERT")
+		if slackep != "" {
+			swapAlert := ""
+			slacknoti.SendWithCustomChannel(swapAlert, slackep)
+		}
+
+	}()
 
 	m.Ack()
 }

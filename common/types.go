@@ -72,3 +72,11 @@ type ExternalTxSwapResult struct {
 	IsReverted  bool
 	IsFailed    bool
 }
+
+type PappSwapInfo struct {
+	DappName      string
+	TokenIn       string
+	TokenOut      string
+	TokenInAmount uint64
+	MinOutAmount  uint64
+}

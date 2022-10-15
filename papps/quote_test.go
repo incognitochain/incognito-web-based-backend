@@ -30,6 +30,11 @@ func TestCreateCalldataUniswap(t *testing.T) {
 	require.Equal(t, nil, err)
 
 	t.Logf("result: %s\n", result)
+
+	decode, err := DecodeUniswapCalldata(result)
+	require.Equal(t, nil, err)
+
+	t.Logf("decode: %s\n", decode)
 }
 
 func TestCreateCalldataPancake(t *testing.T) {
@@ -45,10 +50,24 @@ func TestCreateCalldataPancake(t *testing.T) {
 	paths = append(paths, token1)
 	paths = append(paths, token2)
 	srcQty := new(big.Int).SetInt64(10000)
-	dstQty := new(big.Int).SetInt64(1)
+	dstQty := new(big.Int).SetInt64(13)
 
 	result, err := BuildCallDataPancake(paths, srcQty, dstQty, true)
 	require.Equal(t, nil, err)
 
 	t.Logf("result: %s\n", result)
+
+	decode, err := DecodePancakeCalldata(result)
+	require.Equal(t, nil, err)
+
+	t.Logf("decode: %s\n", decode)
+}
+
+func TestDecodeCurve(t *testing.T) {
+
+	decode, err := DecodeCurveCalldata("8c0b65930000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000f40b000000000000000000000000000000000000000000000000000000000000f3f830000000000000000000000001d8b86e3d88cdb2d34688e87e72f388cb541b7c8")
+	require.Equal(t, nil, err)
+
+	t.Logf("decode: %s\n", decode)
+
 }

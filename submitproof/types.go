@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 type SubmitProofShieldTask struct {
@@ -24,8 +25,7 @@ type SubmitPappTxTask struct {
 	FeeRefundAddress string
 	BurntToken       string
 	BurntAmount      uint64
-	ReceiveToken     string
-	ReceiveAmount    uint64
+	PappSwapInfo     *common.PappSwapInfo
 	Networks         []string
 	Time             time.Time
 }

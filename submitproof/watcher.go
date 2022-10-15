@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -265,6 +266,7 @@ func watchPendingExternalTx() {
 			currentEVMHeight, err := getEVMBlockHeight(networkInfo.Endpoints)
 			if err != nil {
 				log.Fatalln("getEVMBlockHeight err:", networkInfo.Network, err)
+				//TODO
 			}
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {
@@ -482,6 +484,15 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			}
 			if otherInfo.IsFailed {
 				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, exttx `%v`, network `%v`\n", txtype, tx.Txhash, tx.Network))
+			} else {
+				go func() {
+					slackep := os.Getenv("SLACK_SWAP_ALERT")
+					if slackep != "" {
+						swapAlert := ""
+						slacknoti.SendWithCustomChannel(swapAlert, slackep)
+					}
+
+				}()
 			}
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain accepted exttx `%v`, network `%v`, incReqTx `%v`\n outcome of tx: `%v`\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
 		}

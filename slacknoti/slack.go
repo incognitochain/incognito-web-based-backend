@@ -39,7 +39,7 @@ func send(text string) {
 
 func StartSlackHook() {
 	notiChan = make(chan string)
-	t := time.NewTicker(30 * time.Second)
+	t := time.NewTicker(2 * time.Second)
 	for {
 		select {
 		case noti := <-notiChan:
@@ -60,4 +60,25 @@ func StartSlackHook() {
 
 func SendSlackNoti(msg string) {
 	notiChan <- msg
+}
+
+func SendWithCustomChannel(text string, channel string) {
+	content := struct {
+		Text string `json:"text"`
+	}{
+		Text: text,
+	}
+	contentBytes, err := json.Marshal(content)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	httpClient := http.DefaultClient
+	resp, err := httpClient.Post(channel, "application/json", bytes.NewReader(contentBytes))
+	if resp.Status != "200" || err != nil {
+		log.Println(err)
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println(string(body))
+	}
+	defer resp.Body.Close()
 }

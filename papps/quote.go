@@ -3,6 +3,7 @@ package papps
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -216,7 +217,6 @@ func BuildCallDataPancake(paths []common.Address, srcQty *big.Int, expectedOut *
 		return result, err
 	}
 	result = hex.EncodeToString(input)
-
 	return result, err
 }
 
@@ -245,4 +245,95 @@ func BuildCurveCallData(
 	result = hex.EncodeToString(input)
 
 	return result, err
+}
+
+func DecodePancakeCalldata(inputHex string) (*PancakeDecodeData, error) {
+	tradeAbi, err := abi.JSON(strings.NewReader(pancakeproxy.PancakeproxyMetaData.ABI))
+	if err != nil {
+		return nil, err
+	}
+	decodeData, err := hex.DecodeString(inputHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if method, ok := tradeAbi.Methods["trade"]; ok {
+		params := make(map[string]interface{})
+		err := method.Inputs.UnpackIntoMap(params, decodeData[4:])
+		if err != nil {
+			return nil, err
+		}
+
+		result := PancakeDecodeData{
+			AmountOutMin: params["amountOutMin"].(*big.Int),
+			SrcQty:       params["srcQty"].(*big.Int),
+			Deadline:     params["deadline"].(*big.Int),
+			Path:         params["path"].([]common.Address),
+		}
+		return &result, nil
+	}
+	return nil, errors.New("invalid abi")
+}
+
+func DecodeUniswapCalldata(inputHex string) (*UniswapDecodeData, error) {
+	tradeAbi, err := abi.JSON(strings.NewReader(puniswap.PuniswapMetaData.ABI))
+	if err != nil {
+		return nil, err
+	}
+	decodeData, err := hex.DecodeString(inputHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if method, ok := tradeAbi.Methods["tradeInputSingle"]; ok {
+		params := make(map[string]interface{})
+		err := method.Inputs.UnpackIntoMap(params, decodeData[4:])
+		if err != nil {
+			log.Println(err)
+		} else {
+			dataBytes, _ := json.Marshal(params["params"])
+			result := UniswapDecodeData{}
+			err = json.Unmarshal(dataBytes, &result)
+			return &result, err
+		}
+
+	}
+	if method, ok := tradeAbi.Methods["tradeInput"]; ok {
+		params := make(map[string]interface{})
+		err := method.Inputs.UnpackIntoMap(params, decodeData[4:])
+		if err != nil {
+			return nil, err
+		}
+		dataBytes, _ := json.Marshal(params["params"])
+		result := UniswapDecodeData{}
+		err = json.Unmarshal(dataBytes, &result)
+		return &result, err
+	}
+	return nil, errors.New("invalid abi")
+}
+
+func DecodeCurveCalldata(inputHex string) (*CurveDecodeData, error) {
+	tradeAbi, err := abi.JSON(strings.NewReader(pcurve.PcurveMetaData.ABI))
+	if err != nil {
+		return nil, err
+	}
+	decodeData, err := hex.DecodeString(inputHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if method, ok := tradeAbi.Methods["exchangeUnderlying"]; ok {
+		params := make(map[string]interface{})
+		err := method.Inputs.UnpackIntoMap(params, decodeData[4:])
+		if err != nil {
+			return nil, err
+		}
+
+		result := CurveDecodeData{
+			Amount:    params["amount"].(*big.Int),
+			MinAmount: params["minAmount"].(*big.Int),
+			I:         params["i"].(*big.Int),
+			J:         params["i"].(*big.Int),
+			CurvePool: params["curvePool"].(common.Address),
+		}
+		return &result, nil
+	}
+	return nil, errors.New("invalid abi")
 }

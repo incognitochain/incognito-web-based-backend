@@ -47,7 +47,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		}
 		c.JSON(200, responseBodyData)
 		return
-	case "eth", "bsc", "plg", "ftm":
+	case "eth", "bsc", "plg", "ftm", "avax", "aurora":
 		re, err := restyClient.R().
 			EnableTrace().
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
@@ -95,7 +95,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 			fmt.Println("newReq", string(a))
 
 			switch Network {
-			case "eth", "bsc", "plg", "ftm":
+			case "eth", "bsc", "plg", "ftm", "avax", "aurora":
 				re, err := restyClient.R().
 					EnableTrace().
 					SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(newReq).
@@ -214,6 +214,10 @@ func extractUnshieldInfoField(txdetail *TransactionDetail) (ID int, PaymentAddre
 		Network = "plg"
 	case 4:
 		Network = "ftm"
+	case 5:
+		Network = "avax"
+	case 6:
+		Network = "aurora"
 	}
 	IncognitoAmount = fmt.Sprintf("%d", unshieldMeta.Data[0].BurningAmount)
 	PaymentAddress = "0x" + unshieldMeta.Data[0].RemoteAddress

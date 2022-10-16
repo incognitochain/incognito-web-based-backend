@@ -9,6 +9,7 @@ import (
 	"github.com/kamva/mgm/v3"
 	"github.com/kamva/mgm/v3/operator"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -174,15 +175,16 @@ func DBGetPappWaitingSubmitOutchain(offset, limit int64) ([]common.PappTxData, e
 	return result, nil
 }
 
-func DBSavePappTxData(txdata common.PappTxData) error {
+func DBSavePappTxData(txdata common.PappTxData) (*primitive.ObjectID, error) {
 	filter := bson.M{"inctx": bson.M{operator.Eq: txdata.IncTx}}
 	update := bson.M{"$set": bson.M{"created_at": time.Now(), "status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "burnttoken": txdata.BurntToken, "burntamount": txdata.BurntAmount, "pappswapinfo": txdata.PappSwapInfo, "isunifiedtoken": txdata.IsUnifiedToken, "fee_refundota": txdata.FeeRefundOTA, "fee_refundaddress": txdata.FeeRefundAddress, "refundsubmitted": txdata.RefundSubmitted, "outchain_status": txdata.OutchainStatus}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	_, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	result, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	docID := result.UpsertedID.(primitive.ObjectID)
+	return &docID, nil
 }
 
 func DBRetrievePendingPappTxs(pappType int, offset, limit int64) ([]common.PappTxData, error) {

@@ -39,7 +39,7 @@ func send(text string) {
 
 func StartSlackHook() {
 	notiChan = make(chan string)
-	t := time.NewTicker(30 * time.Second)
+	t := time.NewTicker(2 * time.Second)
 	for {
 		select {
 		case noti := <-notiChan:

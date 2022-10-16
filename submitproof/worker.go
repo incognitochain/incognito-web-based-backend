@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -281,7 +283,9 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 		m.Ack()
 		return
 	}
+	go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
 
+	m.Ack()
 	err = database.DBSaveExternalTxStatus(status)
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
@@ -308,7 +312,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		m.Ack()
 		return
 	}
-
+	pappSwapInfoStr, _ := json.MarshalIndent(task.PappSwapInfo, "", "\t")
 	data := wcommon.PappTxData{
 		IncTx:            task.TxHash,
 		IncTxData:        string(task.TxRawData),
@@ -319,14 +323,13 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		FeeAmount:        task.FeeAmount,
 		BurntToken:       task.BurntToken,
 		BurntAmount:      task.BurntAmount,
-		ReceiveToken:     task.ReceiveToken,
-		ReceiveAmount:    task.ReceiveAmount,
+		PappSwapInfo:     string(pappSwapInfoStr),
 		Networks:         task.Networks,
 		FeeRefundOTA:     task.FeeRefundOTA,
 		FeeRefundAddress: task.FeeRefundAddress,
 		OutchainStatus:   wcommon.StatusWaiting,
 	}
-	err = database.DBSavePappTxData(data)
+	docID, err := database.DBSavePappTxData(data)
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
 		if !ok {
@@ -391,6 +394,30 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			return
 		}
 	}
+	go func() {
+		slackep := os.Getenv("SLACK_SWAP_ALERT")
+		if slackep != "" {
+			swapAlert := ""
+			pappTxData := data
+			if pappTxData.PappSwapInfo != "" {
+				tkInInfo, _ := getTokenInfo(task.PappSwapInfo.TokenIn)
+				amount := new(big.Float).SetUint64(task.PappSwapInfo.TokenInAmount)
+				decimal := new(big.Float).SetFloat64(math.Pow10(-18))
+				amountInFloat, _ := amount.Mul(amount, decimal).Float64()
+				tokenInSymbol := tkInInfo.Symbol
+
+				tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
+				amount = new(big.Float).SetUint64(task.PappSwapInfo.TokenInAmount)
+				decimal = new(big.Float).SetFloat64(math.Pow10(-18))
+				amountOutFloat, _ := amount.Mul(amount, decimal).Float64()
+				tokenOutSymbol := tkOutInfo.Symbol
+
+				swapAlert = fmt.Sprintf("`[%v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%f %v` to `%f %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+				log.Println(swapAlert)
+				slacknoti.SendWithCustomChannel(swapAlert, slackep)
+			}
+		}
+	}()
 
 	m.Ack()
 }

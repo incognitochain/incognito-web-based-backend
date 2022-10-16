@@ -65,8 +65,7 @@ type PappTxData struct {
 	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
 	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
 	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
-	ReceiveToken     string   `json:"receivetoken" bson:"receivetoken"`
-	ReceiveAmount    uint64   `json:"receiveamount" bson:"receiveamount"`
+	PappSwapInfo     string   `json:"pappswapinfo" bson:"pappswapinfo"`
 	Status           string   `json:"status" bson:"status"`
 	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
 	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`

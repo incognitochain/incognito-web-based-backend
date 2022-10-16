@@ -47,7 +47,7 @@ func StartAPIservice(cfg common.Config) {
 
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	r.GET("/tokenlist", APIGetSupportedToken)
+	r.GET("/tokenlist", gincache.CachePage(store, 10*time.Second, APIGetSupportedToken))
 
 	r.POST("/estimateshieldreward", APIEstimateReward)
 
@@ -76,7 +76,7 @@ func StartAPIservice(cfg common.Config) {
 
 	pAppsGroup.GET("/getvaultstate", APIGetVaultState)
 
-	pAppsGroup.GET("/getsupportedtokens", APIGetSupportedToken)
+	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 10*time.Second, APIGetSupportedToken))
 
 	//admin
 	adminGroup := r.Group("/admin")
@@ -88,6 +88,8 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.POST("/submitshieldtx", APISubmitShieldTx)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
+
+	go prefetchSupportedTokenList()
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {
@@ -106,4 +108,35 @@ func loadOTAKey(key string) error {
 	}
 	incFeeKeySet = wl
 	return nil
+}
+
+var supportTokenList []PappSupportedTokenData
+
+func prefetchSupportedTokenList() {
+	for {
+		tokenList, err := retrieveTokenList()
+		if err != nil {
+			log.Println(err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		spTkList, err := getPappSupportedTokenList(tokenList)
+		if err != nil {
+			log.Println(err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		supportTokenList = spTkList
+
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func getSupportedTokenList() []PappSupportedTokenData {
+	result := []PappSupportedTokenData{}
+	result = append(result, supportTokenList...)
+	return result
+
 }

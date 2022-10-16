@@ -44,20 +44,24 @@ const (
 )
 
 const (
-	NETWORK_INC = "inc"
-	NETWORK_ETH = "eth"
-	NETWORK_BSC = "bsc"
-	NETWORK_PLG = "plg"
-	NETWORK_FTM = "ftm"
+	NETWORK_INC    = "inc"
+	NETWORK_ETH    = "eth"
+	NETWORK_BSC    = "bsc"
+	NETWORK_PLG    = "plg"
+	NETWORK_FTM    = "ftm"
+	NETWORK_AVAX   = "avax"
+	NETWORK_AURORA = "aurora"
 )
 
 const (
-	NativeCurrencyTypePRV = 0
-	NativeCurrencyTypeETH = 1
-	NativeCurrencyTypeBSC = 7
-	NativeCurrencyTypePLG = 19
-	NativeCurrencyTypeFTM = 21
-	UnifiedCurrencyType   = 25
+	NativeCurrencyTypePRV    = 0
+	NativeCurrencyTypeETH    = 1
+	NativeCurrencyTypeBSC    = 7
+	NativeCurrencyTypePLG    = 19
+	NativeCurrencyTypeFTM    = 21
+	NativeCurrencyTypeAVAX   = 28
+	NativeCurrencyTypeAURORA = 30
+	UnifiedCurrencyType      = 25
 )
 
 const (
@@ -66,6 +70,8 @@ const (
 	NETWORK_BSC_ID
 	NETWORK_PLG_ID
 	NETWORK_FTM_ID
+	NETWORK_AVAX_ID
+	NETWORK_AURORA_ID
 )
 
 const (
@@ -103,6 +109,12 @@ const (
 
 	// pUnifined token:
 	UNIFINE_TOKEN //25
+
+	AVAX       //28
+	AVAX_ERC20 //29
+
+	AURORA_ETH   //30
+	AURORA_ERC20 //31
 )
 
 var (
@@ -117,6 +129,10 @@ var (
 		PLG_ERC20:     NETWORK_PLG_ID,
 		FTM:           NETWORK_FTM_ID,
 		FTM_ERC20:     NETWORK_FTM_ID,
+		AVAX:          NETWORK_AVAX_ID,
+		AVAX_ERC20:    NETWORK_AVAX_ID,
+		AURORA_ETH:    NETWORK_AURORA_ID,
+		AURORA_ERC20:  NETWORK_AURORA_ID,
 	}
 )
 
@@ -125,6 +141,8 @@ var (
 		NETWORK_PLG_ID: {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
 		NETWORK_BSC_ID: {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
 		NETWORK_ETH_ID: {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
+		NETWORK_FTM_ID: {strings.ToLower("0xf1277d1Ed8AD466beddF92ef448A132661956621"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
+		//Todo add avax and aurora
 	}
 )
 
@@ -218,6 +236,12 @@ var TestnetBridgeNetworkData = []BridgeNetworkData{
 			"https://data-seed-prebsc-1-s1.binance.org:8545",
 		},
 	},
+	{
+		Network:            "ftm",
+		ChainID:            "4002",
+		ConfirmationBlocks: 5,
+		Endpoints:          []string{"https://rpc.testnet.fantom.network"},
+	},
 }
 
 var TestnetPappsEndpointData = []PAppsEndpointData{
@@ -230,6 +254,11 @@ var TestnetPappsEndpointData = []PAppsEndpointData{
 		Network:      "bsc",
 		ExchangeApps: map[string]string{"pancake": "pancakeswapep:3000"},
 		AppContracts: map[string]string{"pancake": "0x0e2923c21E2C5A2BDD18aa460B3FdDDDaDb0aE18"},
+	},
+	{
+		Network:      "ftm",
+		ExchangeApps: map[string]string{"spooky": "spookyswapep:3000"},
+		AppContracts: map[string]string{"spooky": "0x14D0cf3bC307aA15DA40Aa4c8cc2A2a81eF96B3a"},
 	},
 }
 
@@ -244,7 +273,13 @@ var TestnetIncognitoVault = []PappVaultData{
 		Type:            1,
 		ContractAddress: "0xc157CC3077ddfa425bae12d2F3002668971A4e3d",
 	},
-	{Network: "plg",
+	{
+		Network:         "plg",
+		Type:            1,
+		ContractAddress: "0x76318093c374e39B260120EBFCe6aBF7f75c8D28",
+	},
+	{
+		Network:         "ftm",
 		Type:            1,
 		ContractAddress: "0x76318093c374e39B260120EBFCe6aBF7f75c8D28",
 	},

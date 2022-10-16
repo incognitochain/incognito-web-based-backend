@@ -140,7 +140,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, feeDiff, receiveToken, receiveAmount, err := checkValidTxSwap(md, outCoins, spTkList)
+	valid, networkList, feeToken, feeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -149,7 +149,7 @@ func APISubmitSwapTx(c *gin.Context) {
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA)
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return

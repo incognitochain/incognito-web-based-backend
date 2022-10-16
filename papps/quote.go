@@ -287,6 +287,19 @@ func DecodeUniswapCalldata(inputHex string) (*UniswapDecodeData, error) {
 		params := make(map[string]interface{})
 		err := method.Inputs.UnpackIntoMap(params, decodeData[4:])
 		if err != nil {
+			log.Println(err)
+		} else {
+			dataBytes, _ := json.Marshal(params["params"])
+			result := UniswapDecodeData{}
+			err = json.Unmarshal(dataBytes, &result)
+			return &result, err
+		}
+
+	}
+	if method, ok := tradeAbi.Methods["tradeInput"]; ok {
+		params := make(map[string]interface{})
+		err := method.Inputs.UnpackIntoMap(params, decodeData[4:])
+		if err != nil {
 			return nil, err
 		}
 		dataBytes, _ := json.Marshal(params["params"])

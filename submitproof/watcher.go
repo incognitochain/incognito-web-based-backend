@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -98,7 +99,11 @@ func forwardCollectedFee() {
 
 		collectFeeTk := make(map[string]float64)
 		for tkID, tkAmount := range amountToSend {
-			tkInfo, _ := getTokenInfo(tkID)
+			tkInfo, err := getTokenInfo(tkID)
+			if err != nil {
+				log.Println("getTokenInfo", tkID, err)
+				continue
+			}
 			amount := new(big.Float).SetUint64(tkAmount)
 			decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
 			afl64, _ := amount.Mul(amount, decimal).Float64()
@@ -125,7 +130,7 @@ func forwardCollectedFee() {
 				amount := new(big.Float).SetUint64(tkAmount)
 				decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
 				afl64, _ := amount.Mul(amount, decimal).Float64()
-				slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%v` `%f` fee to central wallet txhash `%v`", tkInfo.Symbol, afl64, txhash))
+				slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%f %v` fee to central wallet txhash `%v`", afl64, tkInfo.Symbol, txhash))
 			}(tokenID, amount)
 		}
 		time.Sleep(6 * time.Hour)
@@ -265,6 +270,7 @@ func watchPendingExternalTx() {
 			currentEVMHeight, err := getEVMBlockHeight(networkInfo.Endpoints)
 			if err != nil {
 				log.Fatalln("getEVMBlockHeight err:", networkInfo.Network, err)
+				//TODO
 			}
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {
@@ -490,6 +496,51 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			}
 			if otherInfo.IsFailed {
 				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, exttx `%v`, network `%v`\n", txtype, tx.Txhash, tx.Network))
+			} else {
+				go func() {
+				retry:
+					slackep := os.Getenv("SLACK_SWAP_ALERT")
+					if slackep != "" {
+						swapAlert := ""
+						txIncRequest := tx.IncRequestTx
+						pappTxData, err := database.DBGetPappTxData(txIncRequest)
+						if err != nil {
+							log.Println("DBGetPappTxData", err)
+							time.Sleep(5 * time.Second)
+							goto retry
+						}
+						if pappTxData.PappSwapInfo != "" {
+							pappSwapInfo := wcommon.PappSwapInfo{}
+
+							err = json.Unmarshal([]byte(pappTxData.PappSwapInfo), &pappSwapInfo)
+							if err != nil {
+								log.Println("Unmarshal", err)
+								return
+							}
+							tkInInfo, _ := getTokenInfo(pappSwapInfo.TokenIn)
+							amount := new(big.Float).SetUint64(pappSwapInfo.TokenInAmount)
+							decimal := new(big.Float).SetFloat64(math.Pow10(-18))
+							amountInFloat, _ := amount.Mul(amount, decimal).Float64()
+							tokenInSymbol := tkInInfo.Symbol
+
+							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
+							amount = new(big.Float).SetUint64(pappSwapInfo.TokenInAmount)
+							decimal = new(big.Float).SetFloat64(math.Pow10(-18))
+							amountOutFloat, _ := amount.Mul(amount, decimal).Float64()
+							tokenOutSymbol := tkOutInfo.Symbol
+
+							if otherInfo.IsReverted {
+								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%f %v` to `%f %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+							} else {
+								amount = new(big.Float).SetUint64(otherInfo.Amount)
+								realOutFloat, _ := amount.Mul(amount, decimal).Float64()
+								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%f %v` to `%f %v` | received: `%f %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
+							}
+							log.Println(swapAlert)
+							slacknoti.SendWithCustomChannel(swapAlert, slackep)
+						}
+					}
+				}()
 			}
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain accepted exttx `%v`, network `%v`, incReqTx `%v`\n outcome of tx: `%v`\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
 		}
@@ -568,15 +619,19 @@ func watchEVMAccountBalance() {
 			log.Println("DBRetrieveFeeTable err:", err)
 		}
 
+		balanceResult := make(map[string]string)
+
 		for _, networkInfo := range networks {
 			for _, endpoint := range networkInfo.Endpoints {
 				evmClient, err := ethclient.Dial(endpoint)
 				if err != nil {
+					balanceResult[networkInfo.Network] = err.Error()
 					log.Println(err)
 					continue
 				}
 				feeLeft, err := evmClient.BalanceAt(context.Background(), keyAddr, nil)
 				if err != nil {
+					balanceResult[networkInfo.Network] = err.Error()
 					log.Println(err)
 					continue
 				}
@@ -584,6 +639,7 @@ func watchEVMAccountBalance() {
 
 				gasPrice, ok := feeData.GasPrice[networkInfo.Network]
 				if !ok {
+					balanceResult[networkInfo.Network] = "no gasprice"
 					log.Printf("network %v have no gasprice\n", networkInfo.Network)
 					continue
 				}
@@ -599,14 +655,22 @@ func watchEVMAccountBalance() {
 				log.Printf("network %v estimted has %v txs left (\n", networkInfo.Network, txLeft.Uint64())
 
 				if txLeft.Uint64() <= wcommon.MinEVMTxs {
-					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left (%f) \n", networkInfo.Network, txLeft.Uint64(), feeFloat))
+					balanceResult[networkInfo.Network] = fmt.Sprintf("%f", feeFloat)
+					// go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left (%f) \n", networkInfo.Network, txLeft.Uint64(), feeFloat))
 				} else {
-					go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left (%f)\n", networkInfo.Network, txLeft.Uint64(), feeFloat))
+					balanceResult[networkInfo.Network] = fmt.Sprintf("%f low fee ⚠️", feeFloat)
+					// go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left (%f)\n", networkInfo.Network, txLeft.Uint64(), feeFloat))
 				}
-
 				break
 			}
 		}
+		slacktext := "`[networkfee]`\n"
+		for network, v := range balanceResult {
+			t := fmt.Sprintf("%v: %v\n", network, v)
+			slacktext = slacktext + t
+		}
+
+		go slacknoti.SendSlackNoti(slacktext)
 		time.Sleep(30 * time.Minute)
 	}
 

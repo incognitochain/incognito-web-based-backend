@@ -74,3 +74,11 @@ type ExternalTxSwapResult struct {
 	TokenContract string
 	Amount        uint64
 }
+
+type PappSwapInfo struct {
+	DappName      string
+	TokenIn       string
+	TokenOut      string
+	TokenInAmount uint64
+	MinOutAmount  uint64
+}

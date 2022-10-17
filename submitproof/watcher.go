@@ -526,7 +526,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								log.Println("getTokenDecimalOnNetwork2", err)
 								return
 							}
-							decimal.SetInt64(decimalInt)
+							decimal.SetFloat64(math.Pow10(int(-decimalInt)))
 
 							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenInSymbol := tkInInfo.Symbol
@@ -538,7 +538,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								log.Println("getTokenDecimalOnNetwork2", err)
 								return
 							}
-							decimal.SetInt64(decimalInt)
+							decimal.SetFloat64(math.Pow10(int(-decimalInt)))
 							amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenOutSymbol := tkOutInfo.Symbol
 
@@ -669,11 +669,9 @@ func watchEVMAccountBalance() {
 				log.Printf("network %v estimted has %v txs left (\n", networkInfo.Network, txLeft.Uint64())
 
 				if txLeft.Uint64() <= wcommon.MinEVMTxs {
-					balanceResult[networkInfo.Network] = fmt.Sprintf("%f", feeFloat)
-					// go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left (%f) \n", networkInfo.Network, txLeft.Uint64(), feeFloat))
-				} else {
 					balanceResult[networkInfo.Network] = fmt.Sprintf("%f low fee ⚠️", feeFloat)
-					// go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left (%f)\n", networkInfo.Network, txLeft.Uint64(), feeFloat))
+				} else {
+					balanceResult[networkInfo.Network] = fmt.Sprintf("%f", feeFloat)
 				}
 				break
 			}

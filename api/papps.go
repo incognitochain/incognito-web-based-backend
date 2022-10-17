@@ -623,7 +623,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		switch appName {
 		case "uniswap":
 			fmt.Println("uniswap", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
-			realAmountIn := amountFloat
+			realAmountIn := new(big.Float).Set(amountFloat)
 			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.997))
 			realAmountInFloat, _ := realAmountIn.Float64()
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
@@ -765,28 +765,37 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			pTkAmountFloatStr := pTokenAmount.Text('f', -1)
 
+			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
+			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
+			// outFloat, _ := pTokenAmountPreSlippage.Float64()
+			// inFloat, _ := amountFloat.Float64()
+			// rate := outFloat / inFloat
+
 			pathsList := []string{}
 			for _, v := range paths {
 				pathsList = append(pathsList, v.String())
 			}
 			result = append(result, QuoteDataResp{
-				AppName:           appName,
-				AmountIn:          amount,
-				AmountInRaw:       quote.Data.AmountIn,
-				AmountOut:         pTkAmountFloatStr,
-				AmountOutRaw:      amountOutBig.String(),
-				Paths:             pathsList,
-				Fee:               fees,
-				Calldata:          calldata,
-				CallContract:      contract,
-				FeeAddress:        feeAddress,
-				FeeAddressShardID: int(feeAddressShardID),
-				RouteDebug:        quote.Data.Route,
+				AppName:              appName,
+				AmountIn:             amount,
+				AmountInRaw:          quote.Data.AmountIn,
+				AmountOut:            pTkAmountFloatStr,
+				AmountOutRaw:         amountOutBig.String(),
+				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				Paths:                pathsList,
+				Rate:                 rate.Text('f', -1),
+				Fee:                  fees,
+				Calldata:             calldata,
+				CallContract:         contract,
+				FeeAddress:           feeAddress,
+				FeeAddressShardID:    int(feeAddressShardID),
+				RouteDebug:           quote.Data.Route,
 			})
 			log.Println("done estimate uniswap")
 		case "pancake", "spooky":
 			fmt.Println(appName, networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
-			realAmountIn := amountFloat
+			realAmountIn := new(big.Float).Set(amountFloat)
 			if strings.Contains(config.NetworkID, "testnet") {
 				realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.998))
 			} else {
@@ -895,27 +904,33 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				err = errors.New("Error building call data: amountout out of range")
 				log.Println(err.Error())
 				return nil, err
-
 			}
 			pTokenAmount := new(big.Float).Mul(amountOut, toTokenDecimal)
 			pTkAmountFloatStr := pTokenAmount.Text('f', -1)
+
+			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
+			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
+			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
+
 			contract, ok := pappList.AppContracts[appName]
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
 			}
 
 			result = append(result, QuoteDataResp{
-				AppName:           appName,
-				AmountIn:          amount,
-				AmountOut:         pTkAmountFloatStr,
-				AmountOutRaw:      amountOutBig.String(),
-				Paths:             quote.Data.Route,
-				Fee:               fees,
-				Calldata:          calldata,
-				CallContract:      contract,
-				FeeAddress:        feeAddress,
-				FeeAddressShardID: int(feeAddressShardID),
-				ImpactAmount:      fmt.Sprintf("%.2f", quote.Data.Impact),
+				AppName:              appName,
+				AmountIn:             amount,
+				AmountOut:            pTkAmountFloatStr,
+				AmountOutRaw:         amountOutBig.String(),
+				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				Rate:                 rate.Text('f', -1),
+				Paths:                quote.Data.Route,
+				Fee:                  fees,
+				Calldata:             calldata,
+				CallContract:         contract,
+				FeeAddress:           feeAddress,
+				FeeAddressShardID:    int(feeAddressShardID),
+				ImpactAmount:         fmt.Sprintf("%.2f", quote.Data.Impact),
 			})
 
 			log.Println("done estimate pancake")
@@ -946,7 +961,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			log.Println("amountBigFloat: ", amountBigFloat.String())
 
 			//fee 0.04%
-			realAmountIn := amountBigFloat
+			realAmountIn := new(big.Float).Set(amountBigFloat)
 			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9996))
 
 			// convert float to bigin:
@@ -968,7 +983,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			}
 			var amountOut *big.Int
 			var calldata string
-
+			var pTkAmountPreSlippageFloatStr string
 			for _, endpoint := range networkInfo.Endpoints {
 				evmClient, err := ethclient.Dial(endpoint)
 				if err != nil {
@@ -980,6 +995,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					log.Println(err)
 					continue
 				} else {
+					amountOutBigFloatPreSlippage := new(big.Float).SetInt(amountOut)
+					pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
+					pTkAmountPreSlippageFloatStr = pTokenAmountPreSlippage.Text('f', -1)
 					amountOutBigFloat := new(big.Float).SetInt(amountOut)
 					if slippage != nil {
 						sl := new(big.Float).SetFloat64(0.01)
@@ -1032,16 +1050,18 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, errors.New("contract not found " + appName)
 			}
 			result = append(result, QuoteDataResp{
-				AppName:           appName,
-				AmountIn:          amount,
-				AmountOut:         pTokenAmount.String(),
-				AmountOutRaw:      amountOut.String(),
-				Fee:               fees,
-				CallContract:      contract,
-				Calldata:          calldata,
-				FeeAddress:        feeAddress,
-				Paths:             []string{pTokenContract1.ContractID, pTokenContract2.ContractID},
-				FeeAddressShardID: int(feeAddressShardID),
+				AppName:              appName,
+				AmountIn:             amount,
+				AmountOut:            pTokenAmount.String(),
+				AmountOutRaw:         amountOut.String(),
+				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				Rate:                 rate.Text('f', -1),
+				Fee:                  fees,
+				CallContract:         contract,
+				Calldata:             calldata,
+				FeeAddress:           feeAddress,
+				Paths:                []string{pTokenContract1.ContractID, pTokenContract2.ContractID},
+				FeeAddressShardID:    int(feeAddressShardID),
 			})
 			log.Println("done estimate curve")
 		}
@@ -1510,7 +1530,7 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 
 		feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeeFromToken)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
 
-		additionalTokenInFee1, _ := additionalTokenInFee.Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.PDecimals))).Uint64()
+		additionalTokenInFee1, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.PDecimals))).Uint64()
 		feeAmount2 := feeAmount + additionalTokenInFee1
 
 		gasFeeFromTokenToPrv := gasFeeFromToken + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv

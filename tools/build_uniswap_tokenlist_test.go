@@ -15,9 +15,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
+type PappSupportedTokenData struct {
+	TokenID    string `json:"tokenid" bson:"tokenid"`
+	ContractID string `json:"contractid" bson:"contractid"`
+	Verify     bool   `json:"verify" bson:"verify"`
+}
+
 func TestBuildUniswapTokenList(t *testing.T) {
 	type TokenStruct struct {
 		Address string `json:"address"`
+		ChainID int    `json:"chainId"`
 	}
 
 	contractList := []TokenStruct{}
@@ -52,15 +59,18 @@ func TestBuildUniswapTokenList(t *testing.T) {
 
 	for _, v := range chainTokenList {
 		if v.CurrencyType == common.ERC20 || v.CurrencyType == common.ETH && v.Verified {
-			chainTokenMap[v.ContractID] = v
+			chainTokenMap[strings.ToLower(v.ContractID)] = v
 		}
 	}
 
-	result := []common.PappSupportedTokenData{}
+	result := []PappSupportedTokenData{}
 
 	for _, v := range contractList {
-		if tk, ok := chainTokenMap[v.Address]; ok {
-			token := common.PappSupportedTokenData{
+		if v.ChainID != 1 {
+			continue
+		}
+		if tk, ok := chainTokenMap[strings.ToLower(v.Address)]; ok {
+			token := PappSupportedTokenData{
 				Verify:     true,
 				ContractID: v.Address,
 				TokenID:    tk.TokenID,
@@ -71,17 +81,15 @@ func TestBuildUniswapTokenList(t *testing.T) {
 
 	log.Printf("found %v tokens\n", len(result))
 
-	for _, v := range result {
-		savePappSupportedToken(v)
-	}
+	savePappSupportedToken(result)
 
-	err = addTokenToDB(result, dbendpoint, dbname)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// err = addTokenToDB(result, dbendpoint, dbname)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 }
 
-func savePappSupportedToken(token common.PappSupportedTokenData) error {
+func savePappSupportedToken(token []PappSupportedTokenData) error {
 	agrBytes, _ := json.MarshalIndent(token, "", "\t")
 	writeToFile(fmt.Sprintln(string(agrBytes)), "tokens.json")
 	return nil

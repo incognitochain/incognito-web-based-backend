@@ -403,16 +403,16 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				tkInInfo, _ := getTokenInfo(task.PappSwapInfo.TokenIn)
 				amount := new(big.Float).SetUint64(task.PappSwapInfo.TokenInAmount)
 				decimal := new(big.Float).SetFloat64(math.Pow10(-18))
-				amountInFloat, _ := amount.Mul(amount, decimal).Float64()
+				amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenInSymbol := tkInInfo.Symbol
 
 				tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
 				amount = new(big.Float).SetUint64(task.PappSwapInfo.MinOutAmount)
 				decimal = new(big.Float).SetFloat64(math.Pow10(-18))
-				amountOutFloat, _ := amount.Mul(amount, decimal).Float64()
+				amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenOutSymbol := tkOutInfo.Symbol
 
-				swapAlert = fmt.Sprintf("`[%v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%f %v` to `%f %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+				swapAlert = fmt.Sprintf("`[%v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 				log.Println(swapAlert)
 				slacknoti.SendWithCustomChannel(swapAlert, slackep)
 			}

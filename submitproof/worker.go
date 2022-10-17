@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"os"
 	"strings"
@@ -400,15 +399,29 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			swapAlert := ""
 			pappTxData := data
 			if pappTxData.PappSwapInfo != "" {
+				networkID := wcommon.GetNetworkID(task.Networks[0])
 				tkInInfo, _ := getTokenInfo(task.PappSwapInfo.TokenIn)
 				amount := new(big.Float).SetUint64(task.PappSwapInfo.TokenInAmount)
-				decimal := new(big.Float).SetFloat64(math.Pow10(-18))
+				decimal := new(big.Float)
+				decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
+				if err != nil {
+					log.Println("getTokenDecimalOnNetwork1", err)
+					return
+				}
+				decimal.SetInt64(decimalInt)
+
 				amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenInSymbol := tkInInfo.Symbol
 
 				tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
 				amount = new(big.Float).SetUint64(task.PappSwapInfo.MinOutAmount)
-				decimal = new(big.Float).SetFloat64(math.Pow10(-18))
+
+				decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
+				if err != nil {
+					log.Println("getTokenDecimalOnNetwork2", err)
+					return
+				}
+				decimal.SetInt64(decimalInt)
 				amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenOutSymbol := tkOutInfo.Symbol
 

@@ -521,22 +521,22 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							tkInInfo, _ := getTokenInfo(pappSwapInfo.TokenIn)
 							amount := new(big.Float).SetUint64(pappSwapInfo.TokenInAmount)
 							decimal := new(big.Float).SetFloat64(math.Pow10(-18))
-							amountInFloat, _ := amount.Mul(amount, decimal).Float64()
+							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenInSymbol := tkInInfo.Symbol
 
 							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
 							amount = new(big.Float).SetUint64(pappSwapInfo.MinOutAmount)
 							decimal = new(big.Float).SetFloat64(math.Pow10(-18))
-							amountOutFloat, _ := amount.Mul(amount, decimal).Float64()
+							amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenOutSymbol := tkOutInfo.Symbol
 
 							if otherInfo.IsReverted {
-								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%f %v` to `%f %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 							} else {
 								amount = new(big.Float).SetUint64(otherInfo.Amount)
 								decimal = new(big.Float).SetFloat64(math.Pow10(-tkOutInfo.PDecimals))
-								realOutFloat, _ := amount.Mul(amount, decimal).Float64()
-								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%f %v` to `%f %v` | received: `%f %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
+								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
+								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
 							}
 							log.Println(swapAlert)
 							slacknoti.SendWithCustomChannel(swapAlert, slackep)

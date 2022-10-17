@@ -520,13 +520,25 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							}
 							tkInInfo, _ := getTokenInfo(pappSwapInfo.TokenIn)
 							amount := new(big.Float).SetUint64(pappSwapInfo.TokenInAmount)
-							decimal := new(big.Float).SetFloat64(math.Pow10(-18))
+							decimal := new(big.Float)
+							decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
+							if err != nil {
+								log.Println("getTokenDecimalOnNetwork2", err)
+								return
+							}
+							decimal.SetInt64(decimalInt)
+
 							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenInSymbol := tkInInfo.Symbol
 
 							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
 							amount = new(big.Float).SetUint64(pappSwapInfo.MinOutAmount)
-							decimal = new(big.Float).SetFloat64(math.Pow10(-18))
+							decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
+							if err != nil {
+								log.Println("getTokenDecimalOnNetwork2", err)
+								return
+							}
+							decimal.SetInt64(decimalInt)
 							amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenOutSymbol := tkOutInfo.Symbol
 

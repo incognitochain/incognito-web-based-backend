@@ -407,7 +407,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				tokenInSymbol := tkInInfo.Symbol
 
 				tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
-				amount = new(big.Float).SetUint64(task.PappSwapInfo.TokenInAmount)
+				amount = new(big.Float).SetUint64(task.PappSwapInfo.MinOutAmount)
 				decimal = new(big.Float).SetFloat64(math.Pow10(-18))
 				amountOutFloat, _ := amount.Mul(amount, decimal).Float64()
 				tokenOutSymbol := tkOutInfo.Symbol

@@ -1510,7 +1510,7 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 
 		feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeeFromToken)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
 
-		additionalTokenInFee1, _ := additionalTokenInFee.Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.PDecimals))).Uint64()
+		additionalTokenInFee1, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.PDecimals))).Uint64()
 		feeAmount2 := feeAmount + additionalTokenInFee1
 
 		gasFeeFromTokenToPrv := gasFeeFromToken + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv

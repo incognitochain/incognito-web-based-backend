@@ -623,7 +623,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		switch appName {
 		case "uniswap":
 			fmt.Println("uniswap", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
-			realAmountIn := amountFloat
+			realAmountIn := new(big.Float).Set(amountFloat)
 			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.997))
 			realAmountInFloat, _ := realAmountIn.Float64()
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
@@ -768,6 +768,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
+			// outFloat, _ := pTokenAmountPreSlippage.Float64()
+			// inFloat, _ := amountFloat.Float64()
+			// rate := outFloat / inFloat
 
 			pathsList := []string{}
 			for _, v := range paths {
@@ -781,6 +784,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOutRaw:         amountOutBig.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
 				Paths:                pathsList,
+				Rate:                 rate.Text('f', -1),
 				Fee:                  fees,
 				Calldata:             calldata,
 				CallContract:         contract,
@@ -791,7 +795,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			log.Println("done estimate uniswap")
 		case "pancake", "spooky":
 			fmt.Println(appName, networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
-			realAmountIn := amountFloat
+			realAmountIn := new(big.Float).Set(amountFloat)
 			if strings.Contains(config.NetworkID, "testnet") {
 				realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.998))
 			} else {
@@ -919,6 +923,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOut:            pTkAmountFloatStr,
 				AmountOutRaw:         amountOutBig.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				Rate:                 rate.Text('f', -1),
 				Paths:                quote.Data.Route,
 				Fee:                  fees,
 				Calldata:             calldata,
@@ -956,7 +961,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			log.Println("amountBigFloat: ", amountBigFloat.String())
 
 			//fee 0.04%
-			realAmountIn := amountBigFloat
+			realAmountIn := new(big.Float).Set(amountBigFloat)
 			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9996))
 
 			// convert float to bigin:
@@ -1050,6 +1055,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOut:            pTokenAmount.String(),
 				AmountOutRaw:         amountOut.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				Rate:                 rate.Text('f', -1),
 				Fee:                  fees,
 				CallContract:         contract,
 				Calldata:             calldata,

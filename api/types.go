@@ -65,6 +65,7 @@ type QuoteDataResp struct {
 	AmountOut            string
 	AmountOutRaw         string
 	AmountOutPreSlippage string
+	Rate                 string
 	Fee                  []PappNetworkFee
 	FeeAddress           string
 	FeeAddressShardID    int

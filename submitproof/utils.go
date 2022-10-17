@@ -526,3 +526,20 @@ func genShardsAccount(mainAcc string) error {
 
 // 	return nil, fmt.Errorf("failed after %v tries", numTries)
 // }
+
+func getTokenDecimalOnNetwork(tokenInfo *wcommon.TokenInfo, networkID int) (int64, error) {
+	if tokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, ctk := range tokenInfo.ListUnifiedToken {
+			netID, err := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+			if err != nil {
+				return 0, err
+			}
+			if netID == networkID {
+				return ctk.Decimals, nil
+			}
+		}
+	} else {
+		return tokenInfo.Decimals, nil
+	}
+	return 0, errors.New("invalid token and network")
+}

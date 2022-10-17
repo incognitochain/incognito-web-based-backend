@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"os"
 	"strings"
@@ -408,7 +409,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 					log.Println("getTokenDecimalOnNetwork1", err)
 					return
 				}
-				decimal.SetInt64(decimalInt)
+				decimal.SetFloat64(math.Pow10(int(-decimalInt)))
 
 				amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenInSymbol := tkInInfo.Symbol
@@ -421,7 +422,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 					log.Println("getTokenDecimalOnNetwork2", err)
 					return
 				}
-				decimal.SetInt64(decimalInt)
+				decimal.SetFloat64(math.Pow10(int(-decimalInt)))
 				amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenOutSymbol := tkOutInfo.Symbol
 

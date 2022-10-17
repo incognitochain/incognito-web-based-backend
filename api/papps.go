@@ -239,10 +239,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		// if pdexresult != nil {
-		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
-		// }
+		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		if pdexresult != nil {
+			pdexEstimate = append(pdexEstimate, *pdexresult)
+		}
 	}
 
 	supportedNetworks := []int{}
@@ -450,6 +450,7 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 		return nil
 	}
 
+	amountOutBigFloatPreSlippage := new(big.Float).SetFloat64(v.MaxGet)
 	amountOutBigFloat := new(big.Float).SetFloat64(v.MaxGet)
 	if slippage != nil {
 		sl := new(big.Float).SetFloat64(0.01)
@@ -466,16 +467,23 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 	amountOutBig = amountOutBig.Mul(amountOutBig, new(big.Float).SetFloat64(math.Pow10(-tkToInfo.PDecimals)))
 	amountOut := amountOutBig.String()
 
+	amountOutBigFloatPreSlippage = amountOutBigFloatPreSlippage.Mul(amountOutBigFloatPreSlippage, new(big.Float).SetFloat64(math.Pow10(-tkToInfo.PDecimals)))
+	amountOutPreSlippage := amountOutBigFloatPreSlippage.String()
+
+	rate := new(big.Float).Quo(amountOutBigFloatPreSlippage, new(big.Float).Set(amountBig))
+
 	result := QuoteDataResp{
-		AppName:      "pdex",
-		AmountIn:     amount,
-		AmountInRaw:  fmt.Sprintf("%v", amountRaw),
-		AmountOut:    fmt.Sprintf("%v", amountOut),
-		AmountOutRaw: fmt.Sprintf("%f", pdexResult.MaxGet),
-		Paths:        pdexResult.TokenRoute,
-		PoolPairs:    pdexResult.Route,
-		ImpactAmount: fmt.Sprintf("%f", pdexResult.ImpactAmount),
-		Fee:          []PappNetworkFee{{TokenID: fromToken, Amount: pdexResult.Fee}},
+		AppName:              "pdex",
+		AmountIn:             amount,
+		AmountInRaw:          fmt.Sprintf("%v", amountRaw),
+		AmountOut:            fmt.Sprintf("%v", amountOut),
+		AmountOutRaw:         fmt.Sprintf("%f", pdexResult.MaxGet),
+		AmountOutPreSlippage: amountOutPreSlippage,
+		Rate:                 rate.Text('f', -1),
+		Paths:                pdexResult.TokenRoute,
+		PoolPairs:            pdexResult.Route,
+		ImpactAmount:         fmt.Sprintf("%f", pdexResult.ImpactAmount),
+		Fee:                  []PappNetworkFee{{TokenID: fromToken, Amount: pdexResult.Fee}},
 	}
 
 	return &result
@@ -649,8 +657,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			estGasUsed += 200000
 			estGasUsed = estGasUsed + estGasUsed/3*2
 
-			amountOutBigFloat0, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
-			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountBigFloat))
+			amountOutBigFloat0, _ := new(big.Float).SetString(quote.Data.AmountOut)
+			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountFloat))
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)

@@ -178,7 +178,7 @@ func SuggestGasPrice(client *ethclient.Client) (*big.Int, error) {
 
 	fmt.Println("gas from SuggestGasPrice from chain ID: ", chainID, gasPrice)
 
-	gasPrice = new(big.Int).Mul(big.NewInt(int64(15)), gasPrice)
+	gasPrice = new(big.Int).Mul(big.NewInt(int64(11)), gasPrice)
 	gasPrice = new(big.Int).Div(gasPrice, big.NewInt(int64(10)))
 
 	return gasPrice, nil

@@ -657,7 +657,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			estGasUsed += 200000
 			estGasUsed = estGasUsed + estGasUsed/3*2
 
-			amountOutBigFloat0, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			amountOutBigFloat0, _ := new(big.Float).SetString(quote.Data.AmountOut)
 			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountFloat))
 			gasFee := (estGasUsed * gasPrice)
 

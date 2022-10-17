@@ -269,8 +269,9 @@ func watchPendingExternalTx() {
 		for _, networkInfo := range networks {
 			currentEVMHeight, err := getEVMBlockHeight(networkInfo.Endpoints)
 			if err != nil {
-				log.Fatalln("getEVMBlockHeight err:", networkInfo.Network, err)
-				//TODO
+				log.Println("getEVMBlockHeight err:", networkInfo.Network, err)
+				go slacknoti.SendSlackNoti(fmt.Sprintf("[externaltx] alert!!! can't get block height for network %v ⚠️", networkInfo.Network))
+				continue
 			}
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {
@@ -524,7 +525,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							tokenInSymbol := tkInInfo.Symbol
 
 							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
-							amount = new(big.Float).SetUint64(pappSwapInfo.TokenInAmount)
+							amount = new(big.Float).SetUint64(pappSwapInfo.MinOutAmount)
 							decimal = new(big.Float).SetFloat64(math.Pow10(-18))
 							amountOutFloat, _ := amount.Mul(amount, decimal).Float64()
 							tokenOutSymbol := tkOutInfo.Symbol

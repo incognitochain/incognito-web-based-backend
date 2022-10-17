@@ -269,8 +269,9 @@ func watchPendingExternalTx() {
 		for _, networkInfo := range networks {
 			currentEVMHeight, err := getEVMBlockHeight(networkInfo.Endpoints)
 			if err != nil {
-				log.Fatalln("getEVMBlockHeight err:", networkInfo.Network, err)
-				//TODO
+				log.Println("getEVMBlockHeight err:", networkInfo.Network, err)
+				go slacknoti.SendSlackNoti(fmt.Sprintf("[externaltx] alert!!! can't get block height for network %v ⚠️", networkInfo.Network))
+				continue
 			}
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {

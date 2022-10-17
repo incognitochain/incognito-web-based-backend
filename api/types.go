@@ -58,20 +58,21 @@ type EstimateSwapRespond struct {
 }
 
 type QuoteDataResp struct {
-	AppName           string
-	CallContract      string
-	AmountIn          string
-	AmountInRaw       string
-	AmountOut         string
-	AmountOutRaw      string
-	Fee               []PappNetworkFee
-	FeeAddress        string
-	FeeAddressShardID int
-	Paths             interface{}
-	PoolPairs         []string
-	Calldata          string
-	ImpactAmount      string
-	RouteDebug        interface{}
+	AppName              string
+	CallContract         string
+	AmountIn             string
+	AmountInRaw          string
+	AmountOut            string
+	AmountOutRaw         string
+	AmountOutPreSlippage string
+	Fee                  []PappNetworkFee
+	FeeAddress           string
+	FeeAddressShardID    int
+	Paths                interface{}
+	PoolPairs            []string
+	Calldata             string
+	ImpactAmount         string
+	RouteDebug           interface{}
 }
 
 type SubmitSwapTx struct {

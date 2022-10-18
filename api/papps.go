@@ -801,7 +801,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				RouteDebug:           quote.Data.Route,
 			})
 			log.Println("done estimate uniswap")
-		case "pancake", "spooky":
+		case "pancake", "spooky", "joe":
 			fmt.Println(appName, networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			realAmountIn := new(big.Float).Set(amountFloat)
 			if strings.Contains(config.NetworkID, "testnet") {
@@ -813,14 +813,22 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
 
 			tokenMap := make(map[string]PancakeTokenMapItem)
-			if appName == "pancake" {
+
+			switch appName {
+			case "pancake":
 				tokenMap, err = buildPancakeTokenMap(spTkList)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
-			} else {
+			case "spooky":
 				tokenMap, err = buildSpookyTokenMap(spTkList)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+			case "joe":
+				tokenMap, err = buildJoeTokenMap(spTkList)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -1338,7 +1346,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					}
 					dappSwapInfo.MinOutAmount = data.AmountOutMinimum.Uint64()
 					dappSwapInfo.TokenInAmount = data.AmountIn.Uint64()
-				case "pancake", "spooky":
+				case "pancake", "spooky", "joe":
 					data, err := papps.DecodePancakeCalldata(v.ExternalCalldata)
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode pancake/spooky calldata")
@@ -1404,6 +1412,23 @@ func buildSpookyTokenMap(tokenList []PappSupportedTokenData) (map[string]Pancake
 
 	for _, token := range tokenList {
 		if (token.CurrencyType == wcommon.FTM || token.CurrencyType == wcommon.FTM_ERC20) && token.Verify {
+			contractID := strings.ToLower(token.ContractID)
+
+			result[contractID] = PancakeTokenMapItem{
+				Decimals: token.Decimals,
+				Symbol:   token.Symbol,
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func buildJoeTokenMap(tokenList []PappSupportedTokenData) (map[string]PancakeTokenMapItem, error) {
+	result := make(map[string]PancakeTokenMapItem)
+
+	for _, token := range tokenList {
+		if (token.CurrencyType == wcommon.AVAX || token.CurrencyType == wcommon.AVAX_ERC20) && token.Verify {
 			contractID := strings.ToLower(token.ContractID)
 
 			result[contractID] = PancakeTokenMapItem{

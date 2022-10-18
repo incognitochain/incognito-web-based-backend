@@ -1040,11 +1040,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			estGasUsed := uint64(wcommon.EVMGasLimit)
 
-			amountOutBigFloat0 := new(big.Float).SetInt(amountOut)
+			amountOutBigFloat0, _ := new(big.Float).SetString(pTkAmountPreSlippageFloatStr)
 
-			dcrate := new(big.Float).SetInt64(int64(math.Pow10(pTokenContract1.Decimals - pTokenContract2.Decimals)))
-			rate := new(big.Float).Quo(amountOutBigFloat0, new(big.Float).Set(amountBigFloat))
-			rate.Mul(rate, dcrate)
+			// dcrate := new(big.Float).SetInt64(int64(math.Pow10(pTokenContract1.Decimals - pTokenContract2.Decimals)))
+			amountInFloat, _ := new(big.Float).SetString(amount)
+			rate := new(big.Float).Quo(amountOutBigFloat0, amountInFloat)
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)

@@ -70,8 +70,8 @@ const (
 	NETWORK_BSC_ID
 	NETWORK_PLG_ID
 	NETWORK_FTM_ID
-	NETWORK_AVAX_ID
 	NETWORK_AURORA_ID
+	NETWORK_AVAX_ID
 )
 
 const (
@@ -138,11 +138,12 @@ var (
 
 var (
 	WrappedNativeMap = map[int][]string{
-		NETWORK_PLG_ID: {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
-		NETWORK_BSC_ID: {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
-		NETWORK_ETH_ID: {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
-		NETWORK_FTM_ID: {strings.ToLower("0xf1277d1Ed8AD466beddF92ef448A132661956621"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
-		//Todo add avax and aurora
+		NETWORK_PLG_ID:    {strings.ToLower("0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"), strings.ToLower("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")},
+		NETWORK_BSC_ID:    {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
+		NETWORK_ETH_ID:    {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
+		NETWORK_FTM_ID:    {strings.ToLower("0xf1277d1Ed8AD466beddF92ef448A132661956621"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
+		NETWORK_AVAX_ID:   {strings.ToLower("0xDCd29f325060F8e9F6c21671aDC74dabD0fD5Ff5"), strings.ToLower("0xd00ae08403b9bbb9124bb305c09058e32c39a48c")},
+		NETWORK_AURORA_ID: {strings.ToLower("0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB"), strings.ToLower("0x06303411c91d9d6671A04018621c797cd230DE91")},
 	}
 )
 
@@ -206,7 +207,8 @@ var MainnetIncognitoVault = []PappVaultData{
 		Type:            1,
 		ContractAddress: "0x43D037A562099A4C2c95b1E2120cc43054450629",
 	},
-	{Network: "plg",
+	{
+		Network:         "plg",
 		Type:            1,
 		ContractAddress: "0x43D037A562099A4C2c95b1E2120cc43054450629",
 	},

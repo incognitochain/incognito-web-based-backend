@@ -90,7 +90,7 @@ retry:
 	var fee *big.Int
 	log.Printf("get fee for network %v using endpoint %v \n", network, endpoints[i])
 	switch network {
-	case common.NETWORK_ETH:
+	case common.NETWORK_ETH, common.NETWORK_AVAX:
 		fee, errFee = getEthGasPrice(evmClient)
 	case common.NETWORK_BSC:
 		fee, errFee = getBscGasPrice(evmClient)

@@ -267,7 +267,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 	if contractID == EthNativeAddrStr {
 		for _, token := range tokenList {
 			tokenNetwork, _ := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
-			if token.IsBridge && token.Verified && tokenNetwork == networkID && wcommon.IsNativeCurrency(token.CurrencyType) {
+			if token.Verified && tokenNetwork == networkID && wcommon.IsNativeCurrency(token.CurrencyType) {
 				linkedTokenID = token.TokenID
 				if token.MovedUnifiedToken {
 					for _, pUtokenInfo := range tokenList {
@@ -288,7 +288,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 		}
 	} else {
 		for _, token := range tokenList {
-			if token.IsBridge && token.Verified {
+			if token.Verified {
 				tkContractID := strings.ToLower(token.ContractID)
 				tkNetworkID, err := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
 				if err != nil {

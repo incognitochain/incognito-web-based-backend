@@ -470,7 +470,8 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 	amountOutBigFloatPreSlippage = amountOutBigFloatPreSlippage.Mul(amountOutBigFloatPreSlippage, new(big.Float).SetFloat64(math.Pow10(-tkToInfo.PDecimals)))
 	amountOutPreSlippage := amountOutBigFloatPreSlippage.String()
 
-	rate := new(big.Float).Quo(amountOutBigFloatPreSlippage, new(big.Float).Set(amountBig))
+	amountInFloat, _ := new(big.Float).SetString(amount)
+	rate := new(big.Float).Quo(amountOutBigFloatPreSlippage, new(big.Float).Set(amountInFloat))
 
 	result := QuoteDataResp{
 		AppName:              "pdex",

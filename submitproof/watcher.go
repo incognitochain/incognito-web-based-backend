@@ -181,17 +181,16 @@ func watchPendingFeeRefundTx() {
 						}
 						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 					}
-				}
-
-				if txDetail.IsInBlock {
-					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted, "")
-					if err != nil {
-						log.Println("DBUpdateRefundFeeRefundTx err:", err)
-						continue
+				} else {
+					if txDetail.IsInBlock {
+						err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted, "")
+						if err != nil {
+							log.Println("DBUpdateRefundFeeRefundTx err:", err)
+							continue
+						}
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 					}
-					go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 				}
-
 			}
 		}
 		time.Sleep(20 * time.Second)

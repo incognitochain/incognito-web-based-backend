@@ -292,7 +292,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			}
 		}
 		if len(supportedOutNetworks) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "The amount exceeds the swap limit. Please retry with another token or switch to other pApps"})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "The amount exceeds the swap limit. Please retry with smaller amount."})
 			return
 		}
 		fmt.Println("pass check vault", "supportedOutNetworks", supportedOutNetworks)

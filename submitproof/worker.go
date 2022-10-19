@@ -66,12 +66,16 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		if cfg.FullnodeAuthKey != "" {
 			err = incClient.AuthorizedSubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType), cfg.FullnodeAuthKey, 0, false)
 			if err != nil {
-				return err
+				if !strings.Contains(err.Error(), "has been submitted") {
+					return err
+				}
 			}
 		} else {
 			err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
 			if err != nil {
-				return err
+				if !strings.Contains(err.Error(), "has been submitted") {
+					return err
+				}
 			}
 		}
 	}
@@ -84,12 +88,16 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		if cfg.FullnodeAuthKey != "" {
 			err = incClient.AuthorizedSubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType), cfg.FullnodeAuthKey, 0, false)
 			if err != nil {
-				return err
+				if !strings.Contains(err.Error(), "has been submitted") {
+					return err
+				}
 			}
 		} else {
 			err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
 			if err != nil {
-				return err
+				if !strings.Contains(err.Error(), "has been submitted") {
+					return err
+				}
 			}
 		}
 

@@ -267,7 +267,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 	if contractID == EthNativeAddrStr {
 		for _, token := range tokenList {
 			tokenNetwork, _ := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
-			if token.IsBridge && token.Verified && tokenNetwork == networkID && wcommon.IsNativeCurrency(token.CurrencyType) {
+			if token.Verified && tokenNetwork == networkID && wcommon.IsNativeCurrency(token.CurrencyType) {
 				linkedTokenID = token.TokenID
 				if token.MovedUnifiedToken {
 					for _, pUtokenInfo := range tokenList {
@@ -288,7 +288,7 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 		}
 	} else {
 		for _, token := range tokenList {
-			if token.IsBridge && token.Verified {
+			if token.Verified {
 				tkContractID := strings.ToLower(token.ContractID)
 				tkNetworkID, err := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
 				if err != nil {
@@ -395,7 +395,7 @@ func initIncClient(network string) error {
 	var err error
 	switch network {
 	case "mainnet":
-		incClient, err = incclient.NewMainNetClient()
+		incClient, err = incclient.NewIncClient(config.FullnodeURL, incclient.MainNetETHHost, 2, network)
 	default:
 		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, network)
 	}
@@ -526,3 +526,20 @@ func genShardsAccount(mainAcc string) error {
 
 // 	return nil, fmt.Errorf("failed after %v tries", numTries)
 // }
+
+func getTokenDecimalOnNetwork(tokenInfo *wcommon.TokenInfo, networkID int) (int64, error) {
+	if tokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, ctk := range tokenInfo.ListUnifiedToken {
+			netID, err := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+			if err != nil {
+				return 0, err
+			}
+			if netID == networkID {
+				return ctk.Decimals, nil
+			}
+		}
+	} else {
+		return tokenInfo.Decimals, nil
+	}
+	return 0, errors.New("invalid token and network")
+}

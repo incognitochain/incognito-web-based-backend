@@ -45,40 +45,40 @@ func IsNativeCurrency(currencyType int) bool {
 
 func GetNetworkID(network string) int {
 	switch network {
-	case "inc":
+	case NETWORK_INC:
 		return NETWORK_INC_ID
-	case "eth":
+	case NETWORK_ETH:
 		return NETWORK_ETH_ID
-	case "bsc":
+	case NETWORK_BSC:
 		return NETWORK_BSC_ID
-	case "plg":
+	case NETWORK_PLG:
 		return NETWORK_PLG_ID
-	case "ftm":
+	case NETWORK_FTM:
 		return NETWORK_FTM_ID
-	case "avax":
-		return NETWORK_AVAX_ID
-	case "aurora":
+	case NETWORK_AURORA:
 		return NETWORK_AURORA_ID
+	case NETWORK_AVAX:
+		return NETWORK_AVAX_ID
 	}
 	return -1
 }
 
 func GetNetworkName(network int) string {
 	switch network {
-	case 0:
+	case NETWORK_INC_ID:
 		return NETWORK_INC
-	case 1:
+	case NETWORK_ETH_ID:
 		return NETWORK_ETH
-	case 2:
+	case NETWORK_BSC_ID:
 		return NETWORK_BSC
-	case 3:
+	case NETWORK_PLG_ID:
 		return NETWORK_PLG
-	case 4:
+	case NETWORK_FTM_ID:
 		return NETWORK_FTM
-	case 5:
-		return NETWORK_AVAX
-	case 6:
+	case NETWORK_AURORA_ID:
 		return NETWORK_AURORA
+	case NETWORK_AVAX_ID:
+		return NETWORK_AVAX
 	}
 	return ""
 }

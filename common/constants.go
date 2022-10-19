@@ -51,6 +51,7 @@ const (
 	NETWORK_FTM    = "ftm"
 	NETWORK_AVAX   = "avax"
 	NETWORK_AURORA = "aurora"
+	NETWORK_NEAR   = "near"
 )
 
 const (
@@ -61,6 +62,7 @@ const (
 	NativeCurrencyTypeFTM    = 21
 	NativeCurrencyTypeAVAX   = 28
 	NativeCurrencyTypeAURORA = 30
+	NativeCurrencyTypeNEAR   = 26
 	UnifiedCurrencyType      = 25
 )
 
@@ -109,6 +111,9 @@ const (
 
 	// pUnifined token:
 	UNIFINE_TOKEN //25
+
+	NEAR       //26
+	NEAR_TOKEN //27
 
 	AVAX       //28
 	AVAX_ERC20 //29

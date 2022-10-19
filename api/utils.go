@@ -60,7 +60,7 @@ func initIncClient(network string) error {
 	var err error
 	switch network {
 	case "mainnet":
-		incClient, err = incclient.NewMainNetClient()
+		incClient, err = incclient.NewIncClient(config.FullnodeURL, incclient.MainNetETHHost, 2, network)
 	default:
 		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, network)
 	}
@@ -310,9 +310,6 @@ func transformShieldServicePappSupportedToken(list []common.PappSupportedTokenDa
 		}
 		for _, tk := range tokenList {
 			if !tk.Verified {
-				continue
-			}
-			if !tk.IsBridge {
 				continue
 			}
 			if tk.CurrencyType == common.UnifiedCurrencyType {

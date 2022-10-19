@@ -181,17 +181,16 @@ func watchPendingFeeRefundTx() {
 						}
 						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 					}
-				}
-
-				if txDetail.IsInBlock {
-					err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted, "")
-					if err != nil {
-						log.Println("DBUpdateRefundFeeRefundTx err:", err)
-						continue
+				} else {
+					if txDetail.IsInBlock {
+						err = database.DBUpdateRefundFeeRefundTx(tx.RefundTx, tx.IncRequestTx, wcommon.StatusAccepted, "")
+						if err != nil {
+							log.Println("DBUpdateRefundFeeRefundTx err:", err)
+							continue
+						}
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 					}
-					go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
 				}
-
 			}
 		}
 		time.Sleep(20 * time.Second)
@@ -520,13 +519,25 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							}
 							tkInInfo, _ := getTokenInfo(pappSwapInfo.TokenIn)
 							amount := new(big.Float).SetUint64(pappSwapInfo.TokenInAmount)
-							decimal := new(big.Float).SetFloat64(math.Pow10(-18))
+							decimal := new(big.Float)
+							decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
+							if err != nil {
+								log.Println("getTokenDecimalOnNetwork2", err)
+								return
+							}
+							decimal.SetFloat64(math.Pow10(int(-decimalInt)))
+
 							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenInSymbol := tkInInfo.Symbol
 
 							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
 							amount = new(big.Float).SetUint64(pappSwapInfo.MinOutAmount)
-							decimal = new(big.Float).SetFloat64(math.Pow10(-18))
+							decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
+							if err != nil {
+								log.Println("getTokenDecimalOnNetwork2", err)
+								return
+							}
+							decimal.SetFloat64(math.Pow10(int(-decimalInt)))
 							amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenOutSymbol := tkOutInfo.Symbol
 
@@ -657,11 +668,9 @@ func watchEVMAccountBalance() {
 				log.Printf("network %v estimted has %v txs left (\n", networkInfo.Network, txLeft.Uint64())
 
 				if txLeft.Uint64() <= wcommon.MinEVMTxs {
-					balanceResult[networkInfo.Network] = fmt.Sprintf("%f", feeFloat)
-					// go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] warning! ⚠️ ⚠️ ⚠️ network %v estimted has %v txs left (%f) \n", networkInfo.Network, txLeft.Uint64(), feeFloat))
-				} else {
 					balanceResult[networkInfo.Network] = fmt.Sprintf("%f low fee ⚠️", feeFloat)
-					// go slacknoti.SendSlackNoti(fmt.Sprintf("[networkfee] network %v estimted has %v txs left (%f)\n", networkInfo.Network, txLeft.Uint64(), feeFloat))
+				} else {
+					balanceResult[networkInfo.Network] = fmt.Sprintf("%f", feeFloat)
 				}
 				break
 			}

@@ -312,9 +312,6 @@ func transformShieldServicePappSupportedToken(list []common.PappSupportedTokenDa
 			if !tk.Verified {
 				continue
 			}
-			if !tk.IsBridge {
-				continue
-			}
 			if tk.CurrencyType == common.UnifiedCurrencyType {
 				for _, ctk := range tk.ListUnifiedToken {
 					if ctk.TokenID == v.TokenID {

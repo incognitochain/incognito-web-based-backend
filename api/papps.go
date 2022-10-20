@@ -239,10 +239,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		if pdexresult != nil {
-			pdexEstimate = append(pdexEstimate, *pdexresult)
-		}
+		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		// if pdexresult != nil {
+		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
+		// }
 	}
 
 	supportedNetworks := []int{}

@@ -441,3 +441,7 @@ type TradeWithdrawInfo struct {
 type RetrySwapTx struct {
 	Txs []string
 }
+type APITokenInfoRequest struct {
+	TokenIDs []string
+	Nocache  bool
+}

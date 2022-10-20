@@ -47,7 +47,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	r.GET("/tokenlist", gincache.CachePage(store, 10*time.Second, APIGetSupportedToken))
+	r.GET("/tokenlist", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
+	r.POST("/tokeninfo", gincache.CachePage(store, 5*time.Second, APIGetSupportedTokenInfo))
 
 	r.POST("/estimateshieldreward", APIEstimateReward)
 
@@ -76,7 +77,7 @@ func StartAPIservice(cfg common.Config) {
 
 	pAppsGroup.GET("/getvaultstate", APIGetVaultState)
 
-	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 10*time.Second, APIGetSupportedToken))
+	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 
 	//admin
 	adminGroup := r.Group("/admin")
@@ -86,7 +87,6 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.POST("/retryshield", gincache.CachePage(store, time.Minute, APIRetryShieldTx))
 	adminGroup.POST("/retryswaptx", gincache.CachePage(store, time.Minute, APIRetrySwapTx))
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
-	adminGroup.POST("/submitshieldtx", APISubmitShieldTx)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 
 	go prefetchSupportedTokenList()

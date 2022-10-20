@@ -39,20 +39,20 @@ func main() {
 		panic(err)
 	}
 
+	keylist, err := loadKeyList()
+	if err != nil {
+		log.Println(err)
+	}
 	switch config.Mode {
 	case common.MODE_FEEESTIMATOR:
 		if err := feeestimator.StartService(config); err != nil {
 			log.Fatalln(err)
 		}
 	case common.MODE_TXSUBMITWATCHER:
-		if err := submitproof.StartWatcher(config, serviceID); err != nil {
+		if err := submitproof.StartWatcher(keylist, config, serviceID); err != nil {
 			log.Fatalln(err)
 		}
 	case common.MODE_TXSUBMITWORKER:
-		keylist, err := loadKeyList()
-		if err != nil {
-			log.Println(err)
-		}
 		go func() {
 			if err := submitproof.StartWorker(keylist, config, serviceID); err != nil {
 				log.Fatalln(err)

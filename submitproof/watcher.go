@@ -26,8 +26,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func StartWatcher(cfg wcommon.Config, serviceID uuid.UUID) error {
+func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) error {
 	config = cfg
+	keyList = keylist
 	network := cfg.NetworkID
 
 	err := initIncClient(network)
@@ -140,7 +141,15 @@ func forwardCollectedFee() {
 
 func watchIncAccountBalance() {
 	for {
-		time.Sleep(1 * time.Minute)
+		for _, key := range keyList {
+			bl, err := incClient.GetBalance(key, inccommon.PRVCoinID.String())
+			if err != nil {
+				log.Println("GetBalance", err)
+				continue
+			}
+			log.Println("PRV left:", bl, key)
+		}
+		time.Sleep(10 * time.Minute)
 	}
 }
 

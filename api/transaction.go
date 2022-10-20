@@ -252,6 +252,34 @@ func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
 	return nil, errors.New(fmt.Sprintf("token not found"))
 }
 
+func getTokensInfo(pUTokenID []string) ([]common.TokenInfo, error) {
+	type APIRespond struct {
+		Result []common.TokenInfo
+		Error  *string
+	}
+
+	reqBody := struct {
+		TokenIDs []string
+	}{
+		TokenIDs: pUTokenID,
+	}
+
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqBody).
+		Post(config.CoinserviceURL + "/coins/tokeninfo")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(responseBodyData.Result) == 0 {
+		return nil, errors.New(fmt.Sprintf("tokens not found"))
+	}
+	return responseBodyData.Result, nil
+}
+
 func getTokenNetwork(pUTokenID string, tokenID string) int {
 	tokenInfo, err := getTokenInfo(pUTokenID)
 	if err != nil {

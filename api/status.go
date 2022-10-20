@@ -226,7 +226,7 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 							result["error"] = err.Error()
 							continue
 						}
-						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, data.BurntAmount, outchainTxResult.Amount)
+						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, data.BurntAmount, outchainTxResult.Amount.Uint64())
 						result["swap_detail"] = swapDetail
 					}
 

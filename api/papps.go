@@ -590,7 +590,18 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, err
 	}
 	isUnifiedNativeToken := false
-	// if fromTokenInfo
+	isToTokenNative := false
+
+	if pTokenContract2.CurrencyType == nativeCurrentType {
+		isToTokenNative = true
+	}
+	if pTokenContract2.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, v := range toTokenInfo.ListUnifiedToken {
+			if v.CurrencyType == nativeCurrentType {
+				isToTokenNative = true
+			}
+		}
+	}
 	if pTokenContract1.CurrencyType == nativeCurrentType {
 		isUnifiedNativeToken = true
 	}
@@ -911,7 +922,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				paths = append(paths, tokenAddress)
 			}
 
-			calldata, err := papps.BuildCallDataPancake(paths, amountInBig, amountOutBig, isUnifiedNativeToken)
+			calldata, err := papps.BuildCallDataPancake(paths, amountInBig, amountOutBig, isToTokenNative)
 			if err != nil {
 				log.Println("Error building call data: ", err)
 				err1 := errors.New("Error building call data: " + err.Error())
@@ -1343,24 +1354,23 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode curve calldata")
 					}
-					dappSwapInfo.MinOutAmount = data.MinAmount.Uint64()
-					dappSwapInfo.TokenInAmount = data.Amount.Uint64()
+					dappSwapInfo.MinOutAmount = data.MinAmount
+					dappSwapInfo.TokenInAmount = data.Amount
 				case "uniswap":
 					data, err := papps.DecodeUniswapCalldata(v.ExternalCalldata)
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode uniswap calldata")
 					}
-					dappSwapInfo.MinOutAmount = data.AmountOutMinimum.Uint64()
-					dappSwapInfo.TokenInAmount = data.AmountIn.Uint64()
+					dappSwapInfo.MinOutAmount = data.AmountOutMinimum
+					dappSwapInfo.TokenInAmount = data.AmountIn
 				case "pancake", "spooky", "joe":
 					data, err := papps.DecodePancakeCalldata(v.ExternalCalldata)
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode pancake/spooky calldata")
 					}
-					dappSwapInfo.MinOutAmount = data.AmountOutMin.Uint64()
-					dappSwapInfo.TokenInAmount = data.SrcQty.Uint64()
+					dappSwapInfo.MinOutAmount = data.AmountOutMin
+					dappSwapInfo.TokenInAmount = data.SrcQty
 				}
-
 				if feeToken != requireFeeToken {
 					return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
 				}

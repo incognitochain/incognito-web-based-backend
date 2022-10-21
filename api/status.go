@@ -221,12 +221,12 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 				}
 				if networkResult["swap_outcome"] == "success" {
 					if outchainTxResult.TokenContract != "" {
-						outTokenID, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList)
+						outTokenID, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList, true)
 						if err != nil {
 							result["error"] = err.Error()
 							continue
 						}
-						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, data.BurntAmount, outchainTxResult.Amount)
+						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, common.GetNetworkID(network), data.BurntAmount, outchainTxResult.Amount.Uint64(), false)
 						result["swap_detail"] = swapDetail
 					}
 
@@ -275,14 +275,14 @@ func getPdexSwapTxStatus(txhash string) map[string]interface{} {
 	result["inc_respond_tx"] = swapResult.RespondTxs[0]
 
 	if swapResult.Status == "accepted" {
-		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, swapResult.Amount, swapResult.RespondAmounts[0])
+		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, 0, swapResult.Amount, swapResult.RespondAmounts[0], true)
 		result["swap_detail"] = swapDetail
 	}
 
 	return result
 }
 
-func buildSwapDetail(tokenIn, tokenOut string, inAmount uint64, outAmount uint64) map[string]interface{} {
+func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, outAmount uint64, isPdex bool) map[string]interface{} {
 	result := make(map[string]interface{})
 
 	tokenInInfo, err := getTokenInfo(tokenIn)
@@ -299,12 +299,38 @@ func buildSwapDetail(tokenIn, tokenOut string, inAmount uint64, outAmount uint64
 	inAmountfl64, _ := inAmountBig.Mul(inAmountBig, inDecimal).Float64()
 
 	outAmountBig := new(big.Float).SetUint64(outAmount)
-	outDecimal := new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
-	outAmountfl64, _ := outAmountBig.Mul(outAmountBig, outDecimal).Float64()
+	var outAmountfl64 float64
+	if isPdex {
+		outDecimal := new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
+		outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+	} else {
+		if tokenOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+			if tokenOutInfo.Decimals != -1 {
+				outDecimal := new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+				outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+			} else {
+				for _, ctk := range tokenOutInfo.ListUnifiedToken {
+					netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+					if netID == networkID {
+						outDecimal := new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+						outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+						break
+					}
+				}
+			}
+		} else {
+			outDecimal := new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+			outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+		}
+	}
 
+	af, _ := outAmountBig.Float64()
 	result["token_in"] = tokenIn
 	result["token_out"] = tokenOut
 	result["in_amount"] = fmt.Sprintf("%f", inAmountfl64)
 	result["out_amount"] = fmt.Sprintf("%f", outAmountfl64)
+	result["out_decimal"] = fmt.Sprintf("%v", tokenOutInfo.Decimals)
+	result["out_pdecimal"] = fmt.Sprintf("%v", tokenOutInfo.PDecimals)
+	result["out_amount_big"] = fmt.Sprintf("%f", af)
 	return result
 }

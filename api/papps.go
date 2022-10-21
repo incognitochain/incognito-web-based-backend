@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"math"
@@ -379,15 +380,23 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-
+	var resultLock sync.Mutex
+	var wg sync.WaitGroup
 	for _, network := range supportedNetworks {
-		data, err := estimateSwapFee(req.FromToken, req.ToToken, req.Amount, network, spTkList, networksInfo, networkFees, tkFromInfo, slippage)
-		if err != nil {
-			networkErr[wcommon.GetNetworkName(network)] = err.Error()
-		} else {
-			result.Networks[wcommon.GetNetworkName(network)] = data
-		}
+		wg.Add(1)
+		go func(net int) {
+			data, err := estimateSwapFee(req.FromToken, req.ToToken, req.Amount, net, spTkList, networksInfo, networkFees, tkFromInfo, slippage)
+			resultLock.Lock()
+			if err != nil {
+				networkErr[wcommon.GetNetworkName(net)] = err.Error()
+			} else {
+				result.Networks[wcommon.GetNetworkName(net)] = data
+			}
+			resultLock.Unlock()
+			wg.Done()
+		}(network)
 	}
+	wg.Wait()
 
 	for net, v := range networkErr {
 		result.NetworksError[net] = v
@@ -590,7 +599,18 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, err
 	}
 	isUnifiedNativeToken := false
-	// if fromTokenInfo
+	isToTokenNative := false
+
+	if pTokenContract2.CurrencyType == nativeCurrentType {
+		isToTokenNative = true
+	}
+	if pTokenContract2.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, v := range toTokenInfo.ListUnifiedToken {
+			if v.CurrencyType == nativeCurrentType {
+				isToTokenNative = true
+			}
+		}
+	}
 	if pTokenContract1.CurrencyType == nativeCurrentType {
 		isUnifiedNativeToken = true
 	}
@@ -663,36 +683,6 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
-			// if isUnifiedNativeToken {
-			// 	gasFeeFloat := new(big.Float).SetUint64(gasFee)
-			// 	gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
-			// 	gasFeeInt, _ := gasFeeFloat.Uint64()
-			// 	fees = append(fees, PappNetworkFee{
-			// 		Amount:           ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee+additionalTokenInFee.Uint64()), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 		TokenID:          fromToken,
-			// 		AmountInBuyToken: gasFeeInt,
-			// 	})
-			// } else {
-			// 	gasFeePRV := float64(gasFee+additionalTokenInFee.Uint64()) * nativeToken.PricePrv
-			// 	gasFeeFromToken := gasFeePRV / fromTokenInfo.PricePrv
-			// 	gasFeeFloat := new(big.Float).SetFloat64(gasFeeFromToken)
-			// 	gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
-			// 	gasFeeIntToToken, _ := gasFeeFloat.Uint64()
-
-			// 	if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType {
-			// 		fees = append(fees, PappNetworkFee{
-			// 			Amount:           ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeePRV/fromTokenInfo.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 			TokenID:          fromToken,
-			// 			AmountInBuyToken: gasFeeIntToToken,
-			// 		})
-			// 	} else {
-			// 		fees = append(fees, PappNetworkFee{
-			// 			Amount:           ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeePRV)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 			TokenID:          common.PRVCoinID.String(),
-			// 			AmountInBuyToken: gasFeeIntToToken,
-			// 		})
-			// 	}
-			// }
 			if estGasUsed > wcommon.EVMGasLimitETH {
 				return nil, errors.New("estimated used gas exceed gas limit")
 			}
@@ -805,11 +795,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		case "pancake", "spooky", "joe":
 			fmt.Println(appName, networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			realAmountIn := new(big.Float).Set(amountFloat)
-			if strings.Contains(config.NetworkID, "testnet") {
-				realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.998))
-			} else {
-				realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9975))
-			}
+			// if strings.Contains(config.NetworkID, "testnet") {
+			// 	realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.998))
+			// } else {
+			// 	realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9975))
+			// }
 			realAmountInFloat, _ := realAmountIn.Float64()
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
 
@@ -868,24 +858,6 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
-			// if isUnifiedNativeToken {
-			// 	fees = append(fees, PappNetworkFee{
-			// 		Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 		TokenID: fromToken,
-			// 	})
-			// } else {
-			// 	if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType {
-			// 		fees = append(fees, PappNetworkFee{
-			// 			Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv/fromTokenInfo.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 			TokenID: fromToken,
-			// 		})
-			// 	} else {
-			// 		fees = append(fees, PappNetworkFee{
-			// 			Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 			TokenID: common.PRVCoinID.String(),
-			// 		})
-			// 	}
-			// }
 
 			log.Println("len(quote.Data.Outputs)", len(quote.Data.Outputs), quote.Data.Outputs, quote.Data.Outputs[len(quote.Data.Outputs)-1])
 
@@ -911,7 +883,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				paths = append(paths, tokenAddress)
 			}
 
-			calldata, err := papps.BuildCallDataPancake(paths, amountInBig, amountOutBig, isUnifiedNativeToken)
+			calldata, err := papps.BuildCallDataPancake(paths, amountInBig, amountOutBig, isToTokenNative)
 			if err != nil {
 				log.Println("Error building call data: ", err)
 				err1 := errors.New("Error building call data: " + err.Error())
@@ -1049,24 +1021,6 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			gasFee := (estGasUsed * gasPrice)
 
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
-			// if isUnifiedNativeToken {
-			// 	fees = append(fees, PappNetworkFee{
-			// 		Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", estGasUsed*gasPrice), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 		TokenID: fromToken,
-			// 	})
-			// } else {
-			// 	if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType {
-			// 		fees = append(fees, PappNetworkFee{
-			// 			Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv/fromTokenInfo.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 			TokenID: fromToken,
-			// 		})
-			// 	} else {
-			// 		fees = append(fees, PappNetworkFee{
-			// 			Amount:  ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(float64(estGasUsed*gasPrice)*nativeToken.PricePrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
-			// 			TokenID: common.PRVCoinID.String(),
-			// 		})
-			// 	}
-			// }
 			contract, ok := pappList.AppContracts[appName]
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
@@ -1316,7 +1270,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 
 	for _, v := range md.Data {
 		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))
-		receiveToken, err = getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList)
+		receiveToken, err = getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList, true)
 		if err != nil {
 			return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
 		}
@@ -1343,24 +1297,23 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode curve calldata")
 					}
-					dappSwapInfo.MinOutAmount = data.MinAmount.Uint64()
-					dappSwapInfo.TokenInAmount = data.Amount.Uint64()
+					dappSwapInfo.MinOutAmount = data.MinAmount
+					dappSwapInfo.TokenInAmount = data.Amount
 				case "uniswap":
 					data, err := papps.DecodeUniswapCalldata(v.ExternalCalldata)
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode uniswap calldata")
 					}
-					dappSwapInfo.MinOutAmount = data.AmountOutMinimum.Uint64()
-					dappSwapInfo.TokenInAmount = data.AmountIn.Uint64()
+					dappSwapInfo.MinOutAmount = data.AmountOutMinimum
+					dappSwapInfo.TokenInAmount = data.AmountIn
 				case "pancake", "spooky", "joe":
 					data, err := papps.DecodePancakeCalldata(v.ExternalCalldata)
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode pancake/spooky calldata")
 					}
-					dappSwapInfo.MinOutAmount = data.AmountOutMin.Uint64()
-					dappSwapInfo.TokenInAmount = data.SrcQty.Uint64()
+					dappSwapInfo.MinOutAmount = data.AmountOutMin
+					dappSwapInfo.TokenInAmount = data.SrcQty
 				}
-
 				if feeToken != requireFeeToken {
 					return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
 				}

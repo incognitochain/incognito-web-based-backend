@@ -1,5 +1,7 @@
 package common
 
+import "math/big"
+
 type Config struct {
 	Port            int
 	Mode            string
@@ -72,13 +74,13 @@ type ExternalTxSwapResult struct {
 	IsReverted    bool
 	IsFailed      bool
 	TokenContract string
-	Amount        uint64
+	Amount        *big.Int
 }
 
 type PappSwapInfo struct {
 	DappName      string
 	TokenIn       string
 	TokenOut      string
-	TokenInAmount uint64
-	MinOutAmount  uint64
+	TokenInAmount *big.Int
+	MinOutAmount  *big.Int
 }

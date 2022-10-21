@@ -122,7 +122,7 @@ func getpTokenContractID(tokenID string, networkID int, supportedTokenList []Pap
 	return nil, errors.New("can't find contractID for token " + tokenID)
 }
 
-func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData) (string, error) {
+func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData, filterUnified bool) (string, error) {
 	if contractID == "" {
 		return "", errors.New("contractID cannot be empty")
 	}
@@ -133,8 +133,14 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 		networkName := common.GetNetworkName(networkID)
 		nativeCtype := common.GetNativeNetworkCurrencyType(networkName)
 		for _, v := range supportedTokenList {
-			if v.CurrencyType == nativeCtype {
-				return v.ID, nil
+			if filterUnified {
+				if v.NetworkID == networkID && common.CheckIsWrappedNativeToken(v.ContractID, networkID) && !v.MovedUnifiedToken {
+					return v.ID, nil
+				}
+			} else {
+				if v.CurrencyType == nativeCtype {
+					return v.ID, nil
+				}
 			}
 		}
 	}
@@ -142,6 +148,9 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 	for _, v := range supportedTokenList {
 		v.ContractID = strings.ToLower(v.ContractID)
 		if v.ContractID == contractID && v.NetworkID == networkID {
+			if v.MovedUnifiedToken && filterUnified {
+				continue
+			}
 			return v.ID, nil
 		}
 	}
@@ -434,4 +443,13 @@ func getCurrentBeaconHeight(rpcURL string) (uint64, error) {
 		return 0, err
 	}
 	return responseRPCData.Result.BeaconHeight, nil
+}
+
+func getTokenInfoOfSupportedPappToken(spTkList []PappSupportedTokenData, tokenID string) (*PappSupportedTokenData, error) {
+	for _, v := range spTkList {
+		if v.ID == tokenID {
+			return &v, nil
+		}
+	}
+	return nil, errors.New("token not found")
 }

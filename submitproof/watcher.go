@@ -553,8 +553,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							if otherInfo.IsReverted {
 								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 							} else {
-								amount = new(big.Float).SetUint64(otherInfo.Amount)
-								decimal = new(big.Float).SetFloat64(math.Pow10(-tkOutInfo.PDecimals))
+								amount = new(big.Float).SetInt(otherInfo.Amount)
 								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
 							}

@@ -453,3 +453,66 @@ func getTokenInfoOfSupportedPappToken(spTkList []PappSupportedTokenData, tokenID
 	}
 	return nil, errors.New("token not found")
 }
+
+func getShieldStatus(endpoint, txhash string) (*ShieldStatus, error) {
+	reqRPC := genRPCBody("bridgeaggGetStatusShield", []interface{}{txhash})
+
+	var responseBodyData struct {
+		ID     int           `json:"Id"`
+		Result *ShieldStatus `json:"Result"`
+		Error  *struct {
+			Code       int    `json:"Code"`
+			Message    string `json:"Message"`
+			StackTrace string `json:"StackTrace"`
+		} `json:"Error"`
+	}
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqRPC).
+		Post(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	if responseBodyData.Error != nil {
+		return nil, errors.New(responseBodyData.Error.Message)
+	}
+	return responseBodyData.Result, nil
+}
+
+func getShieldRewardEstimate(uTokenID string, tokenID string, amount uint64) (uint64, error) {
+
+	reqRPC := genRPCBody("bridgeaggEstimateReward", []interface{}{
+		map[string]interface{}{
+			"UnifiedTokenID": uTokenID,
+			"TokenID":        tokenID,
+			"Amount":         amount,
+		},
+	})
+	var responseBodyData struct {
+		ID     int `json:"Id"`
+		Result *struct {
+			ReceivedAmount uint64 `json:"ReceivedAmount"`
+			Reward         uint64 `json:"Reward"`
+		} `json:"Result"`
+		Error *struct {
+			Code       int    `json:"Code"`
+			Message    string `json:"Message"`
+			StackTrace string `json:"StackTrace"`
+		} `json:"Error"`
+	}
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqRPC).
+		Post(config.FullnodeURL)
+	if err != nil {
+		return 0, err
+	}
+
+	if responseBodyData.Error != nil {
+		return 0, errors.New(responseBodyData.Error.Message)
+	}
+	return responseBodyData.Result.Reward, nil
+}

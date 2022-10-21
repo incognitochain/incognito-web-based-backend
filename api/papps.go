@@ -554,6 +554,31 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, err
 	}
 
+	toTokenUnifiedID := ""
+	toTokenChildID := ""
+
+	if toTokenInfo.MovedUnifiedToken {
+		toTokenChildID = toToken
+		toTokenUnifiedID, err = getUnifiedTokenFromChildToken(toTokenChildID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if toTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+			toTokenUnifiedID = toToken
+			for _, ctk := range toTokenInfo.ListUnifiedToken {
+				netID, err := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+				if err != nil {
+					return nil, err
+				}
+				if netID == networkID {
+					toTokenChildID = ctk.TokenID
+					break
+				}
+			}
+		}
+	}
+
 	pTokenContract2, err := getpTokenContractID(toToken, networkID, spTkList)
 	if err != nil {
 		log.Println("err get pTokenContract2")
@@ -775,6 +800,12 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			for _, v := range paths {
 				pathsList = append(pathsList, v.String())
 			}
+			outAmountInc, _ := ConvertToNanoIncognitoToken(new(big.Float).SetInt(amountOutBig), int64(pTokenContract2.Decimals)).Uint64()
+
+			reDepositReward, _ := getShieldRewardEstimate(toTokenUnifiedID, toTokenChildID, outAmountInc)
+			reDepositRewardBig := new(big.Float).SetUint64(reDepositReward)
+			reDepositRewardStr := new(big.Float).Mul(reDepositRewardBig, toTokenDecimal).Text('f', -1)
+
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -782,6 +813,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOut:            pTkAmountFloatStr,
 				AmountOutRaw:         amountOutBig.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				RedepositReward:      reDepositRewardStr,
 				Paths:                pathsList,
 				Rate:                 rate.Text('f', -1),
 				Fee:                  fees,
@@ -792,7 +824,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				RouteDebug:           quote.Data.Route,
 			})
 			log.Println("done estimate uniswap")
-		case "pancake", "spooky", "joe":
+		case "pancake", "spooky", "joe", "trisolaris":
 			fmt.Println(appName, networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			realAmountIn := new(big.Float).Set(amountFloat)
 			// if strings.Contains(config.NetworkID, "testnet") {
@@ -820,6 +852,12 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				}
 			case "joe":
 				tokenMap, err = buildJoeTokenMap(spTkList)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+			case "trisolaris":
+				tokenMap, err = buildTrisolarisTokenMap(spTkList)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -903,6 +941,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
 
+			outAmountInc, _ := ConvertToNanoIncognitoToken(new(big.Float).SetInt(amountOutBig), int64(pTokenContract2.Decimals)).Uint64()
+			reDepositReward, _ := getShieldRewardEstimate(toTokenUnifiedID, toTokenChildID, outAmountInc)
+			reDepositRewardBig := new(big.Float).SetUint64(reDepositReward)
+			reDepositRewardStr := new(big.Float).Mul(reDepositRewardBig, toTokenDecimal).Text('f', -1)
+
 			contract, ok := pappList.AppContracts[appName]
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
@@ -914,6 +957,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOut:            pTkAmountFloatStr,
 				AmountOutRaw:         amountOutBig.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				RedepositReward:      reDepositRewardStr,
 				Rate:                 rate.Text('f', -1),
 				Paths:                quote.Data.Route,
 				Fee:                  fees,
@@ -1025,12 +1069,19 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
 			}
+
+			outAmountInc, _ := ConvertToNanoIncognitoToken(new(big.Float).SetInt(amountOut), int64(pTokenContract2.Decimals)).Uint64()
+			reDepositReward, _ := getShieldRewardEstimate(toTokenUnifiedID, toTokenChildID, outAmountInc)
+			reDepositRewardBig := new(big.Float).SetUint64(reDepositReward)
+			reDepositRewardStr := new(big.Float).Mul(reDepositRewardBig, toTokenDecimal).Text('f', -1)
+
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
 				AmountOut:            pTokenAmount.String(),
 				AmountOutRaw:         amountOut.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
+				RedepositReward:      reDepositRewardStr,
 				Rate:                 rate.Text('f', -1),
 				Fee:                  fees,
 				CallContract:         contract,
@@ -1306,7 +1357,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					}
 					dappSwapInfo.MinOutAmount = data.AmountOutMinimum
 					dappSwapInfo.TokenInAmount = data.AmountIn
-				case "pancake", "spooky", "joe":
+				case "pancake", "spooky", "joe", "trisolaris":
 					data, err := papps.DecodePancakeCalldata(v.ExternalCalldata)
 					if err != nil {
 						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode pancake/spooky calldata")
@@ -1388,6 +1439,23 @@ func buildJoeTokenMap(tokenList []PappSupportedTokenData) (map[string]PancakeTok
 
 	for _, token := range tokenList {
 		if (token.CurrencyType == wcommon.AVAX || token.CurrencyType == wcommon.AVAX_ERC20) && token.Verify {
+			contractID := strings.ToLower(token.ContractID)
+
+			result[contractID] = PancakeTokenMapItem{
+				Decimals: token.Decimals,
+				Symbol:   token.Symbol,
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func buildTrisolarisTokenMap(tokenList []PappSupportedTokenData) (map[string]PancakeTokenMapItem, error) {
+	result := make(map[string]PancakeTokenMapItem)
+
+	for _, token := range tokenList {
+		if (token.CurrencyType == wcommon.AURORA_ETH || token.CurrencyType == wcommon.AURORA_ERC20) && token.Verify {
 			contractID := strings.ToLower(token.ContractID)
 
 			result[contractID] = PancakeTokenMapItem{

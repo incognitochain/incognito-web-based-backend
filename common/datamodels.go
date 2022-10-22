@@ -63,6 +63,7 @@ type PappTxData struct {
 	IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
 	FeeToken         string   `json:"feetoken" bson:"feetoken"`
 	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
+	PFeeAmount       uint64   `json:"pfeeamount" bson:"pfeeamount"`
 	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
 	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
 	PappSwapInfo     string   `json:"pappswapinfo" bson:"pappswapinfo"`
@@ -105,7 +106,6 @@ type RefundFeeData struct {
 	RefundAmount     uint64 `json:"refundamount" bson:"refundamount"`
 	RefundToken      string `json:"refundtoken" bson:"refundtoken"`
 	RefundOTA        string `json:"refundota" bson:"refundota"`
-	RefundOTASS      string `json:"refundotass" bson:"refundotass"`
 	RefundAddress    string `json:"refundaddress" bson:"refundaddress"`
 	RefundTx         string `json:"refundtx" bson:"refundtx"`
 	RefundStatus     string `json:"status" bson:"status"`

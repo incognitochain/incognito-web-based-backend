@@ -126,6 +126,23 @@ func DBGetPappTxNeedFeeRefund(limit int64) ([]common.PappTxData, error) {
 	return result, nil
 }
 
+func DBGetPappTxNeedPrivacyFeeRefund(limit int64) ([]common.PappTxData, error) {
+	var result []common.PappTxData
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusAccepted}, "refundsubmitted": bson.M{operator.Eq: false}, "refundpfee": bson.M{operator.Eq: true}}
+	if limit == 0 {
+		limit = 100
+	}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Sort:  bson.D{{"created_at", -1}},
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func DBGetTxFeeRefundByReq(incReqTx string) (*common.RefundFeeData, error) {
 	var result common.RefundFeeData
 

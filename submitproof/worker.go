@@ -630,6 +630,7 @@ retry:
 			goto retrySaved
 		}
 	}
+	go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` refund fee tx submitted, `%v`, requestTx `%v`, isPrivacyFee `%v`\n", txhash, task.IncReqTx, task.IsPrivacyFeeRefund))
 
 }
 func speedupOutChainSwapTx(network int, evmTxHash string) error {

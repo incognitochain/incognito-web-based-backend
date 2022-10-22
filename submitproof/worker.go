@@ -410,7 +410,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			if pappTxData.PappSwapInfo != "" {
 				networkID := wcommon.GetNetworkID(task.Networks[0])
 				tkInInfo, _ := getTokenInfo(task.PappSwapInfo.TokenIn)
-				amount := new(big.Float).SetUint64(task.PappSwapInfo.TokenInAmount)
+				amount := new(big.Float).SetInt(task.PappSwapInfo.TokenInAmount)
 				decimal := new(big.Float)
 				decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
 				if err != nil {
@@ -423,7 +423,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				tokenInSymbol := tkInInfo.Symbol
 
 				tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
-				amount = new(big.Float).SetUint64(task.PappSwapInfo.MinOutAmount)
+				amount = new(big.Float).SetInt(task.PappSwapInfo.MinOutAmount)
 
 				decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
 				if err != nil {

@@ -79,7 +79,7 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, str
 	var err error
 retry:
 	if i == max_retry {
-		return "", "", "", "", errors.New(finalErr)
+		return "", proofRecord.PaymentAddr, tokenID, linkedTokenID, errors.New(finalErr)
 	}
 	if i > 0 {
 		time.Sleep(10 * time.Second)
@@ -99,7 +99,7 @@ retry:
 		finalErr = "checkProofSubmitted " + err.Error()
 	}
 	if isSubmitted {
-		return "", "", "", "", errors.New(ProofAlreadySubmitError)
+		return "", proofRecord.PaymentAddr, tokenID, linkedTokenID, errors.New(ProofAlreadySubmitError)
 	}
 
 	if linkedTokenID == "" && tokenID == "" {

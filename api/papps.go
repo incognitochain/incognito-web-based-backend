@@ -141,7 +141,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
+	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -150,7 +150,7 @@ func APISubmitSwapTx(c *gin.Context) {
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress)
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
@@ -1262,8 +1262,9 @@ func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
 	return result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkList []PappSupportedTokenData) (bool, []string, string, uint64, int64, *wcommon.PappSwapInfo, error) {
+func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkList []PappSupportedTokenData) (bool, []string, string, uint64, uint64, int64, *wcommon.PappSwapInfo, error) {
 	var feeAmount uint64
+	var pfeeAmount uint64
 	var feeToken string
 
 	var requireFee uint64
@@ -1276,15 +1277,15 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 	callNetworkList := []string{}
 	networkInfo, err := getBridgeNetworkInfos()
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
+		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 	}
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
+		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 	}
 	tokenInfo, err := getTokenInfo(md.BurnTokenID.String())
 	if err != nil {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
+		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 	}
 
 	// burnTokenAssetTag := crypto.HashToPoint(md.BurnTokenID[:])
@@ -1297,7 +1298,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				assetTag := c.GetAssetTag()
 				blinder, err := coin.ComputeAssetTagBlinder(rK)
 				if err != nil {
-					return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
+					return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 				}
 				rawAssetTag := new(crypto.Point).Sub(
 					assetTag,
@@ -1309,13 +1310,13 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 
 			coin, err := c.Decrypt(&incFeeKeySet.KeySet)
 			if err != nil {
-				return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 			}
 			feeAmount = coin.GetValue()
 		}
 	}
 	if feeAmount == 0 {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("you need to paid fee")
+		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("you need to paid fee")
 	}
 	var swapInfo *wcommon.PappSwapInfo
 
@@ -1323,14 +1324,14 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))
 		receiveToken, err = getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList, true)
 		if err != nil {
-			return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, err
+			return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 		}
 		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
 		burnAmountStr := fmt.Sprintf("%f", burnAmountFloat)
 		quoteDatas, err := estimateSwapFee(md.BurnTokenID.String(), receiveToken, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo, nil)
 		if err != nil {
 			log.Println("estimateSwapFee error", err)
-			return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+			return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 		}
 
 		for _, quote := range quoteDatas {
@@ -1346,27 +1347,27 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				case "curve":
 					data, err := papps.DecodeCurveCalldata(v.ExternalCalldata)
 					if err != nil {
-						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode curve calldata")
+						return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't decode curve calldata")
 					}
 					dappSwapInfo.MinOutAmount = data.MinAmount
 					dappSwapInfo.TokenInAmount = data.Amount
 				case "uniswap":
 					data, err := papps.DecodeUniswapCalldata(v.ExternalCalldata)
 					if err != nil {
-						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode uniswap calldata")
+						return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't decode uniswap calldata")
 					}
 					dappSwapInfo.MinOutAmount = data.AmountOutMinimum
 					dappSwapInfo.TokenInAmount = data.AmountIn
 				case "pancake", "spooky", "joe", "trisolaris":
 					data, err := papps.DecodePancakeCalldata(v.ExternalCalldata)
 					if err != nil {
-						return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("can't decode pancake/spooky calldata")
+						return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't decode pancake/spooky calldata")
 					}
 					dappSwapInfo.MinOutAmount = data.AmountOutMin
 					dappSwapInfo.TokenInAmount = data.SrcQty
 				}
 				if feeToken != requireFeeToken {
-					return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
+					return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
 				}
 				for _, fee := range quote.Fee {
 					if fee.TokenID == feeToken {
@@ -1375,9 +1376,10 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 							feeDiffFloat := math.Abs(float64(feeDiff))
 							diffPercent := feeDiffFloat / float64(fee.Amount) * 100
 							if diffPercent > wcommon.PercentFeeDiff {
-								return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
+								return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
 							}
 						}
+						pfeeAmount = fee.privacyFee
 					}
 				}
 				swapInfo = &dappSwapInfo
@@ -1386,12 +1388,12 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 		}
 	}
 	if requireFeeToken == "" {
-		return result, callNetworkList, feeToken, feeAmount, feeDiff, nil, errors.New("invalid ExternalCallAddress")
+		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("invalid ExternalCallAddress")
 	}
 	// all pass
 	result = true
 
-	return result, callNetworkList, feeToken, feeAmount, feeDiff, swapInfo, nil
+	return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, nil
 }
 
 func buildPancakeTokenMap(tokenList []PappSupportedTokenData) (map[string]PancakeTokenMapItem, error) {
@@ -1611,12 +1613,14 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 				Amount:           feeAmount2,
 				TokenID:          fromToken,
 				AmountInBuyToken: gasFeeIntToToken,
+				privacyFee:       additionalTokenInFee1,
 			})
 		} else {
 			fees = append(fees, PappNetworkFee{
 				Amount:           ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeeFromTokenToPrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
 				TokenID:          common.PRVCoinID.String(),
 				AmountInBuyToken: gasFeeIntToToken,
+				privacyFee:       uint64(float64(additionalTokenInFee1) * fromTokenInfo.PricePrv),
 			})
 		}
 	}

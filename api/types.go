@@ -65,6 +65,7 @@ type QuoteDataResp struct {
 	AmountOut            string
 	AmountOutRaw         string
 	AmountOutPreSlippage string
+	RedepositReward      string
 	Rate                 string
 	Fee                  []PappNetworkFee
 	FeeAddress           string
@@ -440,4 +441,19 @@ type TradeWithdrawInfo struct {
 
 type RetrySwapTx struct {
 	Txs []string
+}
+type APITokenInfoRequest struct {
+	TokenIDs []string
+	Nocache  bool
+}
+
+type ShieldStatusData struct {
+	Amount uint64 `json:"Amount"`
+	Reward uint64 `json:"Reward"`
+}
+
+type ShieldStatus struct {
+	Status    byte               `json:"Status"`
+	Data      []ShieldStatusData `json:"Data,omitempty"`
+	ErrorCode int                `json:"ErrorCode,omitempty"`
 }

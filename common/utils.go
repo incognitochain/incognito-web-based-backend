@@ -95,7 +95,7 @@ func CheckIsWrappedNativeToken(contractAddress string, network int) bool {
 	list, exist := WrappedNativeMap[network]
 	if exist {
 		for _, v := range list {
-			if strings.ToLower(contractAddress) == v {
+			if strings.EqualFold(contractAddress, v) {
 				return true
 			}
 		}

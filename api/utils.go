@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 	"strings"
@@ -147,7 +148,8 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 	contractID = strings.ToLower(contractID)
 	for _, v := range supportedTokenList {
 		v.ContractID = strings.ToLower(v.ContractID)
-		if v.ContractID == contractID && v.NetworkID == networkID {
+		netID, _ := common.GetNetworkIDFromCurrencyType(v.CurrencyType)
+		if v.ContractID == contractID && netID == networkID {
 			if v.MovedUnifiedToken && filterUnified {
 				continue
 			}
@@ -482,7 +484,7 @@ func getShieldStatus(endpoint, txhash string) (*ShieldStatus, error) {
 }
 
 func getShieldRewardEstimate(uTokenID string, tokenID string, amount uint64) (uint64, error) {
-
+	log.Println("getShieldRewardEstimate", uTokenID, tokenID, amount)
 	reqRPC := genRPCBody("bridgeaggEstimateReward", []interface{}{
 		map[string]interface{}{
 			"UnifiedTokenID": uTokenID,
@@ -510,9 +512,10 @@ func getShieldRewardEstimate(uTokenID string, tokenID string, amount uint64) (ui
 	if err != nil {
 		return 0, err
 	}
-
 	if responseBodyData.Error != nil {
 		return 0, errors.New(responseBodyData.Error.Message)
 	}
+	log.Println("getShieldRewardEstimate Reward", responseBodyData.Result.Reward)
+
 	return responseBodyData.Result.Reward, nil
 }

@@ -182,7 +182,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		return
 	}
 	switch req.Network {
-	case "inc", "eth", "bsc", "plg", "ftm":
+	case "inc", "eth", "bsc", "plg", "ftm", "aurora", "avax":
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "unsupported network"})
 		return
@@ -240,10 +240,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		// if pdexresult != nil {
-		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
-		// }
+		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		if pdexresult != nil {
+			pdexEstimate = append(pdexEstimate, *pdexresult)
+		}
 	}
 
 	supportedNetworks := []int{}
@@ -678,7 +678,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		case "uniswap":
 			fmt.Println("uniswap", networkID, pTokenContract1.ContractID, pTokenContract2.ContractID)
 			realAmountIn := new(big.Float).Set(amountFloat)
-			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.997))
+			// realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.997))
 			realAmountInFloat, _ := realAmountIn.Float64()
 			realAmountInStr := fmt.Sprintf("%f", realAmountInFloat)
 
@@ -800,8 +800,8 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			for _, v := range paths {
 				pathsList = append(pathsList, v.String())
 			}
-			outAmountInc, _ := ConvertToNanoIncognitoToken(new(big.Float).SetInt(amountOutBig), int64(pTokenContract2.Decimals)).Uint64()
 
+			outAmountInc := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountOutBig.String(), int64(pTokenContract2.Decimals), int64(pTokenContract2.PDecimals))
 			reDepositReward, _ := getShieldRewardEstimate(toTokenUnifiedID, toTokenChildID, outAmountInc)
 			reDepositRewardBig := new(big.Float).SetUint64(reDepositReward)
 			reDepositRewardStr := new(big.Float).Mul(reDepositRewardBig, toTokenDecimal).Text('f', -1)
@@ -941,7 +941,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
 
-			outAmountInc, _ := ConvertToNanoIncognitoToken(new(big.Float).SetInt(amountOutBig), int64(pTokenContract2.Decimals)).Uint64()
+			outAmountInc := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountOutBig.String(), int64(pTokenContract2.Decimals), int64(pTokenContract2.PDecimals))
 			reDepositReward, _ := getShieldRewardEstimate(toTokenUnifiedID, toTokenChildID, outAmountInc)
 			reDepositRewardBig := new(big.Float).SetUint64(reDepositReward)
 			reDepositRewardStr := new(big.Float).Mul(reDepositRewardBig, toTokenDecimal).Text('f', -1)
@@ -997,7 +997,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			//fee 0.04%
 			realAmountIn := new(big.Float).Set(amountBigFloat)
-			realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9996))
+			// realAmountIn = realAmountIn.Mul(realAmountIn, new(big.Float).SetFloat64(0.9996))
 
 			// convert float to bigin:
 			amountBigInt, _ := realAmountIn.Int(nil)
@@ -1070,7 +1070,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, errors.New("contract not found " + appName)
 			}
 
-			outAmountInc, _ := ConvertToNanoIncognitoToken(new(big.Float).SetInt(amountOut), int64(pTokenContract2.Decimals)).Uint64()
+			outAmountInc := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(amountOut.String(), int64(pTokenContract2.Decimals), int64(pTokenContract2.PDecimals))
 			reDepositReward, _ := getShieldRewardEstimate(toTokenUnifiedID, toTokenChildID, outAmountInc)
 			reDepositRewardBig := new(big.Float).SetUint64(reDepositReward)
 			reDepositRewardStr := new(big.Float).Mul(reDepositRewardBig, toTokenDecimal).Text('f', -1)
@@ -1643,3 +1643,36 @@ func APIRetrySwapTx(c *gin.Context) {
 	}
 
 }
+
+// "3a526c0fa9abfc3e3e37becc52c5c10abbb7897b0534ad17018e766fc6133590"
+// "cd6dc64b6aac374de86b3376fc3765e5c129ae9b14a0abc30ee888b801dd5148": {
+// 	"Amount": 61858000,
+// 	"LockedAmount": 61858000,
+// 	"WaitingUnshieldAmount": 446589900,
+// 	"WaitingUnshieldFee": 44658990,
+// 	"ExtDecimal": 6,
+// 	"NetworkID": 3,
+// 	"IncTokenID": "cd6dc64b6aac374de86b3376fc3765e5c129ae9b14a0abc30ee888b801dd5148"
+// },
+
+// "50092f46f3f9dcebd3176de97c936950977bcc52a22eebb2863b8e4d24261434"
+// "9a30e84cfe6346cda25c26066c1a4983bc60021e19c29cc0f35a619048313051": {
+// 	"Amount": 0,
+// 	"LockedAmount": 0,
+// 	"WaitingUnshieldAmount": 1230000,
+// 	"WaitingUnshieldFee": 123000,
+// 	"ExtDecimal": 18,
+// 	"NetworkID": 4,
+// 	"IncTokenID": "9a30e84cfe6346cda25c26066c1a4983bc60021e19c29cc0f35a619048313051"
+// },
+
+// "b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d"
+// "a474ec7214b16ad6a6a355e732f2f511d8f2aa79cb4bd498ca46b05f3cfb0e53": {
+// 	"Amount": 123429161,
+// 	"LockedAmount": 123429161,
+// 	"WaitingUnshieldAmount": 27841359,
+// 	"WaitingUnshieldFee": 2784136,
+// 	"ExtDecimal": 18,
+// 	"NetworkID": 2,
+// 	"IncTokenID": "a474ec7214b16ad6a6a355e732f2f511d8f2aa79cb4bd498ca46b05f3cfb0e53"
+// },

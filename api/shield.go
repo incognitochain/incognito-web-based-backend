@@ -29,7 +29,10 @@ func APIEstimateReward(c *gin.Context) {
 		},
 	})
 
-	var responseBodyData APIRespond
+	var responseBodyData struct {
+		Result interface{}
+		Error  interface{}
+	}
 	_, err = restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").

@@ -321,6 +321,7 @@ func watchPendingExternalTx() {
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {
 				log.Println("DBRetrievePendingExternalTx err:", err)
+				continue
 			}
 			for _, tx := range txList {
 				err := processPendingExternalTxs(tx, currentEVMHeight, uint64(networkInfo.ConfirmationBlocks), networkInfo.Endpoints)
@@ -527,8 +528,19 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					return err
 				}
 			}
+			if otherInfo.IsReverted {
+				err = database.DBUpdatePappRefundPFee(tx.IncRequestTx, true)
+				if err != nil {
+					return err
+				}
+			}
 
 			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusAccepted, "")
+			if err != nil {
+				return err
+			}
+
+			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncRequestTx, wcommon.StatusAccepted)
 			if err != nil {
 				return err
 			}
@@ -640,7 +652,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusSubmitting)
+			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
 			if err != nil {
 				return err
 			}
@@ -748,6 +760,14 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 		}
 	}
 
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txList, err = database.DBGetPappTxPendingOutchainSubmit(0, 0)
+	if err != nil {
+		return nil, err
+	}
 	for _, v := range txList {
 		result[v.FeeToken] += v.FeeAmount
 	}

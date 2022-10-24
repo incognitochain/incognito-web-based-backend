@@ -1584,6 +1584,7 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 			Amount:           feeAmount,
 			TokenID:          fromToken,
 			AmountInBuyToken: gasFeeInt,
+			privacyFee:       additionalTokenInFeeUint,
 		})
 	} else {
 

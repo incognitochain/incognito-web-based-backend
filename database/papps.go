@@ -177,7 +177,7 @@ func DBGetPappWaitingSubmitOutchain(offset, limit int64) ([]common.PappTxData, e
 
 func DBSavePappTxData(txdata common.PappTxData) (*primitive.ObjectID, error) {
 	filter := bson.M{"inctx": bson.M{operator.Eq: txdata.IncTx}}
-	update := bson.M{"$set": bson.M{"created_at": time.Now(), "status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "burnttoken": txdata.BurntToken, "burntamount": txdata.BurntAmount, "pappswapinfo": txdata.PappSwapInfo, "isunifiedtoken": txdata.IsUnifiedToken, "fee_refundota": txdata.FeeRefundOTA, "fee_refundaddress": txdata.FeeRefundAddress, "refundsubmitted": txdata.RefundSubmitted, "outchain_status": txdata.OutchainStatus}}
+	update := bson.M{"$set": bson.M{"created_at": time.Now(), "status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "burnttoken": txdata.BurntToken, "burntamount": txdata.BurntAmount, "pappswapinfo": txdata.PappSwapInfo, "isunifiedtoken": txdata.IsUnifiedToken, "fee_refundota": txdata.FeeRefundOTA, "fee_refundaddress": txdata.FeeRefundAddress, "refundsubmitted": txdata.RefundSubmitted, "refundpfee": txdata.RefundPrivacyFee, "pfeeamount": txdata.PFeeAmount, "outchain_status": txdata.OutchainStatus}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	result, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
@@ -185,6 +185,17 @@ func DBSavePappTxData(txdata common.PappTxData) (*primitive.ObjectID, error) {
 	}
 	docID := result.UpsertedID.(primitive.ObjectID)
 	return &docID, nil
+}
+
+func DBUpdatePappRefundPFee(incTx string, refundpfee bool) error {
+	filter := bson.M{"inctx": bson.M{operator.Eq: incTx}}
+	update := bson.M{"$set": bson.M{"refundpfee": refundpfee}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func DBRetrievePendingPappTxs(pappType int, offset, limit int64) ([]common.PappTxData, error) {
@@ -285,6 +296,25 @@ func DBGetPappTxDataByStatus(status string, offset, limit int64) ([]common.PappT
 		limit = int64(1000)
 	}
 	filter := bson.M{"status": bson.M{operator.Eq: status}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Skip:  &offset,
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("found %v PappTxData in %v", len(result), time.Since(startTime))
+	return result, nil
+}
+
+func DBGetPappTxPendingOutchainSubmit(offset, limit int64) ([]common.PappTxData, error) {
+	startTime := time.Now()
+	var result []common.PappTxData
+	if limit == 0 {
+		limit = int64(1000)
+	}
+	filter := bson.M{"outchain_status": bson.M{operator.In: []string{common.StatusSubmitting, common.StatusPending}}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,

@@ -240,10 +240,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		if pdexresult != nil {
-			pdexEstimate = append(pdexEstimate, *pdexresult)
-		}
+		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		// if pdexresult != nil {
+		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
+		// }
 	}
 
 	supportedNetworks := []int{}
@@ -293,7 +293,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			}
 		}
 		if len(supportedOutNetworks) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "The amount exceeds the swap limit. Please retry with another token or switch to other pApps"})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "The amount exceeds the swap limit. Please retry with smaller amount."})
 			return
 		}
 		fmt.Println("pass check vault", "supportedOutNetworks", supportedOutNetworks)

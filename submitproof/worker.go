@@ -293,20 +293,26 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 	}
 	go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
 
-	m.Ack()
 	err = database.DBSaveExternalTxStatus(status)
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
 		if !ok {
 			log.Println("DBSaveExternalTxStatus err", err)
-			m.Nack()
+			m.Ack()
 			return
 		}
 		if !writeErr.HasErrorCode(11000) {
 			log.Println("DBSaveExternalTxStatus err", err)
-			m.Nack()
+			m.Ack()
 			return
 		}
+	}
+
+	err = database.DBUpdatePappTxSubmitOutchainStatus(task.IncTxhash, wcommon.StatusPending)
+	if err != nil {
+		log.Println("DBUpdatePappTxSubmitOutchainStatus err", err)
+		m.Ack()
+		return
 	}
 
 	m.Ack()
@@ -329,6 +335,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		IsUnifiedToken:   task.IsUnifiedToken,
 		FeeToken:         task.FeeToken,
 		FeeAmount:        task.FeeAmount,
+		PFeeAmount:       task.PFeeAmount,
 		BurntToken:       task.BurntToken,
 		BurntAmount:      task.BurntAmount,
 		PappSwapInfo:     string(pappSwapInfoStr),

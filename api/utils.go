@@ -148,7 +148,10 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 	contractID = strings.ToLower(contractID)
 	for _, v := range supportedTokenList {
 		v.ContractID = strings.ToLower(v.ContractID)
-		netID, _ := common.GetNetworkIDFromCurrencyType(v.CurrencyType)
+		netID := v.NetworkID
+		if v.CurrencyType != common.UnifiedCurrencyType {
+			netID, _ = common.GetNetworkIDFromCurrencyType(v.CurrencyType)
+		}
 		if v.ContractID == contractID && netID == networkID {
 			if v.MovedUnifiedToken && filterUnified {
 				continue

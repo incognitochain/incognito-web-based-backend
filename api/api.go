@@ -75,7 +75,7 @@ func StartAPIservice(cfg common.Config) {
 
 	pAppsGroup.POST("/submitswaptx", APISubmitSwapTx)
 
-	pAppsGroup.POST("/swapstatus", gincache.CachePage(store, 10*time.Second, APIGetSwapTxStatus))
+	pAppsGroup.POST("/swapstatus", APIGetSwapTxStatus)
 
 	pAppsGroup.GET("/getvaultstate", APIGetVaultState)
 

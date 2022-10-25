@@ -1,8 +1,10 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	gincache "github.com/gin-contrib/cache"
@@ -50,7 +52,7 @@ func StartAPIservice(cfg common.Config) {
 	r.GET("/tokenlist", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 	r.POST("/tokeninfo", gincache.CachePage(store, 5*time.Second, APIGetSupportedTokenInfo))
 
-	r.POST("/estimateshieldreward", APIEstimateReward)
+	r.POST("/estimateshieldreward", gincache.CachePage(store, 5*time.Second, APIEstimateReward))
 
 	r.POST("/estimateunshieldfee", APIEstimateUnshield)
 
@@ -60,7 +62,7 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
-	r.GET("/validaddress", APIValidateAddress)
+	r.GET("/validaddress", gincache.CachePage(store, time.Minute, APIValidateAddress))
 
 	r.POST("/submitshieldtx", APISubmitShieldTx) //depercated
 
@@ -69,7 +71,7 @@ func StartAPIservice(cfg common.Config) {
 	//papps
 	pAppsGroup := r.Group("/papps")
 
-	pAppsGroup.POST("/estimateswapfee", APIEstimateSwapFee)
+	pAppsGroup.POST("/estimateswapfee", gincache.CachePage(store, 5*time.Second, APIEstimateSwapFee))
 
 	pAppsGroup.POST("/submitswaptx", APISubmitSwapTx)
 
@@ -111,8 +113,11 @@ func loadOTAKey(key string) error {
 }
 
 var supportTokenList []PappSupportedTokenData
+var childToUnifiedTokenLock sync.RWMutex
+var childToUnifiedTokenMap map[string]string
 
 func prefetchSupportedTokenList() {
+	childToUnifiedTokenMap = make(map[string]string)
 	for {
 		tokenList, err := retrieveTokenList()
 		if err != nil {
@@ -120,6 +125,15 @@ func prefetchSupportedTokenList() {
 			time.Sleep(5 * time.Second)
 			continue
 		}
+		childToUnifiedTokenLock.Lock()
+		for _, tk := range tokenList {
+			if tk.CurrencyType == common.UnifiedCurrencyType {
+				for _, ctk := range tk.ListUnifiedToken {
+					childToUnifiedTokenMap[ctk.TokenID] = tk.TokenID
+				}
+			}
+		}
+		childToUnifiedTokenLock.Unlock()
 
 		spTkList, err := getPappSupportedTokenList(tokenList)
 		if err != nil {
@@ -132,6 +146,16 @@ func prefetchSupportedTokenList() {
 
 		time.Sleep(5 * time.Second)
 	}
+}
+
+func getUnifiedTokenFromChildToken(childToken string) (string, error) {
+	childToUnifiedTokenLock.RLock()
+	defer childToUnifiedTokenLock.RUnlock()
+	tkID, ok := childToUnifiedTokenMap[childToken]
+	if !ok {
+		return "", errors.New("can't find child token")
+	}
+	return tkID, nil
 }
 
 func getSupportedTokenList() []PappSupportedTokenData {

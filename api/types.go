@@ -65,6 +65,7 @@ type QuoteDataResp struct {
 	AmountOut            string
 	AmountOutRaw         string
 	AmountOutPreSlippage string
+	RedepositReward      string
 	Rate                 string
 	Fee                  []PappNetworkFee
 	FeeAddress           string
@@ -369,6 +370,7 @@ type PappNetworkFee struct {
 	TokenID          string `json:"tokenid"`
 	Amount           uint64 `json:"amount"`
 	AmountInBuyToken string `json:"amountInBuyToken"`
+	privacyFee       uint64
 }
 
 type PancakeTokenMapItem struct {
@@ -444,4 +446,15 @@ type RetrySwapTx struct {
 type APITokenInfoRequest struct {
 	TokenIDs []string
 	Nocache  bool
+}
+
+type ShieldStatusData struct {
+	Amount uint64 `json:"Amount"`
+	Reward uint64 `json:"Reward"`
+}
+
+type ShieldStatus struct {
+	Status    byte               `json:"Status"`
+	Data      []ShieldStatusData `json:"Data,omitempty"`
+	ErrorCode int                `json:"ErrorCode,omitempty"`
 }

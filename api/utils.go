@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 	"strings"
@@ -147,7 +148,11 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 	contractID = strings.ToLower(contractID)
 	for _, v := range supportedTokenList {
 		v.ContractID = strings.ToLower(v.ContractID)
-		if v.ContractID == contractID && v.NetworkID == networkID {
+		netID := v.NetworkID
+		if v.CurrencyType != common.UnifiedCurrencyType {
+			netID, _ = common.GetNetworkIDFromCurrencyType(v.CurrencyType)
+		}
+		if v.ContractID == contractID && netID == networkID {
 			if v.MovedUnifiedToken && filterUnified {
 				continue
 			}
@@ -452,4 +457,68 @@ func getTokenInfoOfSupportedPappToken(spTkList []PappSupportedTokenData, tokenID
 		}
 	}
 	return nil, errors.New("token not found")
+}
+
+func getShieldStatus(endpoint, txhash string) (*ShieldStatus, error) {
+	reqRPC := genRPCBody("bridgeaggGetStatusShield", []interface{}{txhash})
+
+	var responseBodyData struct {
+		ID     int           `json:"Id"`
+		Result *ShieldStatus `json:"Result"`
+		Error  *struct {
+			Code       int    `json:"Code"`
+			Message    string `json:"Message"`
+			StackTrace string `json:"StackTrace"`
+		} `json:"Error"`
+	}
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqRPC).
+		Post(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	if responseBodyData.Error != nil {
+		return nil, errors.New(responseBodyData.Error.Message)
+	}
+	return responseBodyData.Result, nil
+}
+
+func getShieldRewardEstimate(uTokenID string, tokenID string, amount uint64) (uint64, error) {
+	log.Println("getShieldRewardEstimate", uTokenID, tokenID, amount)
+	reqRPC := genRPCBody("bridgeaggEstimateReward", []interface{}{
+		map[string]interface{}{
+			"UnifiedTokenID": uTokenID,
+			"TokenID":        tokenID,
+			"Amount":         amount,
+		},
+	})
+	var responseBodyData struct {
+		ID     int `json:"Id"`
+		Result *struct {
+			ReceivedAmount uint64 `json:"ReceivedAmount"`
+			Reward         uint64 `json:"Reward"`
+		} `json:"Result"`
+		Error *struct {
+			Code       int    `json:"Code"`
+			Message    string `json:"Message"`
+			StackTrace string `json:"StackTrace"`
+		} `json:"Error"`
+	}
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqRPC).
+		Post(config.FullnodeURL)
+	if err != nil {
+		return 0, err
+	}
+	if responseBodyData.Error != nil {
+		return 0, errors.New(responseBodyData.Error.Message)
+	}
+	log.Println("getShieldRewardEstimate Reward", responseBodyData.Result.Reward)
+
+	return responseBodyData.Result.Reward, nil
 }

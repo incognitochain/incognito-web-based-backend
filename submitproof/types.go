@@ -21,6 +21,7 @@ type SubmitPappTxTask struct {
 	IsUnifiedToken   bool
 	FeeToken         string
 	FeeAmount        uint64
+	PFeeAmount       uint64
 	FeeRefundOTA     string
 	FeeRefundAddress string
 	BurntToken       string
@@ -35,9 +36,10 @@ type SubmitRefundFeeTask struct {
 	Token    string
 	OTA      string
 	// OTASS          string
-	PaymentAddress string
-	Amount         uint64
-	Time           time.Time
+	IsPrivacyFeeRefund bool
+	PaymentAddress     string
+	Amount             uint64
+	Time               time.Time
 }
 
 type SubmitPappProofOutChainTask struct {

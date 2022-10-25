@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -115,7 +116,7 @@ retry:
 		log.Println("error:", "invalid tokenID empty", proofRecord.ContractID, networkID)
 		goto retry
 	}
-	incTx, err := submitProofTx(depositProof, linkedTokenID, tokenID, networkID, key)
+	incTx, err := submitProofTx(depositProof, linkedTokenID, tokenID, networkID, key, txhash)
 	if err != nil {
 		log.Println("error:", err)
 		fmt.Println("linkedTokenID, tokenID", linkedTokenID, tokenID)
@@ -131,7 +132,26 @@ retry:
 	return incTx, proofRecord.PaymentAddr, tokenID, linkedTokenID, nil
 }
 
-func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int, key string) (string, error) {
+func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID string, networkID int, key string, txhash string) (string, error) {
+	if networkID == wcommon.NETWORK_AURORA_ID {
+		if strings.Contains(txhash, "0x") {
+			txhash = strings.TrimLeft(txhash, "0x")
+		}
+		if tokenID == pUTokenID {
+			result, err := incClient.CreateAndSendIssuingEVMAuroraRequestTransaction(key, pUTokenID, txhash)
+			if err != nil {
+				return result, err
+			}
+			return result, nil
+		}
+		depositProof := incclient.NewETHDepositProof(0, common.Hash{}, 0, []string{txhash})
+		result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *depositProof, networkID)
+		if err != nil {
+			return result, err
+		}
+		return result, err
+
+	}
 	if tokenID == pUTokenID {
 		result, err := incClient.CreateAndSendIssuingEVMRequestTransaction(key, tokenID, *proof, networkID-1)
 		if err != nil {

@@ -1644,36 +1644,3 @@ func APIRetrySwapTx(c *gin.Context) {
 	}
 
 }
-
-// "3a526c0fa9abfc3e3e37becc52c5c10abbb7897b0534ad17018e766fc6133590"
-// "cd6dc64b6aac374de86b3376fc3765e5c129ae9b14a0abc30ee888b801dd5148": {
-// 	"Amount": 61858000,
-// 	"LockedAmount": 61858000,
-// 	"WaitingUnshieldAmount": 446589900,
-// 	"WaitingUnshieldFee": 44658990,
-// 	"ExtDecimal": 6,
-// 	"NetworkID": 3,
-// 	"IncTokenID": "cd6dc64b6aac374de86b3376fc3765e5c129ae9b14a0abc30ee888b801dd5148"
-// },
-
-// "50092f46f3f9dcebd3176de97c936950977bcc52a22eebb2863b8e4d24261434"
-// "9a30e84cfe6346cda25c26066c1a4983bc60021e19c29cc0f35a619048313051": {
-// 	"Amount": 0,
-// 	"LockedAmount": 0,
-// 	"WaitingUnshieldAmount": 1230000,
-// 	"WaitingUnshieldFee": 123000,
-// 	"ExtDecimal": 18,
-// 	"NetworkID": 4,
-// 	"IncTokenID": "9a30e84cfe6346cda25c26066c1a4983bc60021e19c29cc0f35a619048313051"
-// },
-
-// "b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d"
-// "a474ec7214b16ad6a6a355e732f2f511d8f2aa79cb4bd498ca46b05f3cfb0e53": {
-// 	"Amount": 123429161,
-// 	"LockedAmount": 123429161,
-// 	"WaitingUnshieldAmount": 27841359,
-// 	"WaitingUnshieldFee": 2784136,
-// 	"ExtDecimal": 18,
-// 	"NetworkID": 2,
-// 	"IncTokenID": "a474ec7214b16ad6a6a355e732f2f511d8f2aa79cb4bd498ca46b05f3cfb0e53"
-// },

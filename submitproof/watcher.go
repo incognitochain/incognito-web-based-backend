@@ -164,7 +164,7 @@ func watchPendingFeeRefundTx() {
 			status := tx.RefundStatus
 			switch status {
 			case wcommon.StatusWaiting:
-				_, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundOTASS, tx.RefundAddress, tx.RefundToken, tx.RefundAmount)
+				_, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundAddress, tx.RefundToken, tx.RefundAmount, tx.RefundPrivacyFee)
 				if err != nil {
 					log.Println("SubmitTxFeeRefund err:", err)
 					continue
@@ -188,7 +188,7 @@ func watchPendingFeeRefundTx() {
 							log.Println("DBUpdateRefundFeeRefundTx err:", err)
 							continue
 						}
-						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have submited failed 😵, incReqTx `%v`, incRefund `%v`, isPrivacyFee `%v`\n", tx.IncRequestTx, tx.RefundTx, tx.RefundPrivacyFee))
 					}
 				} else {
 					if txDetail.IsInBlock {
@@ -197,7 +197,7 @@ func watchPendingFeeRefundTx() {
 							log.Println("DBUpdateRefundFeeRefundTx err:", err)
 							continue
 						}
-						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`\n", tx.IncRequestTx, tx.RefundTx))
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[refundfee]` inctx fee refund have accepted 👌, incReqTx `%v`, incRefund `%v`, isPrivacyFee `%v`\n", tx.IncRequestTx, tx.RefundTx, tx.RefundPrivacyFee))
 					}
 				}
 			}
@@ -228,13 +228,13 @@ func watchPappTxNeedFeeRefund() {
 				}
 			}
 			data := wcommon.RefundFeeData{
-				IncRequestTx: tx.IncTx,
-				RefundAmount: tx.FeeAmount,
-				RefundToken:  tx.FeeToken,
-				RefundOTA:    tx.FeeRefundOTA,
-				// RefundOTASS:   tx.FeeRefundOTASS,
-				RefundAddress: tx.FeeRefundAddress,
-				RefundStatus:  wcommon.StatusWaiting,
+				IncRequestTx:     tx.IncTx,
+				RefundAmount:     tx.FeeAmount,
+				RefundToken:      tx.FeeToken,
+				RefundOTA:        tx.FeeRefundOTA,
+				RefundAddress:    tx.FeeRefundAddress,
+				RefundPrivacyFee: false,
+				RefundStatus:     wcommon.StatusWaiting,
 			}
 
 			err = database.DBCreateRefundFeeRecord(data)
@@ -243,7 +243,44 @@ func watchPappTxNeedFeeRefund() {
 				continue
 			}
 		}
-		time.Sleep(20 * time.Second)
+
+		txList, err = database.DBGetPappTxNeedPrivacyFeeRefund(0)
+		if err != nil {
+			log.Println("DBGetPappTxNeedFeeRefund err:", err)
+		}
+		for _, tx := range txList {
+			rftx, err := database.DBGetTxFeeRefundByReq(tx.IncTx)
+			if err != nil {
+				if err != mongo.ErrNoDocuments {
+					log.Println("DBGetTxFeeRefundByReq", err)
+					continue
+				}
+			}
+			if rftx != nil {
+				err = database.DBUpdatePappRefund(tx.IncTx, true)
+				if err != nil {
+					log.Println("DBGetTxFeeRefundByReq", err)
+					continue
+				}
+			}
+			data := wcommon.RefundFeeData{
+				IncRequestTx:     tx.IncTx,
+				RefundAmount:     tx.PFeeAmount,
+				RefundToken:      tx.FeeToken,
+				RefundOTA:        tx.FeeRefundOTA,
+				RefundAddress:    tx.FeeRefundAddress,
+				RefundPrivacyFee: true,
+				RefundStatus:     wcommon.StatusWaiting,
+			}
+
+			err = database.DBCreateRefundFeeRecord(data)
+			if err != nil {
+				log.Println("DBGetTxFeeRefundByReq", err)
+				continue
+			}
+		}
+
+		time.Sleep(30 * time.Second)
 	}
 }
 
@@ -284,6 +321,7 @@ func watchPendingExternalTx() {
 			txList, err := database.DBRetrievePendingExternalTx(networkInfo.Network, 0, 0)
 			if err != nil {
 				log.Println("DBRetrievePendingExternalTx err:", err)
+				continue
 			}
 			for _, tx := range txList {
 				err := processPendingExternalTxs(tx, currentEVMHeight, uint64(networkInfo.ConfirmationBlocks), networkInfo.Endpoints)
@@ -490,8 +528,19 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					return err
 				}
 			}
+			if otherInfo.IsReverted {
+				err = database.DBUpdatePappRefundPFee(tx.IncRequestTx, true)
+				if err != nil {
+					return err
+				}
+			}
 
 			err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusAccepted, "")
+			if err != nil {
+				return err
+			}
+
+			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncRequestTx, wcommon.StatusAccepted)
 			if err != nil {
 				return err
 			}
@@ -604,7 +653,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusSubmitting)
+			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
 			if err != nil {
 				return err
 			}
@@ -712,6 +761,14 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 		}
 	}
 
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txList, err = database.DBGetPappTxPendingOutchainSubmit(0, 0)
+	if err != nil {
+		return nil, err
+	}
 	for _, v := range txList {
 		result[v.FeeToken] += v.FeeAmount
 	}

@@ -82,7 +82,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, burntToken string, burntAmount uint64, swapInfo *common.PappSwapInfo, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, pfeeAmount uint64, burntToken string, burntAmount uint64, swapInfo *common.PappSwapInfo, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -100,6 +100,7 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		IsUnifiedToken:   isUnifiedToken,
 		FeeToken:         feeToken,
 		FeeAmount:        feeAmount,
+		PFeeAmount:       pfeeAmount,
 		FeeRefundOTA:     refundFeeOTA,
 		FeeRefundAddress: refundFeeAddress,
 		BurntToken:       burntToken,
@@ -134,14 +135,15 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 	return "submitting", nil
 }
 
-func SubmitTxFeeRefund(incReqTx, refundOTA, refundOTASS, paymentAddress, token string, amount uint64) (interface{}, error) {
+func SubmitTxFeeRefund(incReqTx, refundOTA, paymentAddress, token string, amount uint64, isPrivacyFeeRefund bool) (interface{}, error) {
 	task := SubmitRefundFeeTask{
-		IncReqTx:       incReqTx,
-		OTA:            refundOTA,
-		PaymentAddress: paymentAddress,
-		Amount:         amount,
-		Token:          token,
-		Time:           time.Now(),
+		IncReqTx:           incReqTx,
+		OTA:                refundOTA,
+		PaymentAddress:     paymentAddress,
+		Amount:             amount,
+		Token:              token,
+		IsPrivacyFeeRefund: isPrivacyFeeRefund,
+		Time:               time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)
 

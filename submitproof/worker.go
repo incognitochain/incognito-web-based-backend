@@ -488,7 +488,11 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 	}
 
 	privKey, _ := crypto.HexToECDSA(config.EVMKey)
-
+	i := 0
+retry:
+	if i == 10 {
+		return nil, errors.New("submit tx outchain failed")
+	}
 	for _, endpoint := range networkInfo.Endpoints {
 		evmClient, err := ethclient.Dial(endpoint)
 		if err != nil {
@@ -546,7 +550,9 @@ func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool)
 	}
 
 	if result.Txhash == "" {
-		return nil, errors.New("submit tx outchain failed")
+		i++
+		time.Sleep(2 * time.Second)
+		goto retry
 	}
 
 	return &result, nil

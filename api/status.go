@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -124,16 +125,24 @@ func APIGetSwapTxStatus(c *gin.Context) {
 	result := make(map[string]interface{})
 
 	spTkList := getSupportedTokenList()
-
+	var wg sync.WaitGroup
+	var lock sync.Mutex
 	for _, txHash := range req.TxList {
-		statusResult := checkPappTxSwapStatus(txHash, spTkList)
-		if len(statusResult) == 0 {
-			statusResult["error"] = "tx not found"
-			result[txHash] = statusResult
-		} else {
-			result[txHash] = statusResult
-		}
+		wg.Add(1)
+		go func(txh string) {
+			statusResult := checkPappTxSwapStatus(txh, spTkList)
+			lock.Lock()
+			if len(statusResult) == 0 {
+				statusResult["error"] = "tx not found"
+				result[txh] = statusResult
+			} else {
+				result[txh] = statusResult
+			}
+			lock.Unlock()
+			wg.Done()
+		}(txHash)
 	}
+	wg.Wait()
 	c.JSON(200, gin.H{"Result": result})
 }
 

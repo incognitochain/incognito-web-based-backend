@@ -145,10 +145,11 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 			return result, nil
 		}
 		depositProof := incclient.NewETHDepositProof(0, common.Hash{}, 0, []string{txhash})
-		result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *depositProof, networkID)
+		data, result, err := incClient.CreateIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *depositProof, networkID)
 		if err != nil {
 			return result, err
 		}
+		log.Println("CreateIssuingpUnifiedRequestTransaction", string(data))
 		return result, err
 
 	}

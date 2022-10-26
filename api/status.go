@@ -178,7 +178,12 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 				networkList = append(networkList, networkResult)
 				continue
 			}
-			networkResult["swap_tx_status"] = outchainTx.Status
+			if outchainTx.Status == wcommon.StatusAccepted {
+				networkResult["swap_tx_status"] = "success"
+			} else {
+				networkResult["swap_tx_status"] = outchainTx.Status
+			}
+
 			networkResult["swap_tx"] = outchainTx.Txhash
 			if outchainTx.Error != "" {
 				networkResult["swap_err"] = outchainTx.Error
@@ -213,7 +218,11 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 						networkList = append(networkList, networkResult)
 						continue
 					}
-					networkResult["redeposit_status"] = redepositTx.Status
+					if redepositTx.Status == wcommon.StatusAccepted {
+						networkResult["redeposit_status"] = "success"
+					} else {
+						networkResult["redeposit_status"] = redepositTx.Status
+					}
 					networkResult["redeposit_inctx"] = redepositTx.IncTx
 					if data.BurntToken == "" {
 						networkResult["swap_outcome"] = "unvailable"
@@ -221,7 +230,7 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 						if redepositTx.UTokenID == data.BurntToken {
 							networkResult["swap_outcome"] = "reverted"
 						} else {
-							if redepositTx.UTokenID == "" {
+							if redepositTx.TokenID == "" {
 								networkResult["swap_outcome"] = "pending"
 							} else {
 								networkResult["swap_outcome"] = "success"

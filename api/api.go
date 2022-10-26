@@ -52,7 +52,7 @@ func StartAPIservice(cfg common.Config) {
 	r.GET("/tokenlist", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 	r.POST("/tokeninfo", gincache.CachePage(store, 5*time.Second, APIGetSupportedTokenInfo))
 
-	r.POST("/estimateshieldreward", gincache.CachePage(store, 5*time.Second, APIEstimateReward))
+	r.POST("/estimateshieldreward", APIEstimateReward)
 
 	r.POST("/estimateunshieldfee", APIEstimateUnshield)
 
@@ -62,7 +62,7 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitunshieldtx", APISubmitUnshieldTx)
 
-	r.GET("/validaddress", gincache.CachePage(store, time.Minute, APIValidateAddress))
+	r.GET("/validaddress", APIValidateAddress)
 
 	r.POST("/submitshieldtx", APISubmitShieldTx) //depercated
 
@@ -71,7 +71,7 @@ func StartAPIservice(cfg common.Config) {
 	//papps
 	pAppsGroup := r.Group("/papps")
 
-	pAppsGroup.POST("/estimateswapfee", gincache.CachePage(store, 5*time.Second, APIEstimateSwapFee))
+	pAppsGroup.POST("/estimateswapfee", APIEstimateSwapFee)
 
 	pAppsGroup.POST("/submitswaptx", APISubmitSwapTx)
 

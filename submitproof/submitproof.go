@@ -151,7 +151,6 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		}
 		log.Println("CreateIssuingpUnifiedRequestTransaction", string(data))
 		return result, err
-
 	}
 	if tokenID == pUTokenID {
 		result, err := incClient.CreateAndSendIssuingEVMRequestTransaction(key, tokenID, *proof, networkID-1)

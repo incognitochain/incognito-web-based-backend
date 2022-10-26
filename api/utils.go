@@ -153,7 +153,7 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 			netID, _ = common.GetNetworkIDFromCurrencyType(v.CurrencyType)
 		}
 		if v.ContractID == contractID && netID == networkID {
-			if v.MovedUnifiedToken && filterUnified {
+			if v.MovedUnifiedToken && !filterUnified {
 				continue
 			}
 			return v.ID, nil

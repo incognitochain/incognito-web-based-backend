@@ -282,8 +282,11 @@ func getPdexSwapTxStatus(txhash string) map[string]interface{} {
 	swapResult := responseBodyData.Result[0]
 
 	result["is_pdex_swap"] = true
-	result["inc_request_tx_status"] = swapResult.Status
-	result["inc_respond_tx"] = swapResult.RespondTxs[0]
+	result["inc_request_tx_status"] = wcommon.StatusPending
+	if len(swapResult.RespondTxs) > 0 {
+		result["inc_request_tx_status"] = swapResult.Status
+		result["inc_respond_tx"] = swapResult.RespondTxs[0]
+	}
 
 	if swapResult.Status == "accepted" {
 		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, 0, swapResult.Amount, swapResult.RespondAmounts[0], true, "")

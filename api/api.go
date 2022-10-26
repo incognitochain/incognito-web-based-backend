@@ -86,8 +86,8 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)
 	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
 	adminGroup.GET("/pendingswaptx", APIGetPendingSwapTx)
-	adminGroup.POST("/retryshield", gincache.CachePage(store, time.Minute, APIRetryShieldTx))
-	adminGroup.POST("/retryswaptx", gincache.CachePage(store, time.Minute, APIRetrySwapTx))
+	adminGroup.POST("/retryshield", gincache.CachePage(store, 10*time.Second, APIRetryShieldTx))
+	adminGroup.POST("/retryswaptx", gincache.CachePage(store, 10*time.Second, APIRetrySwapTx))
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 

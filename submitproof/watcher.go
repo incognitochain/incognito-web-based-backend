@@ -360,7 +360,7 @@ func watchPendingShieldTx() {
 		for _, txdata := range txList {
 			err := processPendingShieldTxs(txdata)
 			if err != nil {
-				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+				log.Println("processPendingShieldTxs err:", txdata.IncTx, err)
 			}
 		}
 		time.Sleep(10 * time.Second)
@@ -385,7 +385,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 
 	if isInBlock {
 		var status int
-		if txdata.TokenID == txdata.UTokenID {
+		if txdata.TokenID != txdata.UTokenID {
 			statusShield, err := incClient.CheckUnifiedShieldStatus(txdata.IncTx)
 			if err != nil {
 				log.Println("CheckShieldStatus err", err)

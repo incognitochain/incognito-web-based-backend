@@ -241,12 +241,12 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 				}
 				if networkResult["swap_outcome"] == "success" {
 					if outchainTxResult.TokenContract != "" {
-						outTokenID, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList, true)
+						outTokenID, isNative, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList, true)
 						if err != nil {
 							result["error"] = err.Error()
 							continue
 						}
-						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, common.GetNetworkID(network), data.BurntAmount, outchainTxResult.Amount.Uint64(), false, redepositTxStr)
+						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, common.GetNetworkID(network), data.BurntAmount, outchainTxResult.Amount.Uint64(), false, redepositTxStr, outchainTxResult.IsRedeposit, isNative)
 						result["swap_detail"] = swapDetail
 					}
 
@@ -298,14 +298,14 @@ func getPdexSwapTxStatus(txhash string) map[string]interface{} {
 	}
 
 	if swapResult.Status == "accepted" {
-		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, 0, swapResult.Amount, swapResult.RespondAmounts[0], true, "")
+		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, 0, swapResult.Amount, swapResult.RespondAmounts[0], true, "", false, false)
 		result["swap_detail"] = swapDetail
 	}
 
 	return result
 }
 
-func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, outAmount uint64, isPdex bool, redepositTx string) map[string]interface{} {
+func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, outAmount uint64, isPdex bool, redepositTx string, willRedeposit, isNative bool) map[string]interface{} {
 	result := make(map[string]interface{})
 
 	tokenInInfo, err := getTokenInfo(tokenIn)
@@ -329,21 +329,32 @@ func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, o
 		outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
 	} else {
 		if tokenOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-			if tokenOutInfo.Decimals != -1 {
-				outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
-				outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
-			} else {
-				for _, ctk := range tokenOutInfo.ListUnifiedToken {
-					netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
-					if netID == networkID {
+			for _, ctk := range tokenOutInfo.ListUnifiedToken {
+				netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+				if netID == networkID {
+					if isNative {
 						outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
-						outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
-						break
+					} else {
+						if willRedeposit {
+							outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.PDecimals)))
+						} else {
+							outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+						}
 					}
+					outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+					break
 				}
 			}
 		} else {
-			outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+			if isNative {
+				outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+			} else {
+				if willRedeposit {
+					outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.PDecimals)))
+				} else {
+					outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+				}
+			}
 			outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
 		}
 	}

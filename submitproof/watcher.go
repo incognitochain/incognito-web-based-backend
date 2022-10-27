@@ -473,7 +473,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						continue
 					}
 					fmt.Println("96", unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
-					tokenContract = unpackResult[1].(common.Address).String()
+					tokenContract = unpackResult[0].(common.Address).String()
 					amount = unpackResult[2].(*big.Int)
 				case 256, 288:
 					topicHash := strings.ToLower(d.Topics[0].String())

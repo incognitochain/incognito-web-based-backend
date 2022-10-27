@@ -603,7 +603,45 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 							} else {
 								amount = new(big.Float).SetInt(otherInfo.Amount)
-								decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
+
+								if tkOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+									for _, ctk := range tkOutInfo.ListUnifiedToken {
+										netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+										isNative := false
+										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == netID {
+											isNative = true
+										}
+										if netID == networkID {
+											if isNative {
+												decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+											} else {
+												if otherInfo.IsRedeposit {
+													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.PDecimals)))
+												} else {
+													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+												}
+											}
+											break
+										}
+									}
+								} else {
+									netID, _ := wcommon.GetNetworkIDFromCurrencyType(tkOutInfo.CurrencyType)
+									isNative := false
+									if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == netID {
+										isNative = true
+									}
+									if isNative {
+										decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
+									} else {
+										if otherInfo.IsRedeposit {
+											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.PDecimals)))
+										} else {
+											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
+										}
+									}
+								}
+
+								// decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
 								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
 							}

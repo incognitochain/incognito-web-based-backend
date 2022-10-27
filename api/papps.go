@@ -1062,6 +1062,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				}
 			}
 
+			if amountOut == nil {
+				log.Println(errors.New("cant estimate curve"))
+				continue
+			}
+
 			amountOutFloat := new(big.Float)
 			amountOutFloat, _ = amountOutFloat.SetString(amountOut.String())
 			pTokenAmount := new(big.Float).Mul(amountOutFloat, toTokenDecimal)

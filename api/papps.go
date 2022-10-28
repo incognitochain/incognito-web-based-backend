@@ -644,6 +644,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		for _, v := range fromTokenInfo.ListUnifiedToken {
 			if v.CurrencyType == nativeCurrentType {
 				isUnifiedNativeToken = true
+				break
 			}
 		}
 	}
@@ -1614,10 +1615,11 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 
 		feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeeFromToken)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
 
-		additionalTokenInFee1, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.PDecimals))).Uint64()
+		additionalTokenInFee1, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(fromTokenInfo.PDecimals))).Uint64()
+
 		feeAmount2 := feeAmount + additionalTokenInFee1
 
-		gasFeeFromTokenToPrv := gasFeeFromToken + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv
+		gasFeeFromTokenToPrv := gasFeePRV + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv
 
 		gasFeeFloat := new(big.Float).SetUint64(feeAmount)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
@@ -1625,14 +1627,22 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 		nativeDecimal := math.Pow10(-nativeToken.PDecimals)
 
 		tdecimal, _ := toTokenDecimal.Float64()
+		// fdecimal := math.Pow10(-fromTokenInfo.PDecimals)
 
 		dcrate := new(big.Float).SetFloat64(nativeDecimal / tdecimal)
+
+		dcrate2 := new(big.Float).SetFloat64(math.Pow10(fromTokenInfo.PDecimals - nativeToken.PDecimals))
+
+		gasFeeFloatFromToken := new(big.Float).SetUint64(feeAmount2)
+		gasFeeFloatFromToken = gasFeeFloatFromToken.Mul(gasFeeFloatFromToken, dcrate2)
+		feeInFromToken, _ := gasFeeFloatFromToken.Uint64()
+
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, dcrate)
 		gasFeeIntToToken := gasFeeFloat.String()
 
 		if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType || isFeeWhitelist {
 			fees = append(fees, PappNetworkFee{
-				Amount:           feeAmount2,
+				Amount:           feeInFromToken,
 				TokenID:          fromToken,
 				AmountInBuyToken: gasFeeIntToToken,
 				privacyFee:       additionalTokenInFee1,

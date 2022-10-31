@@ -375,6 +375,7 @@ func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, o
 			return result
 		}
 		if shieldStatus.Data[0].Reward > 0 {
+			outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.PDecimals)))
 			rewardAmountBig := new(big.Float).SetUint64(shieldStatus.Data[0].Reward)
 			rewardAmountfl64, _ := new(big.Float).Mul(rewardAmountBig, outDecimal).Float64()
 			result["reward"] = fmt.Sprintf("%f", rewardAmountfl64)

@@ -353,7 +353,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			c.JSON(200, response)
 			return
 		}
-		response.Error = NotTradeable
+		response.Error = NotTradeable.Error()
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}

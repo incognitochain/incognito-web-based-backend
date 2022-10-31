@@ -14,6 +14,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/rpchandler"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 )
 
 var config wcommon.Config
@@ -80,6 +81,11 @@ func submitProof(txhash, tokenID string, networkID int, key string) (string, str
 	var err error
 retry:
 	if i == max_retry {
+		if strings.Contains(finalErr, "Pool reject double spend tx") {
+			i = 0
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` submit shield failed 😵 max retry reach network `%v` externaltx `%v` \n", txhash, networkID))
+			goto retry
+		}
 		return "", proofRecord.PaymentAddr, tokenID, linkedTokenID, errors.New(finalErr)
 	}
 	if i > 0 {

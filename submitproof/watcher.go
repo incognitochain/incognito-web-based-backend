@@ -575,7 +575,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								log.Println("Unmarshal", err)
 								return
 							}
-							tkInInfo, _ := getTokenInfo(pappSwapInfo.TokenIn)
+							tkInInfo, err := getTokenInfo(pappSwapInfo.TokenIn)
+							if err != nil {
+								log.Println("getTokenInfo1", err)
+								time.Sleep(5 * time.Second)
+								goto retry
+							}
 							amount := new(big.Float).SetInt(pappSwapInfo.TokenInAmount)
 							decimal := new(big.Float)
 							decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
@@ -588,7 +593,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenInSymbol := tkInInfo.Symbol
 
-							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
+							tkOutInfo, err := getTokenInfo(pappSwapInfo.TokenOut)
+							if err != nil {
+								log.Println("getTokenInfo2", err)
+								time.Sleep(5 * time.Second)
+								goto retry
+							}
 							amount = new(big.Float).SetInt(pappSwapInfo.MinOutAmount)
 							decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
 							if err != nil {

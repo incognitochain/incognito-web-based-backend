@@ -50,6 +50,7 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go watchPappTxNeedFeeRefund()
 	go watchPendingFeeRefundTx()
 	go forwardCollectedFee()
+	go watchVaultState()
 
 	return nil
 }
@@ -118,22 +119,25 @@ func forwardCollectedFee() {
 		}
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` we have collected\n %v", string(collectFeeTkBytes)))
 
-		for tokenID, amount := range amountToSend {
-			time.Sleep(30 * time.Second)
-			txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
-			if err != nil {
-				log.Println("GetAllUTXOsV2", err)
-				continue
-			}
+		if config.CentralIncPaymentAddress != "" {
+			for tokenID, amount := range amountToSend {
+				time.Sleep(30 * time.Second)
+				txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
+				if err != nil {
+					log.Println("GetAllUTXOsV2", err)
+					continue
+				}
 
-			go func(tkID string, tkAmount uint64) {
-				tkInfo, _ := getTokenInfo(tkID)
-				amount := new(big.Float).SetUint64(tkAmount)
-				decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
-				afl64, _ := amount.Mul(amount, decimal).Float64()
-				slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%f %v` fee to central wallet txhash `%v`", afl64, tkInfo.Symbol, txhash))
-			}(tokenID, amount)
+				go func(tkID string, tkAmount uint64) {
+					tkInfo, _ := getTokenInfo(tkID)
+					amount := new(big.Float).SetUint64(tkAmount)
+					decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+					afl64, _ := amount.Mul(amount, decimal).Float64()
+					slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%f %v` fee to central wallet txhash `%v`", afl64, tkInfo.Symbol, txhash))
+				}(tokenID, amount)
+			}
 		}
+
 		time.Sleep(6 * time.Hour)
 
 	}

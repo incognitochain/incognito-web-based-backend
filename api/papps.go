@@ -728,7 +728,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err
 			}
 
-			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			amountOutBigFloat, _ := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(quote.Data.AmountOutRaw)
 			if slippage != nil {
 				sl := new(big.Float).SetFloat64(0.01)
 				sl = sl.Mul(sl, slippage)
@@ -791,12 +791,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			pTkAmountFloatStr := pTokenAmount.Text('f', -1)
 
-			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			amountOutBigFloatPreSlippage, _ := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(quote.Data.AmountOutRaw)
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
-			// outFloat, _ := pTokenAmountPreSlippage.Float64()
-			// inFloat, _ := amountFloat.Float64()
-			// rate := outFloat / inFloat
 
 			pathsList := []string{}
 			for _, v := range paths {
@@ -814,6 +811,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
 
+			if amountOutBig.String() == "0" || amountOutBig.String() == "1" {
+				return nil, errors.New("amount out is too small")
+			}
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -931,7 +931,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err1
 			}
 
-			amountOut, ok := new(big.Float).SetString(amountOutBig.String())
+			amountOut, ok := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(amountOutBig.String())
 			if !ok {
 				err = errors.New("Error building call data: amountout out of range")
 				log.Println(err.Error())
@@ -940,7 +940,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			pTokenAmount := new(big.Float).Mul(amountOut, toTokenDecimal)
 			pTkAmountFloatStr := pTokenAmount.Text('f', -1)
 
-			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
+			amountOutBigFloatPreSlippage, _ := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
 
@@ -961,7 +961,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
 			}
-
+			if amountOutBig.String() == "0" || amountOutBig.String() == "1" {
+				return nil, errors.New("amount out is too small")
+			}
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -1042,10 +1044,10 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					log.Println(err)
 					continue
 				} else {
-					amountOutBigFloatPreSlippage := new(big.Float).SetInt(amountOut)
+					amountOutBigFloatPreSlippage := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetInt(amountOut)
 					pTokenAmountPreSlippage = new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 					pTkAmountPreSlippageFloatStr = pTokenAmountPreSlippage.Text('f', -1)
-					amountOutBigFloat := new(big.Float).SetInt(amountOut)
+					amountOutBigFloat := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetInt(amountOut)
 					if slippage != nil {
 						sl := new(big.Float).SetFloat64(0.01)
 						sl = sl.Mul(sl, slippage)
@@ -1096,7 +1098,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			inFloat, _ := amountFloat.Float64()
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
-
+			if amountOut.String() == "0" || amountOut.String() == "1" {
+				return nil, errors.New("amount out is too small")
+			}
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -1116,7 +1120,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		}
 	}
 	if len(result) == 0 {
-		return nil, errors.New("no data")
+		return nil, errors.New("not tradeable")
 	}
 	return result, nil
 }

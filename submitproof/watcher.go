@@ -50,6 +50,7 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go watchPappTxNeedFeeRefund()
 	go watchPendingFeeRefundTx()
 	go forwardCollectedFee()
+	go watchVaultState()
 
 	return nil
 }
@@ -118,22 +119,25 @@ func forwardCollectedFee() {
 		}
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` we have collected\n %v", string(collectFeeTkBytes)))
 
-		for tokenID, amount := range amountToSend {
-			time.Sleep(30 * time.Second)
-			txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
-			if err != nil {
-				log.Println("GetAllUTXOsV2", err)
-				continue
-			}
+		if config.CentralIncPaymentAddress != "" {
+			for tokenID, amount := range amountToSend {
+				time.Sleep(30 * time.Second)
+				txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
+				if err != nil {
+					log.Println("GetAllUTXOsV2", err)
+					continue
+				}
 
-			go func(tkID string, tkAmount uint64) {
-				tkInfo, _ := getTokenInfo(tkID)
-				amount := new(big.Float).SetUint64(tkAmount)
-				decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
-				afl64, _ := amount.Mul(amount, decimal).Float64()
-				slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%f %v` fee to central wallet txhash `%v`", afl64, tkInfo.Symbol, txhash))
-			}(tokenID, amount)
+				go func(tkID string, tkAmount uint64) {
+					tkInfo, _ := getTokenInfo(tkID)
+					amount := new(big.Float).SetUint64(tkAmount)
+					decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+					afl64, _ := amount.Mul(amount, decimal).Float64()
+					slacknoti.SendSlackNoti(fmt.Sprintf("`[withdrawFee]` withdraw `%f %v` fee to central wallet txhash `%v`", afl64, tkInfo.Symbol, txhash))
+				}(tokenID, amount)
+			}
 		}
+
 		time.Sleep(6 * time.Hour)
 
 	}
@@ -347,6 +351,27 @@ func watchPendingPappTx() {
 				log.Println("processPendingShieldTxs err:", txdata.IncTx)
 			}
 		}
+
+		txList, err = database.DBGetPappTxPendingOutchainSubmit(0, 0)
+		if err != nil {
+			log.Println("DBGetPappTxPendingOutchainSubmit err:", err)
+		}
+		for _, txdata := range txList {
+			tx, err := database.DBGetExternalTxByIncTx(txdata.IncTx, txdata.Networks[0])
+			if err != nil {
+				log.Println("DBGetExternalTxByIncTx err:", err)
+				continue
+			}
+			if tx != nil {
+				if tx.Status == wcommon.StatusAccepted {
+					err = database.DBUpdatePappTxSubmitOutchainStatus(txdata.IncTx, wcommon.StatusAccepted)
+					if err != nil {
+						log.Println("DBGetExternalTxByIncTx err:", err)
+						continue
+					}
+				}
+			}
+		}
 		time.Sleep(10 * time.Second)
 	}
 }
@@ -360,7 +385,7 @@ func watchPendingShieldTx() {
 		for _, txdata := range txList {
 			err := processPendingShieldTxs(txdata)
 			if err != nil {
-				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+				log.Println("processPendingShieldTxs err:", txdata.IncTx, err)
 			}
 		}
 		time.Sleep(10 * time.Second)
@@ -385,7 +410,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 
 	if isInBlock {
 		var status int
-		if txdata.TokenID == txdata.UTokenID {
+		if txdata.TokenID != txdata.UTokenID {
 			statusShield, err := incClient.CheckUnifiedShieldStatus(txdata.IncTx)
 			if err != nil {
 				log.Println("CheckShieldStatus err", err)
@@ -473,7 +498,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						continue
 					}
 					fmt.Println("96", unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
-					tokenContract = unpackResult[1].(common.Address).String()
+					tokenContract = unpackResult[0].(common.Address).String()
 					amount = unpackResult[2].(*big.Int)
 				case 256, 288:
 					topicHash := strings.ToLower(d.Topics[0].String())
@@ -575,7 +600,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								log.Println("Unmarshal", err)
 								return
 							}
-							tkInInfo, _ := getTokenInfo(pappSwapInfo.TokenIn)
+							tkInInfo, err := getTokenInfo(pappSwapInfo.TokenIn)
+							if err != nil {
+								log.Println("getTokenInfo1", err)
+								time.Sleep(5 * time.Second)
+								goto retry
+							}
 							amount := new(big.Float).SetInt(pappSwapInfo.TokenInAmount)
 							decimal := new(big.Float)
 							decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
@@ -588,7 +618,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
 							tokenInSymbol := tkInInfo.Symbol
 
-							tkOutInfo, _ := getTokenInfo(pappSwapInfo.TokenOut)
+							tkOutInfo, err := getTokenInfo(pappSwapInfo.TokenOut)
+							if err != nil {
+								log.Println("getTokenInfo2", err)
+								time.Sleep(5 * time.Second)
+								goto retry
+							}
 							amount = new(big.Float).SetInt(pappSwapInfo.MinOutAmount)
 							decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
 							if err != nil {
@@ -603,7 +638,45 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 							} else {
 								amount = new(big.Float).SetInt(otherInfo.Amount)
-								decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
+
+								if tkOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+									for _, ctk := range tkOutInfo.ListUnifiedToken {
+										netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+										isNative := false
+										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == netID {
+											isNative = true
+										}
+										if netID == networkID {
+											if isNative {
+												decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+											} else {
+												if otherInfo.IsRedeposit {
+													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.PDecimals)))
+												} else {
+													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+												}
+											}
+											break
+										}
+									}
+								} else {
+									netID, _ := wcommon.GetNetworkIDFromCurrencyType(tkOutInfo.CurrencyType)
+									isNative := false
+									if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == netID {
+										isNative = true
+									}
+									if isNative {
+										decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
+									} else {
+										if otherInfo.IsRedeposit {
+											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.PDecimals)))
+										} else {
+											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
+										}
+									}
+								}
+
+								// decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
 								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
 							}

@@ -123,9 +123,9 @@ func getpTokenContractID(tokenID string, networkID int, supportedTokenList []Pap
 	return nil, errors.New("can't find contractID for token " + tokenID)
 }
 
-func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData, filterUnified bool) (string, error) {
+func getTokenIDByContractID(contractID string, networkID int, supportedTokenList []PappSupportedTokenData, filterUnified bool) (string, bool, error) {
 	if contractID == "" {
-		return "", errors.New("contractID cannot be empty")
+		return "", false, errors.New("contractID cannot be empty")
 	}
 	if !strings.Contains(contractID, "0x") {
 		contractID = "0x" + contractID
@@ -136,11 +136,11 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 		for _, v := range supportedTokenList {
 			if filterUnified {
 				if v.NetworkID == networkID && common.CheckIsWrappedNativeToken(v.ContractID, networkID) && !v.MovedUnifiedToken {
-					return v.ID, nil
+					return v.ID, true, nil
 				}
 			} else {
 				if v.CurrencyType == nativeCtype {
-					return v.ID, nil
+					return v.ID, true, nil
 				}
 			}
 		}
@@ -156,10 +156,10 @@ func getTokenIDByContractID(contractID string, networkID int, supportedTokenList
 			if v.MovedUnifiedToken && !filterUnified {
 				continue
 			}
-			return v.ID, nil
+			return v.ID, false, nil
 		}
 	}
-	return "", errors.New("can't find tokenID for contract " + contractID)
+	return "", false, errors.New("can't find tokenID for contract " + contractID)
 }
 
 func uniswapDataExtractor(data []byte) (*UniswapQuote, [][]int64, error) {

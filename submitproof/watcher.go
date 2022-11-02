@@ -351,6 +351,27 @@ func watchPendingPappTx() {
 				log.Println("processPendingShieldTxs err:", txdata.IncTx)
 			}
 		}
+
+		txList, err = database.DBGetPappTxPendingOutchainSubmit(0, 0)
+		if err != nil {
+			log.Println("DBGetPappTxPendingOutchainSubmit err:", err)
+		}
+		for _, txdata := range txList {
+			tx, err := database.DBGetExternalTxByIncTx(txdata.IncTx, txdata.Networks[0])
+			if err != nil {
+				log.Println("DBGetExternalTxByIncTx err:", err)
+				continue
+			}
+			if tx != nil {
+				if tx.Status == wcommon.StatusAccepted {
+					err = database.DBUpdatePappTxSubmitOutchainStatus(txdata.IncTx, wcommon.StatusAccepted)
+					if err != nil {
+						log.Println("DBGetExternalTxByIncTx err:", err)
+						continue
+					}
+				}
+			}
+		}
 		time.Sleep(10 * time.Second)
 	}
 }

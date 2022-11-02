@@ -240,10 +240,10 @@ func APIEstimateSwapFee(c *gin.Context) {
 	var pdexEstimate []QuoteDataResp
 
 	if req.Network == "inc" {
-		// pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
-		// if pdexresult != nil {
-		// 	pdexEstimate = append(pdexEstimate, *pdexresult)
-		// }
+		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		if pdexresult != nil {
+			pdexEstimate = append(pdexEstimate, *pdexresult)
+		}
 	}
 
 	supportedNetworks := []int{}
@@ -353,7 +353,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			c.JSON(200, response)
 			return
 		}
-		response.Error = NotTradeable
+		response.Error = NotTradeable.Error()
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
@@ -644,6 +644,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		for _, v := range fromTokenInfo.ListUnifiedToken {
 			if v.CurrencyType == nativeCurrentType {
 				isUnifiedNativeToken = true
+				break
 			}
 		}
 	}
@@ -727,7 +728,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err
 			}
 
-			amountOutBigFloat, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			amountOutBigFloat, _ := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(quote.Data.AmountOutRaw)
 			if slippage != nil {
 				sl := new(big.Float).SetFloat64(0.01)
 				sl = sl.Mul(sl, slippage)
@@ -790,12 +791,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 			pTkAmountFloatStr := pTokenAmount.Text('f', -1)
 
-			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.AmountOutRaw)
+			amountOutBigFloatPreSlippage, _ := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(quote.Data.AmountOutRaw)
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
-			// outFloat, _ := pTokenAmountPreSlippage.Float64()
-			// inFloat, _ := amountFloat.Float64()
-			// rate := outFloat / inFloat
 
 			pathsList := []string{}
 			for _, v := range paths {
@@ -813,6 +811,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
 
+			if amountOutBig.String() == "0" || amountOutBig.String() == "1" {
+				return nil, errors.New("amount out is too small")
+			}
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -930,7 +931,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				return nil, err1
 			}
 
-			amountOut, ok := new(big.Float).SetString(amountOutBig.String())
+			amountOut, ok := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(amountOutBig.String())
 			if !ok {
 				err = errors.New("Error building call data: amountout out of range")
 				log.Println(err.Error())
@@ -939,7 +940,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			pTokenAmount := new(big.Float).Mul(amountOut, toTokenDecimal)
 			pTkAmountFloatStr := pTokenAmount.Text('f', -1)
 
-			amountOutBigFloatPreSlippage, _ := new(big.Float).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
+			amountOutBigFloatPreSlippage, _ := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetString(quote.Data.Outputs[len(quote.Data.Outputs)-1])
 			pTokenAmountPreSlippage := new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 			pTkAmountPreSlippageFloatStr := pTokenAmountPreSlippage.Text('f', -1)
 
@@ -960,7 +961,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			if !ok {
 				return nil, errors.New("contract not found " + appName)
 			}
-
+			if amountOutBig.String() == "0" || amountOutBig.String() == "1" {
+				return nil, errors.New("amount out is too small")
+			}
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -1041,10 +1044,10 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					log.Println(err)
 					continue
 				} else {
-					amountOutBigFloatPreSlippage := new(big.Float).SetInt(amountOut)
+					amountOutBigFloatPreSlippage := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetInt(amountOut)
 					pTokenAmountPreSlippage = new(big.Float).Mul(amountOutBigFloatPreSlippage, toTokenDecimal)
 					pTkAmountPreSlippageFloatStr = pTokenAmountPreSlippage.Text('f', -1)
-					amountOutBigFloat := new(big.Float).SetInt(amountOut)
+					amountOutBigFloat := new(big.Float).SetPrec(uint(pTokenContract2.Decimals)).SetInt(amountOut)
 					if slippage != nil {
 						sl := new(big.Float).SetFloat64(0.01)
 						sl = sl.Mul(sl, slippage)
@@ -1060,6 +1063,11 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 					}
 					break
 				}
+			}
+
+			if amountOut == nil {
+				log.Println(errors.New("cant estimate curve"))
+				continue
 			}
 
 			amountOutFloat := new(big.Float)
@@ -1090,7 +1098,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			inFloat, _ := amountFloat.Float64()
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
 			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
-
+			if amountOut.String() == "0" || amountOut.String() == "1" {
+				return nil, errors.New("amount out is too small")
+			}
 			result = append(result, QuoteDataResp{
 				AppName:              appName,
 				AmountIn:             amount,
@@ -1110,7 +1120,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		}
 	}
 	if len(result) == 0 {
-		return nil, errors.New("no data")
+		return nil, errors.New("not tradeable")
 	}
 	return result, nil
 }
@@ -1338,7 +1348,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 
 	for _, v := range md.Data {
 		callNetworkList = append(callNetworkList, wcommon.GetNetworkName(int(v.ExternalNetworkID)))
-		receiveToken, err = getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList, true)
+		receiveToken, _, err = getTokenIDByContractID(v.ReceiveToken, int(v.ExternalNetworkID), spTkList, true)
 		if err != nil {
 			return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 		}
@@ -1609,10 +1619,11 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 
 		feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeeFromToken)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
 
-		additionalTokenInFee1, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.PDecimals))).Uint64()
+		additionalTokenInFee1, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(fromTokenInfo.PDecimals))).Uint64()
+
 		feeAmount2 := feeAmount + additionalTokenInFee1
 
-		gasFeeFromTokenToPrv := gasFeeFromToken + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv
+		gasFeeFromTokenToPrv := gasFeePRV + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv
 
 		gasFeeFloat := new(big.Float).SetUint64(feeAmount)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
@@ -1620,14 +1631,22 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 		nativeDecimal := math.Pow10(-nativeToken.PDecimals)
 
 		tdecimal, _ := toTokenDecimal.Float64()
+		// fdecimal := math.Pow10(-fromTokenInfo.PDecimals)
 
 		dcrate := new(big.Float).SetFloat64(nativeDecimal / tdecimal)
+
+		dcrate2 := new(big.Float).SetFloat64(math.Pow10(fromTokenInfo.PDecimals - nativeToken.PDecimals))
+
+		gasFeeFloatFromToken := new(big.Float).SetUint64(feeAmount2)
+		gasFeeFloatFromToken = gasFeeFloatFromToken.Mul(gasFeeFloatFromToken, dcrate2)
+		feeInFromToken, _ := gasFeeFloatFromToken.Uint64()
+
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, dcrate)
 		gasFeeIntToToken := gasFeeFloat.String()
 
 		if pTokenContract1.CurrencyType == wcommon.UnifiedCurrencyType || isFeeWhitelist {
 			fees = append(fees, PappNetworkFee{
-				Amount:           feeAmount2,
+				Amount:           feeInFromToken,
 				TokenID:          fromToken,
 				AmountInBuyToken: gasFeeIntToToken,
 				privacyFee:       additionalTokenInFee1,

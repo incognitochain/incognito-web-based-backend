@@ -178,7 +178,12 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 				networkList = append(networkList, networkResult)
 				continue
 			}
-			networkResult["swap_tx_status"] = outchainTx.Status
+			if outchainTx.Status == wcommon.StatusAccepted {
+				networkResult["swap_tx_status"] = "success"
+			} else {
+				networkResult["swap_tx_status"] = outchainTx.Status
+			}
+
 			networkResult["swap_tx"] = outchainTx.Txhash
 			if outchainTx.Error != "" {
 				networkResult["swap_err"] = outchainTx.Error
@@ -213,7 +218,11 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 						networkList = append(networkList, networkResult)
 						continue
 					}
-					networkResult["redeposit_status"] = redepositTx.Status
+					if redepositTx.Status == wcommon.StatusAccepted {
+						networkResult["redeposit_status"] = "success"
+					} else {
+						networkResult["redeposit_status"] = redepositTx.Status
+					}
 					networkResult["redeposit_inctx"] = redepositTx.IncTx
 					if data.BurntToken == "" {
 						networkResult["swap_outcome"] = "unvailable"
@@ -221,7 +230,7 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 						if redepositTx.UTokenID == data.BurntToken {
 							networkResult["swap_outcome"] = "reverted"
 						} else {
-							if redepositTx.UTokenID == "" {
+							if redepositTx.TokenID == "" {
 								networkResult["swap_outcome"] = "pending"
 							} else {
 								networkResult["swap_outcome"] = "success"
@@ -232,12 +241,12 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 				}
 				if networkResult["swap_outcome"] == "success" {
 					if outchainTxResult.TokenContract != "" {
-						outTokenID, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList, true)
+						outTokenID, isNative, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList, true)
 						if err != nil {
 							result["error"] = err.Error()
 							continue
 						}
-						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, common.GetNetworkID(network), data.BurntAmount, outchainTxResult.Amount.Uint64(), false, redepositTxStr)
+						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, common.GetNetworkID(network), data.BurntAmount, outchainTxResult.Amount.Uint64(), false, redepositTxStr, outchainTxResult.IsRedeposit, isNative)
 						result["swap_detail"] = swapDetail
 					}
 
@@ -282,18 +291,21 @@ func getPdexSwapTxStatus(txhash string) map[string]interface{} {
 	swapResult := responseBodyData.Result[0]
 
 	result["is_pdex_swap"] = true
-	result["inc_request_tx_status"] = swapResult.Status
-	result["inc_respond_tx"] = swapResult.RespondTxs[0]
+	result["inc_request_tx_status"] = wcommon.StatusPending
+	if len(swapResult.RespondTxs) > 0 {
+		result["inc_request_tx_status"] = swapResult.Status
+		result["inc_respond_tx"] = swapResult.RespondTxs[0]
+	}
 
 	if swapResult.Status == "accepted" {
-		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, 0, swapResult.Amount, swapResult.RespondAmounts[0], true, "")
+		swapDetail := buildSwapDetail(swapResult.SellTokenID, swapResult.BuyTokenID, 0, swapResult.Amount, swapResult.RespondAmounts[0], true, "", false, false)
 		result["swap_detail"] = swapDetail
 	}
 
 	return result
 }
 
-func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, outAmount uint64, isPdex bool, redepositTx string) map[string]interface{} {
+func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, outAmount uint64, isPdex bool, redepositTx string, willRedeposit, isNative bool) map[string]interface{} {
 	result := make(map[string]interface{})
 
 	tokenInInfo, err := getTokenInfo(tokenIn)
@@ -317,21 +329,32 @@ func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, o
 		outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
 	} else {
 		if tokenOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-			if tokenOutInfo.Decimals != -1 {
-				outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
-				outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
-			} else {
-				for _, ctk := range tokenOutInfo.ListUnifiedToken {
-					netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
-					if netID == networkID {
+			for _, ctk := range tokenOutInfo.ListUnifiedToken {
+				netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+				if netID == networkID {
+					if isNative {
 						outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
-						outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
-						break
+					} else {
+						if willRedeposit {
+							outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.PDecimals)))
+						} else {
+							outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+						}
 					}
+					outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+					break
 				}
 			}
 		} else {
-			outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+			if isNative {
+				outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+			} else {
+				if willRedeposit {
+					outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.PDecimals)))
+				} else {
+					outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.Decimals)))
+				}
+			}
 			outAmountfl64, _ = new(big.Float).Mul(outAmountBig, outDecimal).Float64()
 		}
 	}
@@ -352,6 +375,7 @@ func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, o
 			return result
 		}
 		if shieldStatus.Data[0].Reward > 0 {
+			outDecimal = new(big.Float).SetFloat64(math.Pow10(-int(tokenOutInfo.PDecimals)))
 			rewardAmountBig := new(big.Float).SetUint64(shieldStatus.Data[0].Reward)
 			rewardAmountfl64, _ := new(big.Float).Mul(rewardAmountBig, outDecimal).Float64()
 			result["reward"] = fmt.Sprintf("%f", rewardAmountfl64)

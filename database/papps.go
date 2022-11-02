@@ -314,7 +314,7 @@ func DBGetPappTxPendingOutchainSubmit(offset, limit int64) ([]common.PappTxData,
 	if limit == 0 {
 		limit = int64(1000)
 	}
-	filter := bson.M{"outchain_status": bson.M{operator.In: []string{common.StatusSubmitting, common.StatusPending}}}
+	filter := bson.M{"outchain_status": bson.M{operator.In: []string{common.StatusSubmitting, common.StatusPending, common.StatusWaiting, common.StatusSubmitFailed}}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,

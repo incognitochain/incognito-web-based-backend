@@ -643,7 +643,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 									for _, ctk := range tkOutInfo.ListUnifiedToken {
 										netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
 										isNative := false
-										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == netID {
+										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == ctk.CurrencyType {
 											isNative = true
 										}
 										if netID == networkID {
@@ -662,7 +662,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								} else {
 									netID, _ := wcommon.GetNetworkIDFromCurrencyType(tkOutInfo.CurrencyType)
 									isNative := false
-									if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == netID {
+									if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == tkOutInfo.CurrencyType {
 										isNative = true
 									}
 									if isNative {

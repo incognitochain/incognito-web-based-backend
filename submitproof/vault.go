@@ -67,7 +67,9 @@ func watchVaultState() {
 			continue
 		}
 		slackep := os.Getenv("SLACK_VAULT_ALERT")
-		go slacknoti.SendWithCustomChannel(string(resultJson), slackep)
+		if slackep != "" {
+			go slacknoti.SendWithCustomChannel(string(resultJson), slackep)
+		}
 
 		time.Sleep(10 * time.Minute)
 	}

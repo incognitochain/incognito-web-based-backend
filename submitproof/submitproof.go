@@ -86,7 +86,7 @@ retry:
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` submit shield failed 😵 max retry reach network `%v` externaltx `%v` \n", txhash, networkID))
 			goto retry
 		}
-		return "", proofRecord.PaymentAddr, tokenID, linkedTokenID, errors.New(finalErr)
+		return "", "", tokenID, linkedTokenID, errors.New(finalErr)
 	}
 	if i > 0 {
 		time.Sleep(10 * time.Second)

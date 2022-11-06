@@ -45,6 +45,11 @@ func watchVaultState() {
 			continue
 		}
 
+		if responseBodyData.Result == nil {
+			log.Println("responseBodyData.Result is nil")
+			continue
+		}
+
 		result := make(map[string]map[string]string)
 
 		for uTokenID, vault := range responseBodyData.Result.UnifiedTokenVaults {

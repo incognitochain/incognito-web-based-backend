@@ -51,8 +51,87 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go watchPendingFeeRefundTx()
 	go forwardCollectedFee()
 	go watchVaultState()
+	go trackDexSwap()
 
 	return nil
+}
+
+func trackDexSwap() {
+	for {
+		txList, err := database.DBRetrievePendingDexTxs(0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingDexTxs error", err)
+			continue
+		}
+		markDelete := []string{}
+		for _, tx := range txList {
+			uaStr := parseUserAgent(tx.UserAgent)
+			switch tx.Status {
+			case wcommon.StatusPending:
+				txDetail, err := incClient.GetTxDetail(tx.IncTx)
+				if err != nil {
+					log.Println("CheckTxInBlock err:", err)
+				}
+				if txDetail != nil {
+					if txDetail.IsInBlock {
+						err = database.DBUpdateDexSwapTxStatus(tx.IncTx, wcommon.StatusExecuting)
+						if err != nil {
+							log.Println("DBUpdateDexSwapTxStatus error", err)
+							continue
+						}
+						slackep := os.Getenv("SLACK_SWAP_ALERT")
+						if slackep != "" {
+							tkInInfo, _ := getTokenInfo(tx.TokenSell)
+							tkOutInfo, _ := getTokenInfo(tx.TokenBuy)
+
+							tokenInSymbol := tkInInfo.Symbol
+							tokenOutSymbol := tkOutInfo.Symbol
+
+							swapAlert := fmt.Sprintf("`[%v | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", "pdex", uaStr, tx.ID.Hex(), tx.AmountIn, tokenInSymbol, tx.MinAmountOut, tokenOutSymbol)
+							slacknoti.SendWithCustomChannel(swapAlert, slackep)
+						}
+					}
+				} else {
+					markDelete = append(markDelete, tx.IncTx)
+				}
+			case wcommon.StatusExecuting:
+				isCompleted, outAmount, err := getPdexSwapTxStatus(tx.IncTx, tx.TokenBuy)
+				if err != nil {
+					log.Println("getPdexSwapTxStatus error", err)
+					continue
+				}
+				if isCompleted {
+					err = database.DBUpdateDexSwapTxStatus(tx.IncTx, wcommon.StatusAccepted)
+					if err != nil {
+						log.Println("DBUpdateDexSwapTxStatus error", err)
+						continue
+					}
+
+					slackep := os.Getenv("SLACK_SWAP_ALERT")
+					if slackep != "" {
+						tkInInfo, _ := getTokenInfo(tx.TokenSell)
+						tkOutInfo, _ := getTokenInfo(tx.TokenBuy)
+						tokenInSymbol := tkInInfo.Symbol
+						tokenOutSymbol := tkOutInfo.Symbol
+						var swapAlert string
+						if outAmount != "" {
+							swapAlert = fmt.Sprintf("`[%v | %v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", "pdex", uaStr, tx.ID.Hex(), tx.AmountIn, tokenInSymbol, tx.MinAmountOut, tokenOutSymbol, outAmount, tokenOutSymbol)
+						} else {
+							swapAlert = fmt.Sprintf("`[%v | %v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", "pdex", uaStr, tx.ID.Hex(), tx.AmountIn, tokenInSymbol, tx.MinAmountOut, tokenOutSymbol)
+						}
+						slacknoti.SendWithCustomChannel(swapAlert, slackep)
+					}
+				}
+			}
+		}
+
+		err = database.DBDeleteDexSwap(markDelete)
+		if err != nil {
+			log.Println("DBDeleteDexSwap error", err)
+			continue
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
 
 func forwardCollectedFee() {

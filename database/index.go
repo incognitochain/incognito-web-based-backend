@@ -166,6 +166,20 @@ func DBCreateIndex() error {
 		return err
 	}
 
+	dexSwapModel := []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{Key: "inctx", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err = mgm.Coll(&common.DexSwapTrackData{}).Indexes().CreateMany(context.Background(), dexSwapModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
 	return nil
 }
 

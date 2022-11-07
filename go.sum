@@ -479,6 +479,8 @@ github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104/go.mod h1:XPvLUNfbS4f
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/memcachier/mc/v3 v3.0.3 h1:qii+lDiPKi36O4Xg+HVKwHu6Oq+Gt17b+uEiA0Drwv4=
 github.com/memcachier/mc/v3 v3.0.3/go.mod h1:GzjocBahcXPxt2cmqzknrgqCOmMxiSzhVKPOe90Tpug=
+github.com/mileusna/useragent v1.2.1 h1:p3RJWhi3LfuI6BHdddojREyK3p6qX67vIfOVMnUIVr0=
+github.com/mileusna/useragent v1.2.1/go.mod h1:3d8TOmwL/5I8pJjyVDteHtgDGcefrFUX4ccGOMKNYYc=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=

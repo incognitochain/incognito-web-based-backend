@@ -27,6 +27,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/mileusna/useragent"
 	"github.com/pkg/errors"
 )
 
@@ -542,4 +543,44 @@ func getTokenDecimalOnNetwork(tokenInfo *wcommon.TokenInfo, networkID int) (int6
 		return tokenInfo.Decimals, nil
 	}
 	return 0, errors.New("invalid token and network")
+}
+
+func parseUserAgent(userAgent string) string {
+	ua := useragent.Parse(userAgent)
+	uaStr := ""
+
+	if ua.IsAndroid() {
+		uaStr = "mobile-android"
+	}
+	if ua.IsIOS() {
+		uaStr = "mobile-ios"
+	}
+	if ua.IsEdge() {
+		uaStr = "web-edge"
+	}
+	if ua.IsFirefox() {
+		uaStr = "web-firefox"
+	}
+	if ua.IsChrome() {
+		uaStr = "web-chrome"
+	}
+	if ua.IsOpera() {
+		uaStr = "web-opera"
+	}
+
+	if uaStr == "" {
+		if ua.Mobile || ua.Tablet {
+			uaStr = "mobile"
+		}
+		if ua.Bot {
+			uaStr = "bot"
+		}
+		if ua.Desktop {
+			uaStr = "web"
+		}
+	}
+	if uaStr == "" {
+		uaStr = userAgent
+	}
+	return uaStr
 }

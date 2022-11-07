@@ -29,6 +29,7 @@ type SubmitPappTxTask struct {
 	PappSwapInfo     *common.PappSwapInfo
 	Networks         []string
 	Time             time.Time
+	UserAgent        string
 }
 
 type SubmitRefundFeeTask struct {

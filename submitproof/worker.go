@@ -343,6 +343,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		FeeRefundOTA:     task.FeeRefundOTA,
 		FeeRefundAddress: task.FeeRefundAddress,
 		OutchainStatus:   wcommon.StatusWaiting,
+		UserAgent:        task.UserAgent,
 	}
 	docID, err := database.DBSavePappTxData(data)
 	if err != nil {
@@ -441,7 +442,9 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
 				tokenOutSymbol := tkOutInfo.Symbol
 
-				swapAlert = fmt.Sprintf("`[%v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+				uaStr := parseUserAgent(task.UserAgent)
+
+				swapAlert = fmt.Sprintf("`[%v | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, uaStr, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 				log.Println(swapAlert)
 				slacknoti.SendWithCustomChannel(swapAlert, slackep)
 			}

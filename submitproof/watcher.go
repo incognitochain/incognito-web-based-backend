@@ -676,9 +676,10 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 									}
 								}
 
+								uaStr := parseUserAgent(pappTxData.UserAgent)
 								// decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
 								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
-								swapAlert = fmt.Sprintf("`[%v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
+								swapAlert = fmt.Sprintf("`[%v | %v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, uaStr, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
 							}
 							log.Println(swapAlert)
 							slacknoti.SendWithCustomChannel(swapAlert, slackep)

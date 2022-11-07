@@ -75,6 +75,7 @@ type PappTxData struct {
 	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
 	ShardID          int      `json:"shardid" bson:"shardid"`
 	OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
+	UserAgent        string   `json:"useragent" bson:"useragent"`
 	Error            string   `json:"error" bson:"error"`
 }
 

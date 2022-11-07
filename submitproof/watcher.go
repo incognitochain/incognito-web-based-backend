@@ -122,10 +122,19 @@ func forwardCollectedFee() {
 		if config.CentralIncPaymentAddress != "" {
 			for tokenID, amount := range amountToSend {
 				time.Sleep(30 * time.Second)
-				txhash, err := incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
-				if err != nil {
-					log.Println("GetAllUTXOsV2", err)
-					continue
+				txhash := ""
+				if tokenID == inccommon.PRVCoinID.String() {
+					txhash, err = incClient.CreateAndSendRawTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, 2, nil)
+					if err != nil {
+						log.Println("GetAllUTXOsV2", err)
+						continue
+					}
+				} else {
+					txhash, err = incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
+					if err != nil {
+						log.Println("GetAllUTXOsV2", err)
+						continue
+					}
 				}
 
 				go func(tkID string, tkAmount uint64) {
@@ -855,7 +864,7 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 	for _, tx := range txRefundFeeWaitList {
 		status := tx.RefundStatus
 		switch status {
-		case wcommon.StatusWaiting:
+		case wcommon.StatusWaiting, wcommon.StatusSubmitFailed, wcommon.StatusPending:
 			// _, err := SubmitTxFeeRefund(tx.IncRequestTx, tx.RefundOTA, tx.RefundOTASS, tx.RefundAddress, tx.RefundToken, tx.RefundAmount)
 			result[tx.RefundToken] += tx.RefundAmount
 		}

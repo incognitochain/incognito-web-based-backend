@@ -580,6 +580,14 @@ func parseUserAgent(userAgent string) string {
 		}
 	}
 	if uaStr == "" {
+		if strings.Contains(userAgent, "okhttp") {
+			uaStr = "mobile-android-ish"
+		}
+		if strings.Contains(userAgent, "CFNetwork") {
+			uaStr = "mobile-ios-ish"
+		}
+	}
+	if uaStr == "" {
 		uaStr = userAgent
 	}
 	return uaStr

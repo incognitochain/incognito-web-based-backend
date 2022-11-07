@@ -113,3 +113,14 @@ type RefundFeeData struct {
 	RefundPrivacyFee bool   `json:"ispfee" bson:"ispfee"`
 	Error            string `json:"error" bson:"error"`
 }
+
+type DexSwapTrackData struct {
+	mgm.DefaultModel `bson:",inline"`
+	IncTx            string `json:"inctx" bson:"inctx"`
+	Status           string `json:"status" bson:"status"`
+	TokenSell        string `json:"token_sell" bson:"token_sell"`
+	TokenBuy         string `json:"token_buy" bson:"token_buy"`
+	AmountIn         string `json:"amount_in" bson:"amount_in"`
+	MinAmountOut     string `json:"amount_out" bson:"amount_out"`
+	UserAgent        string `json:"useragent" bson:"useragent"`
+}

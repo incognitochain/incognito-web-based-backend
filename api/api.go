@@ -68,6 +68,8 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/shieldstatus", APIGetShieldStatus)
 
+	r.POST("/dexswap", APITrackDEXSwap)
+
 	//papps
 	pAppsGroup := r.Group("/papps")
 

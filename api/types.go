@@ -402,44 +402,6 @@ type PdexEstimateRespond struct {
 	ImpactAmount  float64
 }
 
-type TradeDataRespond struct {
-	RequestTx           string
-	RespondTxs          []string
-	RespondTokens       []string
-	RespondAmounts      []uint64
-	WithdrawTxs         map[string]TradeWithdrawInfo
-	SellTokenID         string
-	BuyTokenID          string
-	Status              string
-	StatusCode          int
-	PairID              string
-	PoolID              string
-	MinAccept           uint64
-	Amount              uint64
-	Matched             uint64
-	Requestime          int64
-	NFTID               string
-	Receiver            string
-	Fee                 uint64
-	FeeToken            string
-	IsCompleted         bool
-	SellTokenBalance    uint64
-	BuyTokenBalance     uint64
-	SellTokenWithdrawed uint64
-	BuyTokenWithdrawed  uint64
-	TradingPath         []string
-}
-
-type TradeWithdrawInfo struct {
-	TokenIDs   []string
-	IsRejected bool
-	Responds   map[string]struct {
-		Amount    uint64
-		Status    int
-		RespondTx string
-	}
-}
-
 type RetrySwapTx struct {
 	Txs []string
 }
@@ -457,4 +419,12 @@ type ShieldStatus struct {
 	Status    byte               `json:"Status"`
 	Data      []ShieldStatusData `json:"Data,omitempty"`
 	ErrorCode int                `json:"ErrorCode,omitempty"`
+}
+
+type DexSwap struct {
+	Txhash       string `json:"txhash"`
+	TokenSell    string `json:"token_sell"`
+	TokenBuy     string `json:"token_buy"`
+	AmountIn     string `json:"amount_in"`
+	MinAmountOut string `json:"amount_out"`
 }

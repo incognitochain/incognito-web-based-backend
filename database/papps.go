@@ -388,3 +388,52 @@ func DBGetPappSupportedToken() ([]common.PappSupportedTokenData, error) {
 
 	return result, nil
 }
+
+func DBRetrievePendingDexTxs(offset, limit int64) ([]common.DexSwapTrackData, error) {
+	startTime := time.Now()
+	var result []common.DexSwapTrackData
+	if limit == 0 {
+		limit = int64(1000)
+	}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPending, common.StatusExecuting}}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.DexSwapTrackData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Skip:  &offset,
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("found %v DexSwapTrackData in %v", len(result), time.Since(startTime))
+	return result, nil
+}
+
+func DBUpdateDexSwapTxStatus(incTx string, status string) error {
+	filter := bson.M{"inctx": bson.M{operator.Eq: incTx}}
+	update := bson.M{"$set": bson.M{"status": status}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.DexSwapTrackData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBSaveDexSwapTxData(txdata common.DexSwapTrackData) error {
+	var doc interface{}
+	doc = txdata
+	_, err := mgm.Coll(&common.DexSwapTrackData{}).InsertOne(context.Background(), doc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBDeleteDexSwap(txList []string) error {
+	filter := bson.M{"inctx": bson.M{operator.In: txList}}
+	_, err := mgm.Coll(&common.DexSwapTrackData{}).DeleteMany(context.Background(), filter)
+	if err != nil {
+		return err
+	}
+	return nil
+}

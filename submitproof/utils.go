@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -591,4 +592,53 @@ func parseUserAgent(userAgent string) string {
 		uaStr = userAgent
 	}
 	return uaStr
+}
+
+func getPdexSwapTxStatus(txhash, tokenOut string) (bool, string, error) {
+
+	type APIRespond struct {
+		Result []wcommon.TradeDataRespond
+		Error  *string
+	}
+
+	var responseBodyData APIRespond
+
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).
+		Get(config.CoinserviceURL + "/pdex/v3/tradedetail?txhash=" + txhash)
+	if err != nil {
+		log.Println("getPdexSwapTxStatus", err)
+		return false, "", err
+	}
+	if responseBodyData.Error != nil {
+		log.Println("getPdexSwapTxStatus", errors.New(*responseBodyData.Error))
+		return false, "", errors.New(*responseBodyData.Error)
+	}
+
+	if len(responseBodyData.Result) == 0 {
+		return false, "", errors.New("not found")
+	}
+
+	swapResult := responseBodyData.Result[0]
+
+	if len(swapResult.RespondTxs) > 0 {
+		if swapResult.Status == "accepted" {
+			outAmountBig := new(big.Float).SetUint64(swapResult.RespondAmounts[0])
+			var outDecimal *big.Float
+			tokenOutInfo, err := getTokenInfo(tokenOut)
+			if err != nil {
+				return false, "", errors.New("not found")
+			}
+			outDecimal = new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
+			outAmountfl64, _ := new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+			outAmount := fmt.Sprintf("%f", outAmountfl64)
+			return true, outAmount, nil
+		} else {
+			return true, "", nil
+		}
+	}
+
+	return false, "", nil
 }

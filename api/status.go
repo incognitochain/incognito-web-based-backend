@@ -263,7 +263,7 @@ func getPdexSwapTxStatus(txhash string) map[string]interface{} {
 	result := make(map[string]interface{})
 
 	type APIRespond struct {
-		Result []TradeDataRespond
+		Result []wcommon.TradeDataRespond
 		Error  *string
 	}
 
@@ -385,4 +385,31 @@ func buildSwapDetail(tokenIn, tokenOut string, networkID int, inAmount uint64, o
 	}
 	result["out_amount"] = fmt.Sprintf("%f", outAmountfl64)
 	return result
+}
+
+func APITrackDEXSwap(c *gin.Context) {
+	var req DexSwap
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	txdata := wcommon.DexSwapTrackData{
+		IncTx:        req.Txhash,
+		Status:       wcommon.StatusPending,
+		TokenSell:    req.TokenSell,
+		TokenBuy:     req.TokenBuy,
+		AmountIn:     req.AmountIn,
+		MinAmountOut: req.MinAmountOut,
+	}
+	err = database.DBSaveDexSwapTxData(txdata)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+
+	log.Println("APITrackDEXSwap", req.Txhash)
+	c.JSON(http.StatusOK, gin.H{"Result": "ok"})
+	return
 }

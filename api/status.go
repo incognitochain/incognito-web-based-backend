@@ -407,6 +407,7 @@ func APITrackDEXSwap(c *gin.Context) {
 		TokenBuy:     req.TokenBuy,
 		AmountIn:     req.AmountIn,
 		MinAmountOut: req.MinAmountOut,
+		UserAgent:    c.Request.UserAgent(),
 	}
 	err = database.DBSaveDexSwapTxData(txdata)
 	if err != nil {

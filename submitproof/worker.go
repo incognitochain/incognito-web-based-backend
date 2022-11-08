@@ -444,7 +444,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 
 				uaStr := parseUserAgent(task.UserAgent)
 
-				swapAlert = fmt.Sprintf("`[%v | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, uaStr, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+				swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, pappTxData.Networks[0], uaStr, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 				log.Println(swapAlert)
 				slacknoti.SendWithCustomChannel(swapAlert, slackep)
 			}

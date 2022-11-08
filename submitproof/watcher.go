@@ -723,7 +723,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 							tokenOutSymbol := tkOutInfo.Symbol
 
 							if otherInfo.IsReverted {
-								swapAlert = fmt.Sprintf("`[%v]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+								swapAlert = fmt.Sprintf("`[%v(%v)]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, tx.Network, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 							} else {
 								amount = new(big.Float).SetInt(otherInfo.Amount)
 
@@ -732,6 +732,9 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 										netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
 										isNative := false
 										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == ctk.CurrencyType {
+											isNative = true
+										}
+										if wcommon.CheckIsWrappedNativeToken(ctk.ContractID, netID) {
 											isNative = true
 										}
 										if netID == networkID {
@@ -753,6 +756,9 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 									if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == tkOutInfo.CurrencyType {
 										isNative = true
 									}
+									if wcommon.CheckIsWrappedNativeToken(tkOutInfo.ContractID, netID) {
+										isNative = true
+									}
 									if isNative {
 										decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
 									} else {
@@ -767,7 +773,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 								uaStr := parseUserAgent(pappTxData.UserAgent)
 								// decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
 								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
-								swapAlert = fmt.Sprintf("`[%v | %v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, uaStr, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
+								swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, tx.Network, uaStr, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
 							}
 							log.Println(swapAlert)
 							slacknoti.SendWithCustomChannel(swapAlert, slackep)

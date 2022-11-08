@@ -395,6 +395,11 @@ func APITrackDEXSwap(c *gin.Context) {
 		return
 	}
 
+	if req.Txhash == "" || req.TokenSell == "" || req.TokenBuy == "" || req.AmountIn == "" || req.MinAmountOut == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid request"})
+		return
+	}
+
 	txdata := wcommon.DexSwapTrackData{
 		IncTx:        req.Txhash,
 		Status:       wcommon.StatusPending,

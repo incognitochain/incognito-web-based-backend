@@ -367,10 +367,12 @@ type PancakeQuote struct {
 }
 
 type PappNetworkFee struct {
-	TokenID          string `json:"tokenid"`
-	Amount           uint64 `json:"amount"`
-	AmountInBuyToken string `json:"amountInBuyToken"`
-	privacyFee       uint64
+	TokenID               string `json:"tokenid"`
+	Amount                uint64 `json:"amount"`
+	AmountInBuyToken      string `json:"amountInBuyToken"`
+	PrivacyFee            uint64
+	GasFeePRV             float64
+	AdditionalTokenInFee1 float64
 }
 
 type PancakeTokenMapItem struct {
@@ -427,4 +429,8 @@ type DexSwap struct {
 	TokenBuy     string `json:"token_buy"`
 	AmountIn     string `json:"amount_in"`
 	MinAmountOut string `json:"amount_out"`
+}
+
+type TokenStruct struct {
+	ID string `json:"id"`
 }

@@ -667,7 +667,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 
 	amountInBig0 := new(big.Float).Set(amountFloat)
 
-	additionalTokenInFee := amountInBig0.Mul(amountInBig0, new(big.Float).SetFloat64(0.001))
+	additionalTokenInFee := amountInBig0.Mul(amountInBig0, new(big.Float).SetFloat64(0.003))
 
 	toTokenDecimal := big.NewFloat(math.Pow10(-pTokenContract2.Decimals))
 
@@ -1406,7 +1406,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 								return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
 							}
 						}
-						pfeeAmount = fee.privacyFee
+						pfeeAmount = fee.PrivacyFee
 					}
 				}
 				swapInfo = &dappSwapInfo
@@ -1592,9 +1592,9 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 	var fees []PappNetworkFee
 
 	if isUnifiedNativeToken {
-		additionalTokenInFeeUint, _ := additionalTokenInFee.Uint64()
+		// additionalTokenInFeeUint, _ := additionalTokenInFee.Uint64()
+		additionalTokenInFeeUint, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(nativeToken.Decimals))).Uint64()
 		feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee+additionalTokenInFeeUint), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
-
 		gasFeeFloat := new(big.Float).SetUint64(feeAmount)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, toTokenDecimal)
@@ -1611,10 +1611,9 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 			Amount:           feeAmount,
 			TokenID:          fromToken,
 			AmountInBuyToken: gasFeeInt,
-			privacyFee:       additionalTokenInFeeUint,
+			PrivacyFee:       additionalTokenInFeeUint,
 		})
 	} else {
-
 		gasFeePRV := float64(gasFee) * nativeToken.PricePrv
 		gasFeeFromToken := (gasFeePRV / fromTokenInfo.PricePrv)
 
@@ -1624,7 +1623,15 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 
 		feeAmount2 := feeAmount + additionalTokenInFee1
 
-		gasFeeFromTokenToPrv := gasFeePRV + float64(additionalTokenInFee1)*fromTokenInfo.PricePrv
+		additionalTokenInFeeFloat64, _ := additionalTokenInFee.Float64()
+
+		additionalFeeInPRV := additionalTokenInFeeFloat64 * fromTokenInfo.PricePrv
+
+		additionalTokenInFee2, _ := new(big.Float).Mul(new(big.Float).SetFloat64(additionalFeeInPRV), new(big.Float).SetFloat64(math.Pow10(9))).Float64()
+
+		gasFeeFromTokenToPrv := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeePRV)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals))
+
+		gasFeeFromTokenToPrv = gasFeeFromTokenToPrv + uint64(additionalTokenInFee2)
 
 		gasFeeFloat := new(big.Float).SetUint64(feeAmount)
 		gasFeeFloat = gasFeeFloat.Mul(gasFeeFloat, rate)
@@ -1650,14 +1657,14 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 				Amount:           feeInFromToken,
 				TokenID:          fromToken,
 				AmountInBuyToken: gasFeeIntToToken,
-				privacyFee:       additionalTokenInFee1,
+				PrivacyFee:       additionalTokenInFee1,
 			})
 		} else {
 			fees = append(fees, PappNetworkFee{
-				Amount:           ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", uint64(gasFeeFromTokenToPrv)), int64(nativeToken.Decimals), int64(nativeToken.PDecimals)),
+				Amount:           gasFeeFromTokenToPrv,
 				TokenID:          common.PRVCoinID.String(),
 				AmountInBuyToken: gasFeeIntToToken,
-				privacyFee:       uint64(float64(additionalTokenInFee1) * fromTokenInfo.PricePrv),
+				PrivacyFee:       uint64(additionalTokenInFee2),
 			})
 		}
 	}

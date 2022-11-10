@@ -1,11 +1,15 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/incognitochain/incognito-web-based-backend/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 
@@ -190,4 +194,65 @@ func APIGetSupportedToken(c *gin.Context) {
 	response.Result = result
 
 	c.JSON(200, response)
+}
+
+func APIGetDefaultTokenList(c *gin.Context) {
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
+	response.Result = defaultTokenList
+
+	c.JSON(200, response)
+}
+
+func whiteListCurrencyType(currencyType int) bool {
+	switch currencyType {
+	case common.TOMO, common.ZIL, common.XMR, common.NEO, common.DASH, common.LTC, common.DOGE, common.ZEC, common.DOT, common.ETH, common.NEAR, common.AVAX, common.AURORA_ETH, common.BNB_BSC, common.MATIC, common.FTM, common.UNIFINE_TOKEN:
+		return true
+	default:
+		return false
+	}
+}
+
+var whiteListTokenContract map[string]struct{}
+
+func parseDefaultToken() error {
+	whiteListTokenContract = make(map[string]struct{})
+	tokenList := []TokenStruct{}
+	bscList := []TokenStruct{}
+	err := json.Unmarshal([]byte(bscDefault), &bscList)
+	if err != nil {
+		return err
+	}
+
+	ethList := []TokenStruct{}
+	err = json.Unmarshal([]byte(ethDefault), &ethList)
+	if err != nil {
+		return err
+	}
+
+	plgList := []TokenStruct{}
+	err = json.Unmarshal([]byte(plgDefault), &plgList)
+	if err != nil {
+		return err
+	}
+
+	ftmList := []TokenStruct{}
+	err = json.Unmarshal([]byte(ftmDefault), &ftmList)
+	if err != nil {
+		return err
+	}
+
+	tokenList = append(tokenList, bscList...)
+	tokenList = append(tokenList, ethList...)
+	tokenList = append(tokenList, plgList...)
+	tokenList = append(tokenList, ftmList...)
+
+	for _, token := range tokenList {
+		whiteListTokenContract[strings.ToLower(token.ID)] = struct{}{}
+	}
+	fmt.Println("tokenList", len(whiteListTokenContract))
+
+	return nil
 }

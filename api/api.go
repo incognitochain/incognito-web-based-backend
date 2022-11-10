@@ -1,10 +1,8 @@
 package api
 
 import (
-	"errors"
 	"log"
 	"strconv"
-	"sync"
 	"time"
 
 	gincache "github.com/gin-contrib/cache"
@@ -32,6 +30,12 @@ func StartAPIservice(cfg common.Config) {
 		}
 	}
 
+	if network == "mainnet" {
+		err := parseDefaultToken()
+		if err != nil {
+			panic(err)
+		}
+	}
 	err := initIncClient(network)
 	if err != nil {
 		panic(err)
@@ -51,6 +55,7 @@ func StartAPIservice(cfg common.Config) {
 
 	r.GET("/tokenlist", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 	r.POST("/tokeninfo", gincache.CachePage(store, 5*time.Second, APIGetSupportedTokenInfo))
+	r.GET("/defaulttokenlist", gincache.CachePage(store, 5*time.Second, APIGetDefaultTokenList))
 
 	r.POST("/estimateshieldreward", APIEstimateReward)
 
@@ -112,57 +117,4 @@ func loadOTAKey(key string) error {
 	}
 	incFeeKeySet = wl
 	return nil
-}
-
-var supportTokenList []PappSupportedTokenData
-var childToUnifiedTokenLock sync.RWMutex
-var childToUnifiedTokenMap map[string]string
-
-func prefetchSupportedTokenList() {
-	childToUnifiedTokenMap = make(map[string]string)
-	for {
-		tokenList, err := retrieveTokenList()
-		if err != nil {
-			log.Println(err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		childToUnifiedTokenLock.Lock()
-		for _, tk := range tokenList {
-			if tk.CurrencyType == common.UnifiedCurrencyType {
-				for _, ctk := range tk.ListUnifiedToken {
-					childToUnifiedTokenMap[ctk.TokenID] = tk.TokenID
-				}
-			}
-		}
-		childToUnifiedTokenLock.Unlock()
-
-		spTkList, err := getPappSupportedTokenList(tokenList)
-		if err != nil {
-			log.Println(err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		supportTokenList = spTkList
-
-		time.Sleep(5 * time.Second)
-	}
-}
-
-func getUnifiedTokenFromChildToken(childToken string) (string, error) {
-	childToUnifiedTokenLock.RLock()
-	defer childToUnifiedTokenLock.RUnlock()
-	tkID, ok := childToUnifiedTokenMap[childToken]
-	if !ok {
-		return "", errors.New("can't find child token")
-	}
-	return tkID, nil
-}
-
-func getSupportedTokenList() []PappSupportedTokenData {
-	result := []PappSupportedTokenData{}
-	result = append(result, supportTokenList...)
-	return result
-
 }

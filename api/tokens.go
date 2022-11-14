@@ -263,7 +263,7 @@ func APISearchToken(c *gin.Context) {
 	var result []wcommon.TokenInfo
 	for _, tokenInfo := range allTokenList {
 		strLen := len(searchStr)
-		if strLen == 32 {
+		if strLen == 64 {
 			if strings.Contains(strings.ToLower(tokenInfo.TokenID), searchStr) {
 				result = append(result, tokenInfo)
 				break
@@ -291,9 +291,9 @@ func APISearchToken(c *gin.Context) {
 
 	if len(result) == 0 {
 		response.Error = fmt.Errorf("not found")
+		c.JSON(http.StatusBadRequest, response)
 	} else {
 		response.Result = result
+		c.JSON(200, response)
 	}
-
-	c.JSON(200, response)
 }

@@ -79,7 +79,7 @@ func trackDexSwap() {
 							log.Println("DBUpdateDexSwapTxStatus error", err)
 							continue
 						}
-						slackep := os.Getenv("SLACK_SWAP_ALERT")
+						slackep := os.Getenv("SLACK_PDEX_ALERT")
 						if slackep != "" {
 							tkInInfo, _ := getTokenInfo(tx.TokenSell)
 							tkOutInfo, _ := getTokenInfo(tx.TokenBuy)
@@ -107,7 +107,7 @@ func trackDexSwap() {
 						continue
 					}
 
-					slackep := os.Getenv("SLACK_SWAP_ALERT")
+					slackep := os.Getenv("SLACK_PDEX_ALERT")
 					if slackep != "" {
 						tkInInfo, _ := getTokenInfo(tx.TokenSell)
 						tkOutInfo, _ := getTokenInfo(tx.TokenBuy)

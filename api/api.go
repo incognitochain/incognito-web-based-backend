@@ -57,6 +57,8 @@ func StartAPIservice(cfg common.Config) {
 	r.POST("/tokeninfo", gincache.CachePage(store, 5*time.Second, APIGetSupportedTokenInfo))
 	r.GET("/defaulttokenlist", gincache.CachePage(store, 5*time.Second, APIGetDefaultTokenList))
 
+	r.GET("/searchtoken", gincache.CachePage(store, 5*time.Second, APISearchToken))
+
 	r.POST("/estimateshieldreward", APIEstimateReward)
 
 	r.POST("/estimateunshieldfee", APIEstimateUnshield)

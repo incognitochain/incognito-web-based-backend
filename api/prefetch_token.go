@@ -47,6 +47,11 @@ func prefetchSupportedTokenList() {
 			log.Println(err)
 			continue
 		}
+		err = preCalcAllTokenList(tokenList, supportTokenList)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -69,6 +74,7 @@ func getSupportedTokenList() []PappSupportedTokenData {
 }
 
 var defaultTokenList []wcommon.TokenInfo
+var allTokenList []wcommon.TokenInfo
 
 func preCalcDefaultTokenList(tokenList []wcommon.TokenInfo, pappTokens []PappSupportedTokenData) error {
 	var result []wcommon.TokenInfo
@@ -140,5 +146,66 @@ func preCalcDefaultTokenList(tokenList []wcommon.TokenInfo, pappTokens []PappSup
 	}
 
 	defaultTokenList = result
+	return nil
+}
+
+func preCalcAllTokenList(tokenList []wcommon.TokenInfo, pappTokens []PappSupportedTokenData) error {
+	var result []wcommon.TokenInfo
+	dupChecker := make(map[string]struct{})
+
+	for _, tk := range tokenList {
+		if _, exist := dupChecker[tk.TokenID]; !exist {
+			if tk.CurrencyType == wcommon.UnifiedCurrencyType {
+				tk.IsSwapable = true
+				newUTkList := []wcommon.TokenInfo{}
+				for _, utk := range tk.ListUnifiedToken {
+					var swapContractID string
+					if wcommon.IsNativeCurrency(utk.CurrencyType) {
+						swapContractID = "0x0000000000000000000000000000000000000000"
+					} else {
+						netID, err := wcommon.GetNetworkIDFromCurrencyType(utk.CurrencyType)
+						if err == nil {
+							swapContractID, err = getSwapContractID(tk.TokenID, netID, pappTokens)
+							if err != nil {
+								swapContractID, err = getSwapContractID(utk.TokenID, netID, pappTokens)
+								if err != nil {
+									log.Println(err)
+								}
+							}
+						}
+					}
+					if swapContractID != "" {
+						utk.ContractID = swapContractID
+						utk.IsSwapable = true
+						utk.ContractIDSwap = swapContractID
+					}
+					newUTkList = append(newUTkList, utk)
+				}
+				tk.ListUnifiedToken = newUTkList
+			} else {
+				var swapContractID string
+				if common.IsNativeCurrency(tk.CurrencyType) {
+					swapContractID = "0x0000000000000000000000000000000000000000"
+				} else {
+					netID, err := common.GetNetworkIDFromCurrencyType(tk.CurrencyType)
+					if err == nil {
+						swapContractID, err = getSwapContractID(tk.TokenID, netID, pappTokens)
+						if err != nil {
+							log.Println(err)
+						}
+					}
+				}
+				if swapContractID != "" {
+					tk.ContractID = swapContractID
+					tk.IsSwapable = true
+					tk.ContractIDSwap = swapContractID
+				}
+			}
+			result = append(result, tk)
+			dupChecker[tk.TokenID] = struct{}{}
+		}
+	}
+
+	allTokenList = result
 	return nil
 }

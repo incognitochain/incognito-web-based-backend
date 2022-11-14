@@ -53,10 +53,20 @@ func watchVaultState() {
 		result := make(map[string]map[string]string)
 
 		for uTokenID, vault := range responseBodyData.Result.UnifiedTokenVaults {
-			uTkInfo, _ := getTokenInfo(uTokenID)
+		retry:
+			uTkInfo, err := getTokenInfo(uTokenID)
+			if err != nil {
+				log.Println("getTokenInfo", err)
+				goto retry
+			}
 			result[uTkInfo.Name] = make(map[string]string)
 			for cTkID, v := range vault {
-				cTkInfo, _ := getTokenInfo(cTkID)
+			retry2:
+				cTkInfo, err := getTokenInfo(cTkID)
+				if err != nil {
+					log.Println("getTokenInfo", err)
+					goto retry2
+				}
 				amount := new(big.Float).SetUint64(v.Amount)
 				decimal := new(big.Float).SetFloat64(math.Pow10(-9))
 				amountFloat := new(big.Float).Mul(amount, decimal)

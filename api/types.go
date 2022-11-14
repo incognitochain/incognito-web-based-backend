@@ -367,11 +367,11 @@ type PancakeQuote struct {
 }
 
 type PappNetworkFee struct {
-	TokenID          string `json:"tokenid"`
-	Amount           uint64 `json:"amount"`
-	AmountInBuyToken string `json:"amountInBuyToken"`
-	PrivacyFee       uint64
-	FeeInUSD         float64
+	TokenID          string  `json:"tokenid"`
+	Amount           uint64  `json:"amount"`
+	AmountInBuyToken string  `json:"amountInBuyToken"`
+	PrivacyFee       uint64  `json:"privacyFee"`
+	FeeInUSD         float64 `json:"feeInUSD"`
 }
 
 type PancakeTokenMapItem struct {

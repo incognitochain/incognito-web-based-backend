@@ -256,3 +256,44 @@ func parseDefaultToken() error {
 
 	return nil
 }
+
+func APISearchToken(c *gin.Context) {
+	searchStr := c.Query("token")
+	searchStr = strings.ToLower(searchStr)
+	var result []wcommon.TokenInfo
+	for _, tokenInfo := range allTokenList {
+		strLen := len(searchStr)
+		if strLen == 32 {
+			if strings.Contains(strings.ToLower(tokenInfo.TokenID), searchStr) {
+				result = append(result, tokenInfo)
+				break
+			}
+		} else {
+			if strLen <= 5 {
+				if strings.Contains(strings.ToLower(tokenInfo.Symbol), searchStr) {
+					result = append(result, tokenInfo)
+				} else {
+					if strings.Contains(strings.ToLower(tokenInfo.Name), searchStr) {
+						result = append(result, tokenInfo)
+					}
+				}
+			} else {
+				if strings.Contains(strings.ToLower(tokenInfo.Name), searchStr) {
+					result = append(result, tokenInfo)
+				}
+			}
+		}
+	}
+	var response struct {
+		Result interface{}
+		Error  interface{}
+	}
+
+	if len(result) == 0 {
+		response.Error = fmt.Errorf("not found")
+	} else {
+		response.Result = result
+	}
+
+	c.JSON(200, response)
+}

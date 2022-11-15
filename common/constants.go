@@ -147,7 +147,7 @@ var (
 		NETWORK_BSC_ID:    {strings.ToLower("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"), strings.ToLower("0xae13d989dac2f0debff460ac112a837c89baa7cd")},
 		NETWORK_ETH_ID:    {strings.ToLower("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"), strings.ToLower("0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6")},
 		NETWORK_FTM_ID:    {strings.ToLower("0xf1277d1Ed8AD466beddF92ef448A132661956621"), strings.ToLower("0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83")},
-		NETWORK_AVAX_ID:   {strings.ToLower("0xDCd29f325060F8e9F6c21671aDC74dabD0fD5Ff5"), strings.ToLower("0xd00ae08403b9bbb9124bb305c09058e32c39a48c")},
+		NETWORK_AVAX_ID:   {strings.ToLower("0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7"), strings.ToLower("0xd00ae08403b9bbb9124bb305c09058e32c39a48c")},
 		NETWORK_AURORA_ID: {strings.ToLower("0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB"), strings.ToLower("0x1b6A3d5B5DCdF7a37CFE35CeBC0C4bD28eA7e946")},
 	}
 )

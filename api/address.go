@@ -22,7 +22,7 @@ func APIGenUnshieldAddress(c *gin.Context) {
 	switch req.Network {
 	case "centralized":
 		genCentralizedUnshieldAddress(c, req)
-	case "eth", "bsc", "plg", "ftm", "avax", "aurora":
+	case "eth", "bsc", "plg", "ftm", "avax", "aurora", "near":
 		genUnshieldAddress(c, req)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
@@ -100,7 +100,7 @@ func APIGenShieldAddress(c *gin.Context) {
 		genBTCShieldAddress(c, req)
 	case "centralized":
 		genCentralizedShieldAddress(c, req)
-	case "eth", "bsc", "plg", "ftm", "avax", "aurora":
+	case "eth", "bsc", "plg", "ftm", "avax", "aurora", "near":
 		genEVMShieldAddress(c, req)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})

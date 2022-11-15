@@ -47,7 +47,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		}
 		c.JSON(200, responseBodyData)
 		return
-	case "eth", "bsc", "plg", "ftm", "avax", "aurora":
+	case "eth", "bsc", "plg", "ftm", "avax", "aurora", "near":
 		re, err := restyClient.R().
 			EnableTrace().
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).

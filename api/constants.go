@@ -865,5 +865,9 @@ const bscDefault string = `[{
 	"id": "0x8f0528ce5ef7b51152a59745befdd91d97091d2f",
 	"hydeSymbol": "ALPACA",
 	"tradeVolumeUSD": 1082268.0590452938
+},
+{
+	"id": "0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba",
+	"hydeSymbol": "MIM"
 }
 ]`

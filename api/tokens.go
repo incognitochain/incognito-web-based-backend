@@ -243,11 +243,17 @@ func parseDefaultToken() error {
 	if err != nil {
 		return err
 	}
+	avaxList := []TokenStruct{}
+	err = json.Unmarshal([]byte(ftmDefault), &avaxList)
+	if err != nil {
+		return err
+	}
 
 	tokenList = append(tokenList, bscList...)
 	tokenList = append(tokenList, ethList...)
 	tokenList = append(tokenList, plgList...)
 	tokenList = append(tokenList, ftmList...)
+	tokenList = append(tokenList, avaxList...)
 
 	for _, token := range tokenList {
 		whiteListTokenContract[strings.ToLower(token.ID)] = struct{}{}

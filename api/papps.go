@@ -515,7 +515,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		if err != nil {
 			return nil, err
 		}
-		feeAddressShardID, _ = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
+		_, feeAddressShardID = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
 	}
 	log.Println("estimateSwapFee for", fromToken, toToken, amount, networkID)
 	networkName := wcommon.GetNetworkName(networkID)

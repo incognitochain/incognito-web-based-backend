@@ -244,7 +244,7 @@ func parseDefaultToken() error {
 		return err
 	}
 	avaxList := []TokenStruct{}
-	err = json.Unmarshal([]byte(ftmDefault), &avaxList)
+	err = json.Unmarshal([]byte(avaxDefault), &avaxList)
 	if err != nil {
 		return err
 	}

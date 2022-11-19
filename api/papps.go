@@ -425,7 +425,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 	response.Result = result
 
-	c.JSON(200, response)
+	c.PureJSON(200, response)
 
 }
 
@@ -822,7 +822,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOutRaw:         amountOutBig.String(),
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
 				RedepositReward:      reDepositRewardStr,
-				Paths:                pathsList,
+				Paths:                renderTokenFromTradePaths(pathsList, networkID),
 				Rate:                 rate.Text('f', -1),
 				Fee:                  fees,
 				Calldata:             calldata,
@@ -972,7 +972,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
 				RedepositReward:      reDepositRewardStr,
 				Rate:                 rate.Text('f', -1),
-				Paths:                quote.Data.Route,
+				Paths:                renderTokenFromTradePaths(quote.Data.Route, networkID),
 				Fee:                  fees,
 				Calldata:             calldata,
 				CallContract:         contract,
@@ -1113,7 +1113,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				CallContract:         contract,
 				Calldata:             calldata,
 				FeeAddress:           feeAddress,
-				Paths:                []string{pTokenContract1.ContractID, pTokenContract2.ContractID},
+				Paths:                renderTokenFromTradePaths([]string{pTokenContract1.ContractID, pTokenContract2.ContractID}, networkID),
 				FeeAddressShardID:    int(feeAddressShardID),
 			})
 			log.Println("done estimate curve")

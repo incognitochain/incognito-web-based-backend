@@ -1113,3 +1113,26 @@ const avaxDefault = `[{
 	"verify": true
 }
 ]`
+const nearDefault = `[{
+	"id": "token.v2.ref-finance.near",
+	"verify": true
+},{
+	"id": "usn",
+	"verify": true
+},{
+	"id": "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near",
+	"verify": true
+},{
+	"id": "6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near",
+	"verify": true
+},{
+	"id": "aurora",
+	"verify": true
+},{
+	"id": "2260fac5e5542a773aa44fbcfedf7c193bc2c599.factory.bridge.near",
+	"verify": true
+},{
+	"id": "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near",
+	"verify": true
+}]
+`

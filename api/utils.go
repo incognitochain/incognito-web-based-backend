@@ -522,3 +522,37 @@ func getShieldRewardEstimate(uTokenID string, tokenID string, amount uint64) (ui
 
 	return responseBodyData.Result.Reward, nil
 }
+
+func renderTokenFromTradePaths(paths []string, network int) string {
+	var result string
+	for idx, contractID := range paths {
+		tokenSymbol := ""
+		contractID = strings.ToLower(contractID)
+		nativeToken, ok := common.WrappedNativeMap[network]
+		if ok {
+			nt1 := strings.ToLower(nativeToken[0])
+			nt2 := strings.ToLower(nativeToken[1])
+			if nt1 == contractID || nt2 == contractID {
+				tokenSymbol = common.NativeTokenSymbol[network]
+			}
+		}
+		if tokenSymbol == "" {
+			for _, tk := range allTokenList {
+				tkContract := strings.ToLower(tk.ContractID)
+				if tkContract == contractID {
+					tokenSymbol = tk.Symbol
+				}
+			}
+		}
+
+		if tokenSymbol != "" {
+			if idx == 0 {
+				result = fmt.Sprintf("%v", tokenSymbol)
+			} else {
+				result = result + fmt.Sprintf(` -> %v`, tokenSymbol)
+			}
+		}
+	}
+
+	return result
+}

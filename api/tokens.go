@@ -208,7 +208,7 @@ func APIGetDefaultTokenList(c *gin.Context) {
 
 func whiteListCurrencyType(currencyType int) bool {
 	switch currencyType {
-	case common.TOMO, common.ZIL, common.XMR, common.NEO, common.DASH, common.LTC, common.DOGE, common.ZEC, common.DOT, common.ETH, common.NEAR, common.AVAX, common.AURORA_ETH, common.BNB_BSC, common.MATIC, common.FTM, common.UNIFINE_TOKEN:
+	case common.TOMO, common.ZIL, common.XMR, common.NEO, common.DASH, common.LTC, common.DOGE, common.ZEC, common.DOT, common.ETH, common.NEAR, common.NEAR_TOKEN, common.AVAX, common.AURORA_ETH, common.BNB_BSC, common.MATIC, common.FTM, common.UNIFINE_TOKEN:
 		return true
 	default:
 		return false
@@ -249,11 +249,18 @@ func parseDefaultToken() error {
 		return err
 	}
 
+	nearList := []TokenStruct{}
+	err = json.Unmarshal([]byte(nearDefault), &nearList)
+	if err != nil {
+		return err
+	}
+
 	tokenList = append(tokenList, bscList...)
 	tokenList = append(tokenList, ethList...)
 	tokenList = append(tokenList, plgList...)
 	tokenList = append(tokenList, ftmList...)
 	tokenList = append(tokenList, avaxList...)
+	tokenList = append(tokenList, nearList...)
 
 	for _, token := range tokenList {
 		whiteListTokenContract[strings.ToLower(token.ID)] = struct{}{}

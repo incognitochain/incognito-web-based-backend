@@ -71,6 +71,7 @@ type QuoteDataResp struct {
 	FeeAddress           string
 	FeeAddressShardID    int
 	Paths                interface{}
+	PathsContract        interface{}
 	PoolPairs            []string
 	Calldata             string
 	ImpactAmount         string

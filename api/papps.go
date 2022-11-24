@@ -746,7 +746,9 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				if err != nil {
 					return nil, err
 				}
-				paths = append(paths, tokenAddress)
+				if _, ok := traversedTk[route.TokenIn.Address]; !ok {
+					paths = append(paths, tokenAddress)
+				}
 				traversedTk[route.TokenIn.Address] = struct{}{}
 
 				tokenAddress2 := ethcommon.Address{}
@@ -823,6 +825,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				AmountOutPreSlippage: pTkAmountPreSlippageFloatStr,
 				RedepositReward:      reDepositRewardStr,
 				Paths:                renderTokenFromTradePaths(pathsList, networkID),
+				PathsContract:        pathsList,
 				Rate:                 rate.Text('f', -1),
 				Fee:                  fees,
 				Calldata:             calldata,
@@ -973,6 +976,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				RedepositReward:      reDepositRewardStr,
 				Rate:                 rate.Text('f', -1),
 				Paths:                renderTokenFromTradePaths(quote.Data.Route, networkID),
+				PathsContract:        quote.Data.Route,
 				Fee:                  fees,
 				Calldata:             calldata,
 				CallContract:         contract,
@@ -1114,6 +1118,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 				Calldata:             calldata,
 				FeeAddress:           feeAddress,
 				Paths:                renderTokenFromTradePaths([]string{pTokenContract1.ContractID, pTokenContract2.ContractID}, networkID),
+				PathsContract:        []string{pTokenContract1.ContractID, pTokenContract2.ContractID},
 				FeeAddressShardID:    int(feeAddressShardID),
 			})
 			log.Println("done estimate curve")

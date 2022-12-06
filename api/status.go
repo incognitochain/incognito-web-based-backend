@@ -34,10 +34,11 @@ func APIGetStatusByShieldService(c *gin.Context) {
 		PrivacyTokenAddress string
 	}
 	requestBody.WalletAddress = pyd
-retry:
+	authToken := c.Request.Header.Get("Authorization")
+	// retry:
 	re, err := restyClient.R().
 		EnableTrace().
-		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(requestBody).
+		SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(requestBody).
 		Post(config.ShieldService + "/eta/history")
 	if err != nil {
 		c.JSON(400, gin.H{"Error": err.Error()})
@@ -51,17 +52,17 @@ retry:
 	}
 
 	if responseBodyData.Error != nil {
-		if responseBodyData.Error.Code != 401 {
-			c.JSON(400, gin.H{"Error": responseBodyData.Error})
-			return
-		} else {
-			err = requestUSAToken(config.ShieldService)
-			if err != nil {
-				c.JSON(400, gin.H{"Error": err.Error()})
-				return
-			}
-			goto retry
-		}
+		// if responseBodyData.Error.Code != 401 {
+		c.JSON(400, gin.H{"Error": responseBodyData.Error})
+		return
+		// } else {
+		// 	err = requestUSAToken(config.ShieldService)
+		// 	if err != nil {
+		// 		c.JSON(400, gin.H{"Error": err.Error()})
+		// 		return
+		// 	}
+		// 	goto retry
+		// }
 	}
 
 	filteredHistory := []HistoryAddressResp{}

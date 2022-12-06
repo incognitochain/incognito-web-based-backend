@@ -44,10 +44,11 @@ func genCentralizedUnshieldAddress(c *gin.Context, req GenUnshieldAddressRequest
 }
 
 func genUnshieldAddress(c *gin.Context, req GenUnshieldAddressRequest) {
-retry:
+	authToken := c.Request.Header.Get("Authorization")
+	// retry:
 	re, err := restyClient.R().
 		EnableTrace().
-		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+		SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(req).
 		Post(config.ShieldService + "/" + req.Network + "/estimate-fees")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -67,17 +68,17 @@ retry:
 	}
 
 	if responseBodyData.Error != nil {
-		if responseBodyData.Error.Code != 401 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
-			return
-		} else {
-			err = requestUSAToken(config.ShieldService)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
-			goto retry
-		}
+		// if responseBodyData.Error.Code != 401 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
+		return
+		// } else {
+		// 	err = requestUSAToken(config.ShieldService)
+		// 	if err != nil {
+		// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		// 		return
+		// 	}
+		// 	goto retry
+		// }
 	}
 
 	c.JSON(200, responseBodyData)
@@ -180,10 +181,11 @@ func genBTCShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
 }
 
 func genCentralizedShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
-retry:
+	authToken := c.Request.Header.Get("Authorization")
+	// retry:
 	re, err := restyClient.R().
 		EnableTrace().
-		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+		SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(req).
 		Post(config.ShieldService + "/ota/generate")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -202,27 +204,29 @@ retry:
 		return
 	}
 	if responseBodyData.Error != nil {
-		if responseBodyData.Error.Code != 401 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
-			return
-		} else {
-			err = requestUSAToken(config.ShieldService)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
-			goto retry
-		}
+		// if responseBodyData.Error.Code != 401 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
+		return
+		// } else {
+		// 	err = requestUSAToken(config.ShieldService)
+		// 	if err != nil {
+		// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		// 		return
+		// 	}
+		// 	goto retry
+		// }
 	}
 
 	c.JSON(200, responseBodyData)
 }
 
 func genEVMShieldAddress(c *gin.Context, req GenShieldAddressRequest) {
-retry:
+
+	authToken := c.Request.Header.Get("Authorization")
+	// retry:
 	re, err := restyClient.R().
 		EnableTrace().
-		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+		SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(req).
 		Post(config.ShieldService + "/" + req.Network + "/generate")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -241,29 +245,29 @@ retry:
 		return
 	}
 	if responseBodyData.Error != nil {
-		if responseBodyData.Error.Code != 401 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
-			return
-		} else {
-			err = requestUSAToken(config.ShieldService)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
-			goto retry
-		}
+		// if responseBodyData.Error.Code != 401 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
+		return
+		// } else {
+		// 	err = requestUSAToken(config.ShieldService)
+		// 	if err != nil {
+		// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		// 		return
+		// 	}
+		// 	goto retry
 	}
 
 	c.JSON(200, responseBodyData)
 }
 
 func APIValidateAddress(c *gin.Context) {
+	authToken := c.Request.Header.Get("Authorization")
 	currencytype := c.Query("currencytype")
 	address := c.Query("address")
-retry:
+	// retry:
 	re, err := restyClient.R().
 		EnableTrace().
-		SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).
+		SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).
 		Get(config.ShieldService + "/ota/valid/" + currencytype + "/" + address)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -285,13 +289,13 @@ retry:
 		if responseBodyData.Error.Code != 401 {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": responseBodyData.Error})
 			return
-		} else {
-			err = requestUSAToken(config.ShieldService)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
-			goto retry
+			// } else {
+			// 	err = requestUSAToken(config.ShieldService)
+			// 	if err != nil {
+			// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			// 		return
+			// 	}
+			// 	goto retry
 		}
 	}
 

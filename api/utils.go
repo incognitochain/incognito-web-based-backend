@@ -39,7 +39,7 @@ func VerifyCaptcha(clientCaptcha string, secret string) (bool, error) {
 
 	re, err := restyClient.R().
 		EnableTrace().
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").SetHeader("Authorization", "Bearer "+usa.token).SetFormData(data).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").SetFormData(data).
 		Post("https://hcaptcha.com/siteverify")
 	if err != nil {
 		return false, err

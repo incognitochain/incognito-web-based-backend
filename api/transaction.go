@@ -21,16 +21,18 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	err = requestUSAToken(config.ShieldService)
-	if err != nil {
-		c.JSON(400, gin.H{"Error": err.Error()})
-		return
-	}
+
+	authToken := c.Request.Header.Get("Authorization")
+	// err = requestUSAToken(config.ShieldService)
+	// if err != nil {
+	// 	c.JSON(400, gin.H{"Error": err.Error()})
+	// 	return
+	// }
 	switch req.Network {
 	case "centralized":
 		re, err := restyClient.R().
 			EnableTrace().
-			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+			SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(req).
 			Post(config.ShieldService + "/ota/update-fee")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -50,7 +52,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 	case "eth", "bsc", "plg", "ftm", "avax", "aurora", "near":
 		re, err := restyClient.R().
 			EnableTrace().
-			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+			SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(req).
 			Post(config.ShieldService + "/" + req.Network + "/add-tx-withdraw")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -98,7 +100,7 @@ func APISubmitUnshieldTx(c *gin.Context) {
 			case "eth", "bsc", "plg", "ftm", "avax", "aurora":
 				re, err := restyClient.R().
 					EnableTrace().
-					SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(newReq).
+					SetHeader("Content-Type", "application/json").SetHeader("Authorization", authToken).SetBody(newReq).
 					Post(config.ShieldService + "/" + Network + "/add-tx-withdraw")
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})

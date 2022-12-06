@@ -957,3 +957,85 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 
 	return result, nil
 }
+
+func watchPendingUnshieldTx() {
+	for {
+		txList, err := database.DBRetrievePendingShieldTxs(0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingShieldTxs err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingShieldTxs(txdata)
+			if err != nil {
+				log.Println("processPendingShieldTxs err:", txdata.IncTx, err)
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func processPendingUnshieldTxs(txdata wcommon.ShieldTxData) error {
+	isInBlock, err := incClient.CheckTxInBlock(txdata.IncTx)
+	if err != nil {
+		if strings.Contains(err.Error(), "RPC returns an error:") {
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusSubmitFailed, err.Error())
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` submit shield failed 😵 inctx `%v` network `%v` externaltx `%v` \n", txdata.IncTx, txdata.NetworkID, txdata.ExternalTx))
+			return nil
+		}
+		log.Println("CheckTxInBlock err:", err)
+		return err
+	}
+
+	if isInBlock {
+		var status int
+		if txdata.TokenID != txdata.UTokenID {
+			statusShield, err := incClient.CheckUnifiedShieldStatus(txdata.IncTx)
+			if err != nil {
+				log.Println("CheckShieldStatus err", err)
+				return err
+			}
+			if statusShield.Status == 0 {
+				status = 3
+			} else {
+				status = 2
+			}
+		} else {
+			status, err = incClient.CheckShieldStatus(txdata.IncTx)
+			if err != nil {
+				log.Println("CheckShieldStatus err", err)
+				return err
+			}
+		}
+
+		switch status {
+		case 1:
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusPending, "")
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
+			}
+		case 2:
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusAccepted, "")
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
+			}
+			go faucetPRV(txdata.PaymentAddress)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`, inctx `%v`\n", txdata.ExternalTx, txdata.IncTx))
+			return nil
+		case 3:
+			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusRejected, "rejected by chain")
+			if err != nil {
+				log.Println("DBUpdateShieldTxStatus err:", err)
+				return err
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have rejected needed check 😵, exttx `%v`\n", txdata.ExternalTx))
+			return nil
+		}
+	}
+	return nil
+}

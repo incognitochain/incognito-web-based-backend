@@ -91,8 +91,9 @@ func StartAPIservice(cfg common.Config) {
 	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 
 	unshieldGroup := r.Group("/unshield")
-	unshieldGroup.POST("/status", APIGetSwapTxStatus)
+	unshieldGroup.POST("/status", APIGetUnshieldTxStatus)
 	unshieldGroup.POST("/submitunshieldtx", APISubmitUnshieldTxNew)
+	unshieldGroup.POST("/estimatefee", APIUnshieldFeeEstimate)
 
 	//admin
 	adminGroup := r.Group("/admin")

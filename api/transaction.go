@@ -293,3 +293,7 @@ func getTokenNetwork(pUTokenID string, tokenID string) int {
 	}
 	return 0
 }
+
+func APISubmitUnshieldTxNew(c *gin.Context) {
+
+}

@@ -176,3 +176,48 @@ func DBGetPendingFeeRefundTx(limit int64) ([]common.RefundFeeData, error) {
 	}
 	return result, nil
 }
+
+func DBUpdateUnshieldRefund(incReqTx string, refundsubmitted bool) error {
+	filter := bson.M{"inctx": bson.M{operator.Eq: incReqTx}}
+	update := bson.M{"$set": bson.M{"refundsubmitted": refundsubmitted}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.UnshieldTxData{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBGetUnshieldTxNeedFeeRefund(limit int64) ([]common.UnshieldTxData, error) {
+	var result []common.UnshieldTxData
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusRejected}, "refundsubmitted": bson.M{operator.Eq: false}}
+	if limit == 0 {
+		limit = 100
+	}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.UnshieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Sort:  bson.D{{"created_at", -1}},
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// func DBGetUnshieldTxNeedPrivacyFeeRefund(limit int64) ([]common.UnshieldTxData, error) {
+// 	var result []common.UnshieldTxData
+// 	filter := bson.M{"status": bson.M{operator.Eq: common.StatusAccepted}, "refundsubmitted": bson.M{operator.Eq: false}, "refundpfee": bson.M{operator.Eq: true}}
+// 	if limit == 0 {
+// 		limit = 100
+// 	}
+// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+// 	err := mgm.Coll(&common.PappTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+// 		Sort:  bson.D{{"created_at", -1}},
+// 		Limit: &limit,
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return result, nil
+// }

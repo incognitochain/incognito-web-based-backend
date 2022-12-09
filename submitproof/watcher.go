@@ -251,7 +251,7 @@ func watchPendingFeeRefundTx() {
 	for {
 		txList, err := database.DBGetPendingFeeRefundTx(0)
 		if err != nil {
-			log.Println("DBGetPappTxNeedFeeRefund err:", err)
+			log.Println("DBGetPendingFeeRefundTx err:", err)
 		}
 
 		for _, tx := range txList {
@@ -969,6 +969,51 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 	return result, nil
 }
 
+func getPendingUnshieldsFee(shardID int) (map[string]uint64, error) {
+	//TODO
+	result := make(map[string]uint64)
+	var txList []wcommon.UnshieldTxData
+	var err error
+	if shardID == -1 {
+		txList, err = database.DBGetUnshieldTxDataByStatus(wcommon.StatusExecuting, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		txList, err = database.DBGetUnshieldTxDataByStatusAndShardID(wcommon.StatusExecuting, shardID, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txList, err = database.DBGetUnshieldTxPendingOutchainSubmit(0, 0)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txRefundFeeWaitList, err := database.DBGetPendingFeeRefundTx(0)
+	if err != nil {
+		log.Println("DBGetPendingFeeRefundTx err:", err)
+	}
+
+	for _, tx := range txRefundFeeWaitList {
+		status := tx.RefundStatus
+		switch status {
+		case wcommon.StatusWaiting, wcommon.StatusSubmitFailed, wcommon.StatusPending:
+			result[tx.RefundToken] += tx.RefundAmount
+		}
+	}
+
+	return result, nil
+}
+
 func watchPendingUnshieldTx() {
 	for {
 		txList, err := database.DBRetrievePendingUnshieldTxs(0, 0)
@@ -1090,42 +1135,6 @@ func watchUnshieldTxNeedFeeRefund() {
 				RefundOTA:        tx.FeeRefundOTA,
 				RefundAddress:    tx.FeeRefundAddress,
 				RefundPrivacyFee: false,
-				RefundStatus:     wcommon.StatusWaiting,
-			}
-
-			err = database.DBCreateRefundFeeRecord(data)
-			if err != nil {
-				log.Println("DBGetTxFeeRefundByReq", err)
-				continue
-			}
-		}
-
-		txList, err = database.DBGetUnshieldTxNeedPrivacyFeeRefund(0)
-		if err != nil {
-			log.Println("DBGetUnshieldTxNeedPrivacyFeeRefund err:", err)
-		}
-		for _, tx := range txList {
-			rftx, err := database.DBGetTxFeeRefundByReq(tx.IncTx)
-			if err != nil {
-				if err != mongo.ErrNoDocuments {
-					log.Println("DBGetTxFeeRefundByReq", err)
-					continue
-				}
-			}
-			if rftx != nil {
-				err = database.DBUpdateUnshieldRefund(tx.IncTx, true)
-				if err != nil {
-					log.Println("DBUpdateUnshieldRefund", err)
-					continue
-				}
-			}
-			data := wcommon.RefundFeeData{
-				IncRequestTx:     tx.IncTx,
-				RefundAmount:     tx.PFeeAmount,
-				RefundToken:      tx.FeeToken,
-				RefundOTA:        tx.FeeRefundOTA,
-				RefundAddress:    tx.FeeRefundAddress,
-				RefundPrivacyFee: true,
 				RefundStatus:     wcommon.StatusWaiting,
 			}
 

@@ -191,3 +191,41 @@ func DBUpdateUnshieldTxSubmitOutchainStatus(incTx string, status string) error {
 	}
 	return nil
 }
+
+func DBGetUnshieldTxDataByStatusAndShardID(status string, shardid int, offset, limit int64) ([]common.UnshieldTxData, error) {
+	startTime := time.Now()
+	var result []common.UnshieldTxData
+	if limit == 0 {
+		limit = int64(1000)
+	}
+	filter := bson.M{"status": bson.M{operator.Eq: status}, "shardid": bson.M{operator.Eq: shardid}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.UnshieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Skip:  &offset,
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("found %v UnshieldTxData in %v", len(result), time.Since(startTime))
+	return result, nil
+}
+
+func DBGetUnshieldTxDataByStatus(status string, offset, limit int64) ([]common.UnshieldTxData, error) {
+	startTime := time.Now()
+	var result []common.UnshieldTxData
+	if limit == 0 {
+		limit = int64(1000)
+	}
+	filter := bson.M{"status": bson.M{operator.Eq: status}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.UnshieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Skip:  &offset,
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("found %v UnshieldTxData in %v", len(result), time.Since(startTime))
+	return result, nil
+}

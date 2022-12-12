@@ -124,3 +124,41 @@ type DexSwapTrackData struct {
 	MinAmountOut     string `json:"amount_out" bson:"amount_out"`
 	UserAgent        string `json:"useragent" bson:"useragent"`
 }
+
+// pDao
+type Proposal struct {
+	mgm.DefaultModel `bson:",inline"`
+	IncTx            string   `json:"inctx" bson:"inctx"`
+	SubmitBurnTx     string   `json:"submit_burn_tx" bson:"submit_burn_tx"`
+	SubmitProposalTx string   `json:"submit_proposal_tx" bson:"submit_proposal_tx"`
+	Status           string   `json:"status" bson:"status"`
+	ProposalID       string   `json:"token_sell" bson:"token_sell"`
+	Proposer         string   `json:"proposer" bson:"proposer"`
+	Targets          []string `json:"targets" bson:"targets"`
+	Values           []string `json:"values" bson:"values"`
+	Signatures       []string `json:"signatures" bson:"signatures"`
+	Calldatas        []string `json:"calldatas" bson:"calldatas"`
+	Description      string   `json:"description" bson:"description"`
+}
+
+type Vote struct {
+	mgm.DefaultModel `bson:",inline"`
+	Status           string `json:"status" bson:"status"`
+	Txhash           string `json:"txhash"`
+	ProposalID       string
+	Vote             uint8
+	Signature        string
+	Reshield         string `json:"reshield" bson:"reshield"`
+	SubmitBurnTx     string `json:"submit_burn_tx" bson:"submit_burn_tx"`
+	SubmitVoteTx     string `json:"submit_vote_tx" bson:"submit_vote_tx"`
+}
+
+type Cancel struct {
+	mgm.DefaultModel `bson:",inline"`
+	Status           string `json:"status" bson:"status"`
+	Txhash           string `json:"txhash"`
+	ProposalID       string
+	Signature        string
+	Reshield         string `json:"reshield" bson:"reshield"`
+	SubmitCancelTx   string `json:"submit_proposal_tx" bson:"submit_proposal_tx"`
+}

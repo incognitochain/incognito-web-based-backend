@@ -1,6 +1,8 @@
 package api
 
 import (
+	common2 "github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"time"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
@@ -433,4 +435,41 @@ type DexSwap struct {
 
 type TokenStruct struct {
 	ID string `json:"id"`
+}
+
+// Pdao request
+type CreatProposal struct {
+	Txhash      string `json:"txhash" jsonschema:"required"`
+	TxRaw       string
+	Targets     []common2.Address `json:"targets" bson:"targets" jsonschema:"required"`
+	Values      []*big.Int        `json:"values" bson:"values" jsonschema:"required"`
+	Signatures  []string          `json:"signatures" bson:"signatures"`
+	Calldatas   [][]byte          `json:"calldatas" bson:"calldatas" jsonschema:"required"`
+	Description string            `json:"description" bson:"description"`
+	Reshield    string            `json:"reshield" bson:"reshield"`
+	Signature   string            `json:"signature" bson:"signature" jsonschema:"required"`
+}
+
+type SubmitVote struct {
+	Txhash     string `json:"txhash" jsonschema:"required"`
+	TxRaw      string
+	ProposalID string
+	Vote       uint8
+	Signature  string
+	Reshield   string `json:"reshield" bson:"reshield"`
+}
+
+type SubmitCancel struct {
+	Txhash     string `json:"txhash" jsonschema:"required"`
+	TxRaw      string
+	ProposalID string
+	Signature  string
+	Reshield   string `json:"reshield" bson:"reshield"`
+}
+
+type Reshield struct {
+	Signature        string
+	IncognitoAddress string
+	Amount           string
+	Timestamp        string
 }

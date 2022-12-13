@@ -92,9 +92,9 @@ func CreateNewProposal(c *gin.Context) {
 		return
 	}
 
-	// recover user signature
+	// recover address from user's signature
 	gvAbi, _ := abi.JSON(strings.NewReader(governance.GovernanceMetaData.ABI))
-	propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", req.Targets, req.Values, req.Calldatas, req.Description)
+	propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Description)
 	signData, _ := gv.GetDataSign(nil, keccak256(propEncode[4:]))
 	rcAddr, err := crypto.Ecrecover(signData[:], common.Hex2Bytes(req.Signature))
 	// todo: compare address recover and address from burning metadata if has
@@ -116,7 +116,8 @@ func CreateNewProposal(c *gin.Context) {
 	propId, _ := gv.HashProposal(nil, req.Targets, req.Values, req.Calldatas, keccak256([]byte(req.Description)))
 	prop, _ := gv.Proposals(nil, propId)
 	if prop.StartBlock.Cmp(big.NewInt(0)) != 0 {
-
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("prop id has created")})
+		return
 	}
 
 	// check fee

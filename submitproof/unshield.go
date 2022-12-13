@@ -249,11 +249,24 @@ func createOutChainUnshieldTx(network string, incTxHash string, isUnifiedToken b
 	networkChainIdInt.SetString(networkChainId, 10)
 
 	var proof *evmproof.DecodedProof
-	// if isUnifiedToken {
-	proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0)
-	// } else {
-	// 	proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
-	// }
+	if isUnifiedToken {
+		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0)
+	} else {
+		switch network {
+		case wcommon.NETWORK_ETH:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnprooffordeposittosc")
+		case wcommon.NETWORK_BSC:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnpbscprooffordeposittosc")
+		case wcommon.NETWORK_PLG:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
+		case wcommon.NETWORK_FTM:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnftmprooffordeposittosc")
+		case wcommon.NETWORK_AVAX:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnavaxprooffordeposittosc")
+		case wcommon.NETWORK_AURORA:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnauroraprooffordeposittosc")
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

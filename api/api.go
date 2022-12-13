@@ -92,7 +92,7 @@ func StartAPIservice(cfg common.Config) {
 
 	unshieldGroup := r.Group("/unshield")
 	unshieldGroup.POST("/status", APIGetUnshieldTxStatus)
-	unshieldGroup.POST("/submitunshieldtx", APISubmitUnshieldTxNew)
+	unshieldGroup.POST("/submittx", APISubmitUnshieldTxNew)
 	unshieldGroup.GET("/estimatefee", APIUnshieldFeeEstimate)
 
 	//admin

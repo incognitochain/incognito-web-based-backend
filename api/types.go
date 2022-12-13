@@ -383,6 +383,7 @@ type UnshieldNetworkFee struct {
 	TokenID           string  `json:"tokenid"`
 	Amount            uint64  `json:"feeAmount"`
 	PrivacyFee        uint64  `json:"privacyFee"`
+	ProtocolFee       uint64  `json:"protocolFee"`
 	FeeInUSD          float64 `json:"feeInUSD"`
 }
 

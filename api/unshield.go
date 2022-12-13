@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -108,7 +109,7 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	if !ok {
 		mdUnified, ok = mdRaw.(*bridge.UnshieldRequest)
 		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata type"})
 			return
 		}
 	}
@@ -121,6 +122,8 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	uTokenID := ""
 	if md == nil {
 		//unshield unified
+		d, _ := json.Marshal(mdUnified)
+		fmt.Println("456456456", string(d))
 		burnTokenInfo, err = getTokenInfo(mdUnified.UnifiedTokenID.String())
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
@@ -128,7 +131,7 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 		}
 		burntAmount = mdUnified.Data[0].BurningAmount
 
-		unshieldToken, err := getTokenInfo(mdUnified.Data[0].IncTokenID.String())
+		unshieldToken, err = getTokenInfo(mdUnified.Data[0].IncTokenID.String())
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
 			return
@@ -144,7 +147,6 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
 			return
 		}
-
 		tokenID = burnTokenInfo.TokenID
 		uTokenID = burnTokenInfo.TokenID
 		burntAmount = md.BurningAmount
@@ -153,6 +155,7 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 
 	valid, externalAddr, network, feeToken, feeAmount, pfeeAmount, feeDiff, err := checkValidUnshield(md, mdUnified, burnTokenInfo, unshieldToken, outCoins)
 	if err != nil {
+		fmt.Println("asdas", valid, tokenID, uTokenID, externalAddr, network, feeToken, feeAmount, pfeeAmount, feeDiff)
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
 	}
@@ -216,26 +219,8 @@ func estimateUnshieldFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, networ
 	if len(fees) == 0 {
 		return nil, errors.New("can't get fee")
 	}
-	feeAddress := ""
-	feeAddressShardID := byte(0)
-	if incFeeKeySet != nil {
-		feeAddress, err = incFeeKeySet.GetPaymentAddress()
-		if err != nil {
-			return nil, err
-		}
-		_, feeAddressShardID = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
-	}
-	result := UnshieldNetworkFee{
-		FeeAddress:        feeAddress,
-		FeeAddressShardID: int(feeAddressShardID),
-		ExpectedReceive:   amount,
-		BurntAmount:       amount,
-		TokenID:           fees[0].TokenID,
-		Amount:            fees[0].Amount,
-		PrivacyFee:        fees[0].PrivacyFee,
-		FeeInUSD:          fees[0].FeeInUSD,
-	}
-
+	burntAmount := uint64(0)
+	protocolFee := uint64(0)
 	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
 		var tokenID string
 
@@ -249,13 +234,35 @@ func estimateUnshieldFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, networ
 				break
 			}
 		}
-		expectedReceive, fee, err := getUnifiedUnshieldFee(tokenID, burnTokenInfo.TokenID, amount)
+		burntAmount, protocolFee, err = getUnifiedUnshieldFee(tokenID, burnTokenInfo.TokenID, amount)
 		if err != nil {
 			return nil, err
 		}
-		result.ExpectedReceive = expectedReceive
-		_ = fee
+	} else {
+		burntAmount = amount
 	}
+
+	feeAddress := ""
+	feeAddressShardID := byte(0)
+	if incFeeKeySet != nil {
+		feeAddress, err = incFeeKeySet.GetPaymentAddress()
+		if err != nil {
+			return nil, err
+		}
+		_, feeAddressShardID = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
+	}
+	result := UnshieldNetworkFee{
+		FeeAddress:        feeAddress,
+		FeeAddressShardID: int(feeAddressShardID),
+		ExpectedReceive:   amount,
+		BurntAmount:       burntAmount,
+		TokenID:           fees[0].TokenID,
+		Amount:            fees[0].Amount,
+		PrivacyFee:        fees[0].PrivacyFee,
+		ProtocolFee:       protocolFee,
+		FeeInUSD:          fees[0].FeeInUSD,
+	}
+
 	return &result, nil
 }
 
@@ -363,14 +370,13 @@ func checkValidUnshield(md *bridge.BurningRequest, mdUnified *bridge.UnshieldReq
 
 func getUnifiedUnshieldFee(tokenID, uTokenID string, amount uint64) (uint64, uint64, error) {
 
-	methodRPC := "bridgeaggEstimateFeeByBurntAmount"
+	methodRPC := "bridgeaggEstimateFeeByExpectedAmount"
 
 	reqRPC := genRPCBody(methodRPC, []interface{}{
 		map[string]interface{}{
 			"UnifiedTokenID": uTokenID,
 			"TokenID":        tokenID,
-			// "ExpectedAmount": req.ExpectedAmount,
-			"BurntAmount": amount,
+			"ExpectedAmount": amount,
 		},
 	})
 
@@ -396,5 +402,5 @@ func getUnifiedUnshieldFee(tokenID, uTokenID string, amount uint64) (uint64, uin
 	if responseBodyData.Error != nil {
 		return 0, 0, err
 	}
-	return responseBodyData.Result.MinReceivedAmount, responseBodyData.Result.Fee, err
+	return responseBodyData.Result.BurntAmount, responseBodyData.Result.Fee, err
 }

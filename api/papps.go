@@ -528,7 +528,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 		return nil, err
 	}
 
-	vaultData, err := database.DBGetPappVaultData(networkName, wcommon.PappTypeSwap)
+	vaultData, err := database.DBGetPappVaultData(networkName, wcommon.ExternalTxTypeSwap)
 	if err != nil {
 		fmt.Println("DBGetPappVaultData", err)
 		return nil, err
@@ -1620,10 +1620,6 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 		feeInUSD := float64(feeAmount) / math.Pow10(nativeToken.PDecimals)
 		feeInUSD = feeInUSD * fromTokenInfo.PriceUsd
 
-		// if feeInUSD > 25 {
-		// 	feeAmount = uint64(feeInUSD / fromTokenInfo.PriceUsd * math.Pow10(fromTokenInfo.PDecimals))
-		// }
-
 		fees = append(fees, PappNetworkFee{
 			Amount:           feeAmount,
 			TokenID:          fromToken,
@@ -1675,10 +1671,6 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 			feeInUSD := float64(feeInFromToken) / math.Pow10(fromTokenInfo.PDecimals)
 			feeInUSD = feeInUSD * fromTokenInfo.PriceUsd
 
-			// if feeInUSD > 25 {
-			// 	feeInFromToken = uint64(feeInUSD / fromTokenInfo.PriceUsd * math.Pow10(fromTokenInfo.PDecimals))
-			// }
-
 			fees = append(fees, PappNetworkFee{
 				Amount:           feeInFromToken,
 				TokenID:          fromToken,
@@ -1691,9 +1683,6 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupporte
 			feeInUSD := float64(gasFeeFromTokenToPrv) / math.Pow10(9)
 			feeInUSD = (feeInUSD / fromTokenInfo.PricePrv) * fromTokenInfo.PriceUsd
 
-			// if feeInUSD > 25 {
-			// 	gasFeeFromTokenToPrv = uint64(feeInUSD / fromTokenInfo.PriceUsd * fromTokenInfo.PricePrv * math.Pow10(9))
-			// }
 			fees = append(fees, PappNetworkFee{
 				Amount:           gasFeeFromTokenToPrv,
 				TokenID:          common.PRVCoinID.String(),

@@ -21,6 +21,12 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 		return err
 	}
 	log.Println("Database Connected!")
+
+	err = DBCreateUnshieldTxIndex()
+	if err != nil {
+		return err
+	}
+
 	err = DBCreateShieldTxIndex()
 	if err != nil {
 		return err

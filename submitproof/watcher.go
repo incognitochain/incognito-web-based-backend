@@ -42,11 +42,13 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	}
 
 	go watchPendingShieldTx()
+	go watchPendingUnshieldTx()
 	go watchPendingPappTx()
 	go watchPendingExternalTx()
 	go watchIncAccountBalance()
 	go watchEVMAccountBalance()
 	go watchRedepositExternalTx()
+	go watchUnshieldTxNeedFeeRefund()
 	go watchPappTxNeedFeeRefund()
 	go watchPendingFeeRefundTx()
 	go forwardCollectedFee()
@@ -249,7 +251,7 @@ func watchPendingFeeRefundTx() {
 	for {
 		txList, err := database.DBGetPendingFeeRefundTx(0)
 		if err != nil {
-			log.Println("DBGetPappTxNeedFeeRefund err:", err)
+			log.Println("DBGetPendingFeeRefundTx err:", err)
 		}
 
 		for _, tx := range txList {
@@ -429,9 +431,9 @@ func watchPendingExternalTx() {
 
 func watchPendingPappTx() {
 	for {
-		txList, err := database.DBRetrievePendingPappTxs(wcommon.PappTypeSwap, 0, 0)
+		txList, err := database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeSwap, 0, 0)
 		if err != nil {
-			log.Println("DBRetrievePendingShieldTxs err:", err)
+			log.Println("DBRetrievePendingPappTxs err:", err)
 		}
 		for _, txdata := range txList {
 			err := processPendingSwapTx(txdata)
@@ -653,133 +655,142 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				return err
 			}
 
-			err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncRequestTx, wcommon.StatusAccepted)
-			if err != nil {
-				return err
-			}
-
 			txtype := ""
 			switch tx.Type {
-			case wcommon.PappTypeSwap:
+			case wcommon.ExternalTxTypeSwap:
 				txtype = "swaptx"
+				err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncRequestTx, wcommon.StatusAccepted)
+				if err != nil {
+					return err
+				}
+				break
+			case wcommon.ExternalTxTypeUnshield:
+				txtype = "unshield"
+				err = database.DBUpdateUnshieldTxSubmitOutchainStatus(tx.IncRequestTx, wcommon.StatusAccepted)
+				if err != nil {
+					return err
+				}
+				break
 			default:
 				txtype = "unknown"
 			}
 			if otherInfo.IsFailed {
 				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, exttx `%v`, network `%v`\n", txtype, tx.Txhash, tx.Network))
 			} else {
-				go func() {
-				retry:
-					slackep := os.Getenv("SLACK_SWAP_ALERT")
-					if slackep != "" {
-						swapAlert := ""
-						txIncRequest := tx.IncRequestTx
-						pappTxData, err := database.DBGetPappTxData(txIncRequest)
-						if err != nil {
-							log.Println("DBGetPappTxData", err)
-							time.Sleep(5 * time.Second)
-							goto retry
-						}
-						if pappTxData.PappSwapInfo != "" {
-							pappSwapInfo := wcommon.PappSwapInfo{}
-
-							err = json.Unmarshal([]byte(pappTxData.PappSwapInfo), &pappSwapInfo)
+				if tx.Type == wcommon.ExternalTxTypeSwap {
+					go func() {
+					retry:
+						slackep := os.Getenv("SLACK_SWAP_ALERT")
+						if slackep != "" {
+							swapAlert := ""
+							txIncRequest := tx.IncRequestTx
+							pappTxData, err := database.DBGetPappTxData(txIncRequest)
 							if err != nil {
-								log.Println("Unmarshal", err)
-								return
-							}
-							tkInInfo, err := getTokenInfo(pappSwapInfo.TokenIn)
-							if err != nil {
-								log.Println("getTokenInfo1", err)
+								log.Println("DBGetPappTxData", err)
 								time.Sleep(5 * time.Second)
 								goto retry
 							}
-							amount := new(big.Float).SetInt(pappSwapInfo.TokenInAmount)
-							decimal := new(big.Float)
-							decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
-							if err != nil {
-								log.Println("getTokenDecimalOnNetwork2", err)
-								return
-							}
-							decimal.SetFloat64(math.Pow10(int(-decimalInt)))
+							if pappTxData.PappSwapInfo != "" {
+								pappSwapInfo := wcommon.PappSwapInfo{}
 
-							amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
-							tokenInSymbol := tkInInfo.Symbol
-
-							tkOutInfo, err := getTokenInfo(pappSwapInfo.TokenOut)
-							if err != nil {
-								log.Println("getTokenInfo2", err)
-								time.Sleep(5 * time.Second)
-								goto retry
-							}
-							amount = new(big.Float).SetInt(pappSwapInfo.MinOutAmount)
-							decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
-							if err != nil {
-								log.Println("getTokenDecimalOnNetwork2", err)
-								return
-							}
-							decimal.SetFloat64(math.Pow10(int(-decimalInt)))
-							amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
-							tokenOutSymbol := tkOutInfo.Symbol
-
-							if otherInfo.IsReverted {
-								swapAlert = fmt.Sprintf("`[%v(%v)]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, tx.Network, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
-							} else {
-								amount = new(big.Float).SetInt(otherInfo.Amount)
-
-								if tkOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-									for _, ctk := range tkOutInfo.ListUnifiedToken {
-										netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
-										isNative := false
-										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == ctk.CurrencyType {
-											isNative = true
-										}
-										if wcommon.CheckIsWrappedNativeToken(ctk.ContractID, netID) {
-											isNative = true
-										}
-										if netID == networkID {
-											if isNative {
-												decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
-											} else {
-												if otherInfo.IsRedeposit {
-													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.PDecimals)))
-												} else {
-													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
-												}
-											}
-											break
-										}
-									}
-								} else {
-									netID, _ := wcommon.GetNetworkIDFromCurrencyType(tkOutInfo.CurrencyType)
-									isNative := false
-									if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == tkOutInfo.CurrencyType {
-										isNative = true
-									}
-									if wcommon.CheckIsWrappedNativeToken(tkOutInfo.ContractID, netID) {
-										isNative = true
-									}
-									if isNative {
-										decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
-									} else {
-										if otherInfo.IsRedeposit {
-											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.PDecimals)))
-										} else {
-											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
-										}
-									}
+								err = json.Unmarshal([]byte(pappTxData.PappSwapInfo), &pappSwapInfo)
+								if err != nil {
+									log.Println("Unmarshal", err)
+									return
 								}
+								tkInInfo, err := getTokenInfo(pappSwapInfo.TokenIn)
+								if err != nil {
+									log.Println("getTokenInfo1", err)
+									time.Sleep(5 * time.Second)
+									goto retry
+								}
+								amount := new(big.Float).SetInt(pappSwapInfo.TokenInAmount)
+								decimal := new(big.Float)
+								decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
+								if err != nil {
+									log.Println("getTokenDecimalOnNetwork2", err)
+									return
+								}
+								decimal.SetFloat64(math.Pow10(int(-decimalInt)))
 
-								uaStr := parseUserAgent(pappTxData.UserAgent)
-								// decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
-								realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
-								swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, tx.Network, uaStr, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
+								amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
+								tokenInSymbol := tkInInfo.Symbol
+
+								tkOutInfo, err := getTokenInfo(pappSwapInfo.TokenOut)
+								if err != nil {
+									log.Println("getTokenInfo2", err)
+									time.Sleep(5 * time.Second)
+									goto retry
+								}
+								amount = new(big.Float).SetInt(pappSwapInfo.MinOutAmount)
+								decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
+								if err != nil {
+									log.Println("getTokenDecimalOnNetwork2", err)
+									return
+								}
+								decimal.SetFloat64(math.Pow10(int(-decimalInt)))
+								amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
+								tokenOutSymbol := tkOutInfo.Symbol
+
+								if otherInfo.IsReverted {
+									swapAlert = fmt.Sprintf("`[%v(%v)]` swap was reverted 😢\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, tx.Network, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+								} else {
+									amount = new(big.Float).SetInt(otherInfo.Amount)
+
+									if tkOutInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+										for _, ctk := range tkOutInfo.ListUnifiedToken {
+											netID, _ := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
+											isNative := false
+											if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == ctk.CurrencyType {
+												isNative = true
+											}
+											if wcommon.CheckIsWrappedNativeToken(ctk.ContractID, netID) {
+												isNative = true
+											}
+											if netID == networkID {
+												if isNative {
+													decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+												} else {
+													if otherInfo.IsRedeposit {
+														decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.PDecimals)))
+													} else {
+														decimal = new(big.Float).SetFloat64(math.Pow10(-int(ctk.Decimals)))
+													}
+												}
+												break
+											}
+										}
+									} else {
+										netID, _ := wcommon.GetNetworkIDFromCurrencyType(tkOutInfo.CurrencyType)
+										isNative := false
+										if wcommon.GetNativeNetworkCurrencyType(wcommon.GetNetworkName(netID)) == tkOutInfo.CurrencyType {
+											isNative = true
+										}
+										if wcommon.CheckIsWrappedNativeToken(tkOutInfo.ContractID, netID) {
+											isNative = true
+										}
+										if isNative {
+											decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
+										} else {
+											if otherInfo.IsRedeposit {
+												decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.PDecimals)))
+											} else {
+												decimal = new(big.Float).SetFloat64(math.Pow10(-int(tkOutInfo.Decimals)))
+											}
+										}
+									}
+
+									uaStr := parseUserAgent(pappTxData.UserAgent)
+									// decimal = new(big.Float).SetFloat64(math.Pow10(int(-decimalInt)))
+									realOutFloat := amount.Mul(amount, decimal).Text('f', -1)
+									swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap was success 🎉\n SwapID: `%v`\n Requested: `%v %v` to `%v %v` | received: `%v %v`\n--------------------------------------------------------", pappSwapInfo.DappName, tx.Network, uaStr, pappTxData.ID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol, realOutFloat, tokenOutSymbol)
+								}
+								log.Println(swapAlert)
+								slacknoti.SendWithCustomChannel(swapAlert, slackep)
 							}
-							log.Println(swapAlert)
-							slacknoti.SendWithCustomChannel(swapAlert, slackep)
 						}
-					}
-				}()
+					}()
+				}
 			}
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain accepted exttx `%v`, network `%v`, incReqTx `%v`\n outcome of tx: `%v`\n", txtype, tx.Txhash, tx.Network, tx.IncRequestTx, string(otherInfoBytes)))
 		}
@@ -826,7 +837,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 				return err
 			}
 			for _, network := range tx.Networks {
-				_, err := SubmitOutChainPappTx(tx.IncTx, network, tx.IsUnifiedToken, false)
+				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeSwap)
 				if err != nil {
 					return err
 				}
@@ -956,4 +967,184 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 	}
 
 	return result, nil
+}
+
+func getPendingUnshieldsFee(shardID int) (map[string]uint64, error) {
+	//TODO
+	result := make(map[string]uint64)
+	var txList []wcommon.UnshieldTxData
+	var err error
+	if shardID == -1 {
+		txList, err = database.DBGetUnshieldTxDataByStatus(wcommon.StatusExecuting, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		txList, err = database.DBGetUnshieldTxDataByStatusAndShardID(wcommon.StatusExecuting, shardID, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txList, err = database.DBGetUnshieldTxPendingOutchainSubmit(0, 0)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range txList {
+		result[v.FeeToken] += v.FeeAmount
+	}
+
+	txRefundFeeWaitList, err := database.DBGetPendingFeeRefundTx(0)
+	if err != nil {
+		log.Println("DBGetPendingFeeRefundTx err:", err)
+	}
+
+	for _, tx := range txRefundFeeWaitList {
+		status := tx.RefundStatus
+		switch status {
+		case wcommon.StatusWaiting, wcommon.StatusSubmitFailed, wcommon.StatusPending:
+			result[tx.RefundToken] += tx.RefundAmount
+		}
+	}
+
+	return result, nil
+}
+
+func watchPendingUnshieldTx() {
+	for {
+		txList, err := database.DBRetrievePendingUnshieldTxs(0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingUnshieldTxs err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingUnshieldTx(txdata)
+			if err != nil {
+				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+			}
+		}
+
+		txList, err = database.DBGetUnshieldTxPendingOutchainSubmit(0, 0)
+		if err != nil {
+			log.Println("DBGetUnshieldTxPendingOutchainSubmit err:", err)
+		}
+		for _, txdata := range txList {
+			tx, err := database.DBGetExternalTxByIncTx(txdata.IncTx, txdata.Networks[0])
+			if err != nil {
+				log.Println("DBGetExternalTxByIncTx err:", err)
+				continue
+			}
+			if tx != nil {
+				if tx.Status == wcommon.StatusAccepted {
+					err = database.DBUpdateUnshieldTxSubmitOutchainStatus(txdata.IncTx, wcommon.StatusAccepted)
+					if err != nil {
+						log.Println("DBUpdateUnshieldTxSubmitOutchainStatus err:", err)
+						continue
+					}
+				}
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func processPendingUnshieldTx(tx wcommon.UnshieldTxData) error {
+	txDetail, err := incClient.GetTxDetail(tx.IncTx)
+	if err != nil {
+		if strings.Contains(err.Error(), "RPC returns an error:") {
+			err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusSubmitFailed, err.Error())
+			if err != nil {
+				log.Println("DBUpdateUnshieldTxStatus err:", err)
+				return err
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` submit unshield failed 😵 `%v` \n", tx.IncTx))
+			return nil
+		}
+		return err
+	}
+	if txDetail.IsInBlock {
+		status, err := checkBeaconBridgeAggUnshieldStatus(tx.IncTx)
+		if err != nil {
+			return err
+		}
+
+		switch status {
+		case 0:
+			err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusRejected, "")
+			if err != nil {
+				return err
+			}
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
+		case 1:
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
+			err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
+			if err != nil {
+				return err
+			}
+			err = database.DBUpdateUnshieldTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
+			if err != nil {
+				return err
+			}
+			for _, network := range tx.Networks {
+				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeUnshield)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
+				err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+	}
+	return nil
+}
+
+func watchUnshieldTxNeedFeeRefund() {
+	for {
+		txList, err := database.DBGetUnshieldTxNeedFeeRefund(0)
+		if err != nil {
+			log.Println("DBGetUnshieldTxNeedFeeRefund err:", err)
+		}
+		for _, tx := range txList {
+			rftx, err := database.DBGetTxFeeRefundByReq(tx.IncTx)
+			if err != nil {
+				if err != mongo.ErrNoDocuments {
+					log.Println("DBGetTxFeeRefundByReq", err)
+					continue
+				}
+			}
+			if rftx != nil {
+				err = database.DBUpdateUnshieldRefund(tx.IncTx, true)
+				if err != nil {
+					log.Println("DBUpdateUnshieldRefund", err)
+					continue
+				}
+			}
+			data := wcommon.RefundFeeData{
+				IncRequestTx:     tx.IncTx,
+				RefundAmount:     tx.FeeAmount,
+				RefundToken:      tx.FeeToken,
+				RefundOTA:        tx.FeeRefundOTA,
+				RefundAddress:    tx.FeeRefundAddress,
+				RefundPrivacyFee: false,
+				RefundStatus:     wcommon.StatusWaiting,
+			}
+
+			err = database.DBCreateRefundFeeRecord(data)
+			if err != nil {
+				log.Println("DBGetTxFeeRefundByReq", err)
+				continue
+			}
+		}
+
+		time.Sleep(30 * time.Second)
+	}
 }

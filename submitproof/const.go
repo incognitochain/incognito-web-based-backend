@@ -26,6 +26,12 @@ const (
 )
 
 const (
+	UnshieldSubmitIncTask       = "unshield_submit_inc_task"
+	UnshieldSubmitExtTask       = "unshield_submit_ext_task"
+	UnshieldSubmitFeeRefundTask = "unshield_submit_refundfee_task"
+)
+
+const (
 	INC_NetworkID = iota
 	ETH_NetworkID = 1
 	BSC_NetworkID = 2

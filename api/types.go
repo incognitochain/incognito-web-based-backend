@@ -377,6 +377,18 @@ type PappNetworkFee struct {
 	FeeInUSD         float64 `json:"feeInUSD"`
 }
 
+type UnshieldNetworkFee struct {
+	FeeAddress        string  `json:"feeAddress"`
+	FeeAddressShardID int     `json:"feeAddressShardID"`
+	ExpectedReceive   uint64  `json:"expectedReceive"`
+	BurntAmount       uint64  `json:"burntAmount"`
+	TokenID           string  `json:"tokenid"`
+	Amount            uint64  `json:"feeAmount"`
+	PrivacyFee        uint64  `json:"privacyFee"`
+	ProtocolFee       uint64  `json:"protocolFee"`
+	FeeInUSD          float64 `json:"feeInUSD"`
+}
+
 type PancakeTokenMapItem struct {
 	Decimals int    `json:"decimals"`
 	Symbol   string `json:"symbol"`

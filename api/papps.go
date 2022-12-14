@@ -1584,7 +1584,7 @@ func extractDataFromRawTx(txraw []byte) (metadataCommon.Metadata, bool, []coin.C
 	}
 	if tx.Version2 != nil {
 		isPRVTx = true
-		txHash = tx.TokenVersion2.Hash().String()
+		txHash = tx.Version2.Hash().String()
 		mdRaw = tx.Version2.GetMetadata()
 		outCoins = tx.Version2.GetProof().GetOutputCoins()
 	}

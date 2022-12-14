@@ -436,9 +436,8 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 			result["error"] = data.Error
 		}
 	} else {
-		network := wcommon.GetNetworkName(data.NetworkID)
-		networkResult := make(map[string]interface{})
-		networkResult["network"] = network
+		network := data.Networks[0]
+		result["network"] = network
 		outchainTx, err := database.DBGetExternalTxByIncTx(txhash, network)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
@@ -454,23 +453,23 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 			result["outchain_status"] = outchainTx.Status
 		}
 
-		networkResult["outchain_tx"] = outchainTx.Txhash
+		result["outchain_tx"] = outchainTx.Txhash
 		if outchainTx.Error != "" {
-			networkResult["outchain_err"] = outchainTx.Error
+			result["outchain_err"] = outchainTx.Error
 		}
 		if outchainTx.Status == common.StatusAccepted && outchainTx.OtherInfo != "" {
 			var outchainTxResult wcommon.ExternalTxSwapResult
 			err = json.Unmarshal([]byte(outchainTx.OtherInfo), &outchainTxResult)
 			if err != nil {
-				networkResult["error"] = err.Error()
+				result["error"] = err.Error()
 			}
 			if outchainTxResult.IsReverted {
-				networkResult["outchain_status"] = "reverted"
+				result["outchain_status"] = "reverted"
 			} else {
-				networkResult["outchain_status"] = "success"
+				result["outchain_status"] = "success"
 			}
 			if outchainTxResult.IsFailed {
-				networkResult["outchain_status"] = "failed"
+				result["outchain_status"] = "failed"
 			}
 
 		}

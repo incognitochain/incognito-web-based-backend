@@ -132,6 +132,8 @@ func processSubmitUnshieldRequest(ctx context.Context, m *pubsub.Message) {
 
 func processSubmitUnshieldExtTask(ctx context.Context, m *pubsub.Message) {
 	//TODO
+
+	log.Println("processSubmitUnshieldExtTask", "sdfksjdfl")
 	task := SubmitProofOutChainTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
@@ -254,17 +256,23 @@ func createOutChainUnshieldTx(network string, incTxHash string, isUnifiedToken b
 	} else {
 		switch network {
 		case wcommon.NETWORK_ETH:
-			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnprooffordeposittosc")
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnproof")
+			if len(proof.InstRoots) == 0 || err != nil {
+				proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprverc20burnproof")
+			}
 		case wcommon.NETWORK_BSC:
-			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnpbscprooffordeposittosc")
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getbscburnproof")
+			if len(proof.InstRoots) == 0 || err != nil {
+				proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprvbep20burnproof")
+			}
 		case wcommon.NETWORK_PLG:
-			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnplgprooffordeposittosc")
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getplgburnproof")
 		case wcommon.NETWORK_FTM:
-			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnftmprooffordeposittosc")
-		case wcommon.NETWORK_AVAX:
-			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnavaxprooffordeposittosc")
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getftmburnproof")
 		case wcommon.NETWORK_AURORA:
-			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnauroraprooffordeposittosc")
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getauroraburnproof")
+		case wcommon.NETWORK_AVAX:
+			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getavaxburnproof")
 		}
 	}
 	if err != nil {
@@ -326,7 +334,7 @@ retry:
 		result.Network = network
 		result.IncRequestTx = incTxHash
 
-		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
+		tx, err := evmproof.Withdraw(c, auth, proof)
 		if err != nil {
 			log.Println(err)
 			if strings.Contains(err.Error(), "insufficient funds") {

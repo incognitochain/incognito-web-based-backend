@@ -16,6 +16,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
 	"github.com/incognitochain/go-incognito-sdk-v2/crypto"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
@@ -88,29 +89,36 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	var req SubmitSwapTxRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"Error": "ShouldBindJSON " + err.Error()})
 		return
 	}
 
 	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		c.JSON(http.StatusOK, gin.H{"Error": errors.New("invalid txhash").Error()})
 		return
 	}
 
 	mdRaw, isPRVTx, outCoins, txHash, err := extractDataFromRawTx(rawTxBytes)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"Error": "extractDataFromRawTx " + err.Error()})
 		return
 	}
 	var mdUnified *bridge.UnshieldRequest
 	var md *bridge.BurningRequest
+
 	md, ok := mdRaw.(*bridge.BurningRequest)
 	if !ok {
 		mdUnified, ok = mdRaw.(*bridge.UnshieldRequest)
 		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata type"})
-			return
+			var md2 bridge.BurningRequest
+			mdRawJson, _ := json.Marshal(mdRaw)
+			err = json.Unmarshal(mdRawJson, &md2)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"Error": "invalid metadata type"})
+				return
+			}
+			md = &md2
 		}
 	}
 	var burnTokenInfo *wcommon.TokenInfo
@@ -122,18 +130,16 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	uTokenID := ""
 	if md == nil {
 		//unshield unified
-		d, _ := json.Marshal(mdUnified)
-		fmt.Println("456456456", string(d))
 		burnTokenInfo, err = getTokenInfo(mdUnified.UnifiedTokenID.String())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+			c.JSON(http.StatusOK, gin.H{"Error": errors.New("not supported token").Error()})
 			return
 		}
 		burntAmount = mdUnified.Data[0].BurningAmount
 
 		unshieldToken, err = getTokenInfo(mdUnified.Data[0].IncTokenID.String())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+			c.JSON(http.StatusOK, gin.H{"Error": errors.New("not supported token").Error()})
 			return
 		}
 
@@ -144,7 +150,7 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	} else {
 		burnTokenInfo, err = getTokenInfo(md.TokenID.String())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+			c.JSON(http.StatusOK, gin.H{"Error": errors.New("not supported token").Error()})
 			return
 		}
 		tokenID = burnTokenInfo.TokenID
@@ -155,8 +161,7 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 
 	valid, externalAddr, network, feeToken, feeAmount, pfeeAmount, feeDiff, err := checkValidUnshield(md, mdUnified, burnTokenInfo, unshieldToken, outCoins)
 	if err != nil {
-		fmt.Println("asdas", valid, tokenID, uTokenID, externalAddr, network, feeToken, feeAmount, pfeeAmount, feeDiff)
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+		c.JSON(http.StatusOK, gin.H{"Error": "invalid tx err: " + err.Error()})
 		return
 	}
 	networkList = append(networkList, network)
@@ -164,7 +169,7 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	if valid {
 		status, err := submitproof.SubmitUnshieldTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, tokenID, uTokenID, burntAmount, isUnifiedToken, externalAddr, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusOK, gin.H{"Error": "SubmitUnshieldTx " + err.Error()})
 			return
 		}
 		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
@@ -326,6 +331,12 @@ func checkValidUnshield(md *bridge.BurningRequest, mdUnified *bridge.UnshieldReq
 			return result, externalAddress, callNetwork, feeToken, feeAmount, pfeeAmount, feeDiff, err
 		}
 		callNetwork = wcommon.GetNetworkName(callNetworkID)
+		if md.Type == metadata.BurningPRVBEP20RequestMeta {
+			callNetwork = wcommon.NETWORK_BSC
+		}
+		if md.Type == metadata.BurningPRVERC20RequestMeta {
+			callNetwork = wcommon.NETWORK_ETH
+		}
 		burnAmount = md.BurningAmount
 		externalAddress = md.RemoteAddress
 	}
@@ -347,14 +358,14 @@ func checkValidUnshield(md *bridge.BurningRequest, mdUnified *bridge.UnshieldReq
 	requireFee = feeUnshield.Amount
 	requireFeeToken = feeUnshield.TokenID
 	if feeToken != requireFeeToken {
-		return result, externalAddress, callNetwork, feeToken, feeAmount, pfeeAmount, feeDiff, errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))
+		return result, externalAddress, callNetwork, feeToken, feeAmount, pfeeAmount, feeDiff, fmt.Errorf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken)
 	}
 	feeDiff = int64(feeAmount) - int64(feeUnshield.Amount)
 	if feeDiff < 0 {
 		feeDiffFloat := math.Abs(float64(feeDiff))
 		diffPercent := feeDiffFloat / float64(feeUnshield.Amount) * 100
 		if diffPercent > wcommon.PercentFeeDiff {
-			return result, externalAddress, callNetwork, feeToken, feeAmount, pfeeAmount, feeDiff, errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))
+			return result, externalAddress, callNetwork, feeToken, feeAmount, pfeeAmount, feeDiff, fmt.Errorf("invalid fee amount, fee amount must be at least: %v not %v", requireFee, feeAmount)
 		}
 	}
 	pfeeAmount = feeUnshield.PrivacyFee

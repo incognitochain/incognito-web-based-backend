@@ -24,7 +24,7 @@ const PRV_THRESHOLD = "10000000000"
 
 func CreateNewProposal(c *gin.Context) {
 	var req CreatProposal
-	userAgent := c.Request.UserAgent()
+	//userAgent := c.Request.UserAgent()
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -46,7 +46,9 @@ func CreateNewProposal(c *gin.Context) {
 
 	// extract metadata from tx
 	// two outputs: 1 burn prv (optional) - 1 pay fee
-	mdRaw, isPRVTx, outCoins, txHash, err := extractDataFromRawTx(rawTxBytes)
+	// validate fee
+	// todo: lam update
+	_, _, _, _, err = extractDataFromRawTx(rawTxBytes)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -115,17 +117,16 @@ func CreateNewProposal(c *gin.Context) {
 	// check proposal existed
 	propId, _ := gv.HashProposal(nil, req.Targets, req.Values, req.Calldatas, keccak256([]byte(req.Description)))
 	prop, _ := gv.Proposals(nil, propId)
-	if prop.StartBlock.Cmp(big.NewInt(0)) != 0 {
+	if prop.StartBlock.Uint64() != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("prop id has created")})
 		return
 	}
-
-	// check fee
 
 	// update request status
 
 	// store request to DB
 
+	// todo: submit transaction to CS and update to DB to get next step
 	//burntAmount, _ := md.TotalBurningAmount()
 	//if valid {
 	//	status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)

@@ -1,0 +1,178 @@
+package pdao
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/pdao/governance"
+	"log"
+	"math/big"
+	"strings"
+	"time"
+)
+
+var config wcommon.Config
+
+const (
+	CREATE_PROP  = 1
+	VOTE_PROP    = 2
+	CANCEL_PROP  = 3
+	EXECUTE_PROP = 4
+)
+
+func createOutChainTx(network string, incTxHash string, payload []byte, requestType uint8) (*wcommon.ExternalTxStatus, error) {
+	var result wcommon.ExternalTxStatus
+
+	// networkID := wcommon.GetNetworkID(network)
+	networkInfo, err := database.DBGetBridgeNetworkInfo(network)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo: update query governance contract address
+	pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
+	if err != nil {
+		return nil, err
+	}
+
+	networkChainId := networkInfo.ChainID
+
+	networkChainIdInt := new(big.Int)
+	networkChainIdInt.SetString(networkChainId, 10)
+
+	privKey, _ := crypto.HexToECDSA(config.EVMKey)
+	i := 0
+retry:
+	if i == 10 {
+		return nil, errors.New("submit tx outchain failed")
+	}
+	for _, endpoint := range networkInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		gv, err := governance.NewGovernance(common.HexToAddress(pappAddress.ContractAddress), evmClient)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		gasPrice, err := evmClient.SuggestGasPrice(context.Background())
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		auth, err := bind.NewKeyedTransactorWithChainID(privKey, networkChainIdInt)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(11))
+		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
+
+		auth.GasPrice = gasPrice
+		auth.GasLimit = wcommon.EVMGasLimitETH
+		result.Type = wcommon.ExternalTxTypeUnshield
+		result.Network = network
+		result.IncRequestTx = incTxHash
+
+		tx, err := submitTxOutChain(auth, requestType, payload, gv)
+		if err != nil {
+			log.Println(err)
+			if strings.Contains(err.Error(), "insufficient funds") {
+				return nil, errors.New("submit tx outchain failed err insufficient funds")
+			}
+			continue
+		}
+		result.Txhash = tx.Hash().String()
+		result.Status = wcommon.StatusPending
+		result.Nonce = tx.Nonce()
+		break
+	}
+
+	if result.Txhash == "" {
+		i++
+		time.Sleep(2 * time.Second)
+		goto retry
+	}
+
+	return &result, nil
+}
+
+func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []byte, gov *governance.Governance) (*types.Transaction, error) {
+	var tx *types.Transaction
+	var err error
+	switch submitType {
+	case CREATE_PROP:
+		var prop wcommon.Proposal
+		err = json.Unmarshal(payload, &prop)
+		if err != nil {
+			return nil, err
+		}
+		var targets []common.Address
+		var values []*big.Int
+		var calldatas [][]byte
+		for i, _ := range targets {
+			targets = append(targets, common.HexToAddress(prop.Targets[i]))
+			value, _ := new(big.Int).SetString(prop.Values[i], 10)
+			values = append(values, value)
+			calldatas = append(calldatas, common.Hex2Bytes(prop.Calldatas[i]))
+		}
+		signature := common.Hex2Bytes(prop.CreatePropSignature)
+		tx, err = gov.ProposeBySig(
+			executor,
+			targets, values, calldatas,
+			prop.Description,
+			signature[64]+27,
+			toByte32(signature[:32]),
+			toByte32(signature[32:64]),
+		)
+	case VOTE_PROP:
+		var vote wcommon.Vote
+		err = json.Unmarshal(payload, &vote)
+		if err != nil {
+			return nil, err
+		}
+		propID, _ := new(big.Int).SetString(vote.ProposalID, 10)
+		signature := common.Hex2Bytes(vote.VoteSignature)
+		tx, err = gov.CastVoteBySig(
+			executor,
+			propID,
+			vote.Vote,
+			signature[64]+27,
+			toByte32(signature[:32]),
+			toByte32(signature[32:64]),
+		)
+	case CANCEL_PROP:
+		var cancel wcommon.Cancel
+		err = json.Unmarshal(payload, &cancel)
+		if err != nil {
+			return nil, err
+		}
+		propID, _ := new(big.Int).SetString(cancel.ProposalID, 10)
+		signature := common.Hex2Bytes(cancel.CancelSignature)
+		tx, err = gov.CancelBySig(
+			executor,
+			propID,
+			signature[64]+27,
+			toByte32(signature[:32]),
+			toByte32(signature[32:64]),
+		)
+	case EXECUTE_PROP:
+		// todo:
+	default:
+		return nil, errors.New("invalid submit type")
+	}
+	return tx, err
+}

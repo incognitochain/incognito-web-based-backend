@@ -37,6 +37,8 @@ const (
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
+	StatusSuccess      = "success"
+	StatusFailed       = "failed"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"

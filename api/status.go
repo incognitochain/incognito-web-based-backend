@@ -427,6 +427,8 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 		if err != mongo.ErrNoDocuments {
 			result["error"] = err.Error()
 			return result
+		} else {
+			return result
 		}
 	}
 
@@ -445,12 +447,14 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 			} else {
 				result["outchain_status"] = common.StatusSubmitting
 			}
+			result["status"] = common.StatusPending
 			return result
 		}
 		if outchainTx.Status == wcommon.StatusAccepted {
 			result["outchain_status"] = "success"
 		} else {
 			result["outchain_status"] = outchainTx.Status
+			result["status"] = outchainTx.Status
 		}
 
 		result["outchain_tx"] = outchainTx.Txhash
@@ -465,13 +469,15 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 			}
 			if outchainTxResult.IsReverted {
 				result["outchain_status"] = "reverted"
+				result["status"] = common.StatusFailed
 			} else {
 				result["outchain_status"] = "success"
+				result["status"] = common.StatusSuccess
 			}
 			if outchainTxResult.IsFailed {
 				result["outchain_status"] = "failed"
+				result["status"] = common.StatusFailed
 			}
-
 		}
 	}
 	return result

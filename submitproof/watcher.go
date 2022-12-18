@@ -1066,57 +1066,60 @@ func processPendingUnshieldTx(tx wcommon.UnshieldTxData) error {
 		return err
 	}
 	if txDetail.IsInBlock {
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
-		err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
-		if err != nil {
-			return err
-		}
-		err = database.DBUpdateUnshieldTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
-		if err != nil {
-			return err
-		}
-		for _, network := range tx.Networks {
-			_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeUnshield)
+		if tx.IsUnifiedToken {
+			status, err := checkBeaconBridgeAggUnshieldStatus(tx.IncTx)
 			if err != nil {
 				return err
 			}
-		}
-		// status, err := checkBeaconBridgeAggUnshieldStatus(tx.IncTx)
-		// if err != nil {
-		// 	return err
-		// }
 
-		// switch status {
-		// case 0:
-		// 	err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusRejected, "")
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
-		// case 1:
-		// 	go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
-		// 	err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	err = database.DBUpdateUnshieldTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	for _, network := range tx.Networks {
-		// 		_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeUnshield)
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 	}
-		// default:
-		// 	if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
-		// 		err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 	}
-		// }
+			switch status {
+			case 0:
+				err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusRejected, "")
+				if err != nil {
+					return err
+				}
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
+			case 1:
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
+				err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
+				if err != nil {
+					return err
+				}
+				err = database.DBUpdateUnshieldTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
+				if err != nil {
+					return err
+				}
+				for _, network := range tx.Networks {
+					_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeUnshield)
+					if err != nil {
+						return err
+					}
+				}
+			default:
+				if tx.Status != wcommon.StatusExecuting && tx.Status != wcommon.StatusAccepted {
+					err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusExecuting, "")
+					if err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
+			err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
+			if err != nil {
+				return err
+			}
+			err = database.DBUpdateUnshieldTxSubmitOutchainStatus(tx.IncTx, wcommon.StatusWaiting)
+			if err != nil {
+				return err
+			}
+			for _, network := range tx.Networks {
+				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeUnshield)
+				if err != nil {
+					return err
+				}
+			}
+		}
 
 	}
 	return nil

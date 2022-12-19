@@ -249,7 +249,11 @@ func createOutChainUnshieldTx(network string, incTxHash string, isUnifiedToken b
 
 	networkChainIdInt := new(big.Int)
 	networkChainIdInt.SetString(networkChainId, 10)
-
+	i := 0
+retryProof:
+	if i == 10 {
+		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
+	}
 	var proof *evmproof.DecodedProof
 	if isUnifiedToken {
 		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0)
@@ -282,12 +286,14 @@ func createOutChainUnshieldTx(network string, incTxHash string, isUnifiedToken b
 		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
 	}
 
-	if len(proof.InstRoots) == 0 {
-		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
+	if len(proof.InstRoots) == 0 || len(proof.Instruction) == 0 {
+		i++
+		time.Sleep(15 * time.Second)
+		goto retryProof
 	}
 
 	privKey, _ := crypto.HexToECDSA(config.EVMKey)
-	i := 0
+	i = 0
 retry:
 	if i == 10 {
 		return nil, errors.New("submit tx outchain failed")

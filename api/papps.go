@@ -811,7 +811,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			outFloat, _ := pTokenAmountPreSlippage.Float64()
 			inFloat, _ := amountFloat.Float64()
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
-			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
+			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee, false)
 
 			if amountOutBig.String() == "0" || amountOutBig.String() == "1" {
 				return nil, errors.New("amount out is too small")
@@ -956,7 +956,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			outFloat, _ := pTokenAmountPreSlippage.Float64()
 			inFloat, _ := amountFloat.Float64()
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
-			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
+			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee, false)
 
 			log.Println("len(quote.Data.Outputs)", len(quote.Data.Outputs), quote.Data.Outputs, quote.Data.Outputs[len(quote.Data.Outputs)-1])
 
@@ -1101,7 +1101,7 @@ func estimateSwapFee(fromToken, toToken, amount string, networkID int, spTkList 
 			outFloat, _ := pTokenAmountPreSlippage.Float64()
 			inFloat, _ := amountFloat.Float64()
 			rate := new(big.Float).SetFloat64(outFloat / inFloat)
-			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee)
+			fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, rate, gasFee, fromToken, fromTokenInfo, pTokenContract1, toTokenDecimal, additionalTokenInFee, false)
 			if amountOut.String() == "0" || amountOut.String() == "1" {
 				return nil, errors.New("amount out is too small")
 			}
@@ -1592,12 +1592,16 @@ func extractDataFromRawTx(txraw []byte) (metadataCommon.Metadata, bool, []coin.C
 	return mdRaw, isPRVTx, outCoins, txHash, nil
 }
 
-func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupportedTokenData, rate *big.Float, gasFee uint64, fromToken string, fromTokenInfo *wcommon.TokenInfo, pTokenContract1 *PappSupportedTokenData, toTokenDecimal *big.Float, additionalTokenInFee *big.Float) []PappNetworkFee {
+func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *PappSupportedTokenData, rate *big.Float, gasFee uint64, fromToken string, fromTokenInfo *wcommon.TokenInfo, pTokenContract1 *PappSupportedTokenData, toTokenDecimal *big.Float, additionalTokenInFee *big.Float, isUnshield bool) []PappNetworkFee {
 	var fees []PappNetworkFee
 
 	additionalTokenInFeeInUSD, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(fromTokenInfo.PriceUsd)).Uint64()
-	if additionalTokenInFeeInUSD > 25 {
-		additionalTokenInFee = new(big.Float).SetFloat64(float64(25) / fromTokenInfo.PriceUsd)
+	max_pfee := MAX_PFEE_PAPP
+	if isUnshield {
+		max_pfee = MAX_PFEE_UNSHIELD
+	}
+	if additionalTokenInFeeInUSD > max_pfee {
+		additionalTokenInFee = new(big.Float).SetFloat64(float64(max_pfee) / fromTokenInfo.PriceUsd)
 	}
 
 	if isUnifiedNativeToken {

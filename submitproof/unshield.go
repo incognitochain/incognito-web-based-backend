@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/incognitochain/bridge-eth/bridge/prveth"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
@@ -234,7 +235,6 @@ func processSubmitUnshieldExtTask(ctx context.Context, m *pubsub.Message) {
 func createOutChainUnshieldTx(network string, incTxHash string, isUnifiedToken bool) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
-	// networkID := wcommon.GetNetworkID(network)
 	networkInfo, err := database.DBGetBridgeNetworkInfo(network)
 	if err != nil {
 		return nil, err
@@ -254,6 +254,7 @@ retryProof:
 	if i == 10 {
 		return nil, fmt.Errorf("could not get proof for network %s", networkChainId)
 	}
+	isPRV := false
 	var proof *evmproof.DecodedProof
 	if isUnifiedToken {
 		proof, err = evmproof.GetAndDecodeBurnProofUnifiedToken(config.FullnodeURL, incTxHash, 0)
@@ -261,13 +262,15 @@ retryProof:
 		switch network {
 		case wcommon.NETWORK_ETH:
 			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnproof")
-			if len(proof.InstRoots) == 0 || err != nil {
+			if len(proof.Instruction) == 0 || err != nil {
 				proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprverc20burnproof")
+				isPRV = true
 			}
 		case wcommon.NETWORK_BSC:
 			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getbscburnproof")
-			if len(proof.InstRoots) == 0 || err != nil {
+			if len(proof.Instruction) == 0 || err != nil {
 				proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprvbep20burnproof")
+				isPRV = true
 			}
 		case wcommon.NETWORK_PLG:
 			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getplgburnproof")
@@ -304,13 +307,6 @@ retry:
 			log.Println(err)
 			continue
 		}
-
-		c, err := vault.NewVault(common.HexToAddress(pappAddress.ContractAddress), evmClient)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
 		gasPrice, err := evmClient.SuggestGasPrice(context.Background())
 		if err != nil {
 			log.Println(err)
@@ -340,17 +336,57 @@ retry:
 		result.Network = network
 		result.IncRequestTx = incTxHash
 
-		tx, err := evmproof.Withdraw(c, auth, proof)
-		if err != nil {
-			log.Println(err)
-			if strings.Contains(err.Error(), "insufficient funds") {
-				return nil, errors.New("submit tx outchain failed err insufficient funds")
+		if isPRV {
+			networkID := wcommon.GetNetworkID(network)
+			prvInfo, err := getTokenInfo(wcommon.PRV_TOKENID)
+			if err != nil {
+				log.Println(err)
+				continue
 			}
-			continue
+			prvContract := ""
+			for _, cToken := range prvInfo.ListChildToken {
+				tokenNetwork := wcommon.NetworkCurrencyMap[cToken.CurrencyType]
+				if tokenNetwork == networkID {
+					prvContract = cToken.ContractID
+				}
+			}
+
+			c, err := prveth.NewPrveth(common.HexToAddress(prvContract), evmClient)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			tx, err := evmproof.SubmitMintPRVProof(c, auth, proof)
+			if err != nil {
+				log.Println(err)
+				if strings.Contains(err.Error(), "insufficient funds") {
+					return nil, errors.New("submit tx outchain failed err insufficient funds")
+				}
+				continue
+			}
+			result.Txhash = tx.Hash().String()
+			result.Nonce = tx.Nonce()
+		} else {
+			c, err := vault.NewVault(common.HexToAddress(pappAddress.ContractAddress), evmClient)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			tx, err := evmproof.Withdraw(c, auth, proof)
+			if err != nil {
+				log.Println(err)
+				if strings.Contains(err.Error(), "insufficient funds") {
+					return nil, errors.New("submit tx outchain failed err insufficient funds")
+				}
+				continue
+			}
+			result.Txhash = tx.Hash().String()
+			result.Nonce = tx.Nonce()
 		}
-		result.Txhash = tx.Hash().String()
+
 		result.Status = wcommon.StatusPending
-		result.Nonce = tx.Nonce()
 		break
 	}
 

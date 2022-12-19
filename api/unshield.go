@@ -220,7 +220,7 @@ func estimateUnshieldFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, networ
 	additionalTokenInFee = additionalTokenInFee.Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(-burnTokenInfo.PDecimals)))
 	fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, new(big.Float).SetInt64(1), gasFee, burnTokenInfo.TokenID, burnTokenInfo, &PappSupportedTokenData{
 		CurrencyType: burnTokenInfo.CurrencyType,
-	}, new(big.Float).SetInt64(1), additionalTokenInFee)
+	}, new(big.Float).SetInt64(1), additionalTokenInFee, true)
 	if len(fees) == 0 {
 		return nil, errors.New("can't get fee")
 	}

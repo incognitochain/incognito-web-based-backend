@@ -7,6 +7,8 @@ const (
 
 const (
 	UNSHIELD_GAS_LIMIT = 300000
+	MAX_PFEE_PAPP      = uint64(25)
+	MAX_PFEE_UNSHIELD  = uint64(30)
 )
 
 const (

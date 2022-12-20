@@ -295,6 +295,7 @@ type SubmitSwapTxRequest struct {
 	TxHash           string
 	FeeRefundOTA     string
 	FeeRefundAddress string
+	IsInterop        bool
 }
 
 type TxStatusRespond struct {

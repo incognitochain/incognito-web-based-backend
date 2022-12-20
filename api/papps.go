@@ -41,123 +41,92 @@ func APISubmitSwapTx(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	if req.IsInterop {
+		//TODO: 0xkraken
+	} else {
 
-	if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
-		return
-	}
-
-	var md *bridge.BurnForCallRequest
-	var mdRaw metadataCommon.Metadata
-	var isPRVTx bool
-	var isUnifiedToken bool
-	var outCoins []coin.Coin
-	var txHash string
-	var rawTxBytes []byte
-
-	if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
-		return
-	}
-
-	var ok bool
-	// if req.TxHash != "" {
-	// 	txHash = req.TxHash
-
-	// 	statusResult := checkPappTxSwapStatus(txHash)
-	// 	if len(statusResult) > 0 {
-	// 		if er, ok := statusResult["error"]; ok {
-	// 			if er != "not found" {
-	// 				c.JSON(200, gin.H{"Result": statusResult})
-	// 				return
-	// 			}
-	// 		} else {
-	// 			c.JSON(200, gin.H{"Result": statusResult})
-	// 			return
-	// 		}
-	// 	}
-
-	// 	txDetail, err := incClient.GetTx(req.TxHash)
-	// 	if err != nil {
-	// 		c.JSON(http.StatusBadRequest, gin.H{"Error":  err.Error()})
-	// 		return
-	// 	}
-	// 	mdRaw = txDetail.GetMetadata()
-	// 	txType := txDetail.GetType()
-	// 	switch txType {
-	// 	case common.TxCustomTokenPrivacyType:
-	// 		isPRVTx = false
-	// 		txToken := txDetail.(tx_generic.TransactionToken)
-	// 		outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
-	// 		// outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-	// 	case common.TxNormalType:
-	// 		isPRVTx = true
-	// 		// feeToken = common.PRVCoinID.String()
-	// 		outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-	// 	}
-	// } else {
-	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
-		return
-	}
-
-	mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
-
-	spTkList := getSupportedTokenList()
-
-	statusResult := checkPappTxSwapStatus(txHash, spTkList)
-	if len(statusResult) > 0 {
-		if er, ok := statusResult["error"]; ok {
-			if er != "not found" {
-				c.JSON(200, gin.H{"Result": statusResult})
-				return
-			}
-		} else {
-			c.JSON(200, gin.H{"Result": statusResult})
+		if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
 			return
 		}
-	}
 
-	if mdRaw == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-		return
-	}
-	md, ok = mdRaw.(*bridge.BurnForCallRequest)
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-		return
-	}
+		var md *bridge.BurnForCallRequest
+		var mdRaw metadataCommon.Metadata
+		var isPRVTx bool
+		var isUnifiedToken bool
+		var outCoins []coin.Coin
+		var txHash string
+		var rawTxBytes []byte
 
-	burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-		return
-	}
-	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-		isUnifiedToken = true
-	}
+		if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
+			return
+		}
 
-	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
-		return
-	}
-	// valid = true
+		var ok bool
+		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+			return
+		}
 
-	burntAmount, _ := md.TotalBurningAmount()
-	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
+		mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
-		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
-		return
+
+		spTkList := getSupportedTokenList()
+
+		statusResult := checkPappTxSwapStatus(txHash, spTkList)
+		if len(statusResult) > 0 {
+			if er, ok := statusResult["error"]; ok {
+				if er != "not found" {
+					c.JSON(200, gin.H{"Result": statusResult})
+					return
+				}
+			} else {
+				c.JSON(200, gin.H{"Result": statusResult})
+				return
+			}
+		}
+
+		if mdRaw == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+			return
+		}
+		md, ok = mdRaw.(*bridge.BurnForCallRequest)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+			return
+		}
+
+		burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+			return
+		}
+		if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+			isUnifiedToken = true
+		}
+
+		valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+			return
+		}
+		// valid = true
+
+		burntAmount, _ := md.TotalBurningAmount()
+		if valid {
+			status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+				return
+			}
+			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
+			return
+		}
 	}
 }
 
@@ -255,15 +224,17 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 
-	supportedNetworks := []int{}
+	var resultLock sync.Mutex
+	var wg sync.WaitGroup
 
+	supportedNetworks := []int{}
 	outofVaultNetworks := []int{}
+	supportedOutNetworks := []int{}
 	if tkFromInfo.CurrencyType == wcommon.UnifiedCurrencyType {
 		dm := new(big.Float)
 		dm.SetFloat64(math.Pow10(tkFromInfo.PDecimals))
 		amountUint64, _ := amount.Mul(amount, dm).Uint64()
 
-		supportedOutNetworks := []int{}
 		for _, v := range tkFromInfo.ListUnifiedToken {
 			if networkID == 0 {
 				//check all vaults
@@ -316,7 +287,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 			}
 		}
 	} else {
-		supportedOutNetworks := []int{}
 		tkFromNetworkID, _ := getNetworkIDFromCurrencyType(tkFromInfo.CurrencyType)
 		if tkFromNetworkID > 0 {
 			if networkID == tkFromNetworkID {
@@ -384,8 +354,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	var resultLock sync.Mutex
-	var wg sync.WaitGroup
 	for _, network := range supportedNetworks {
 		wg.Add(1)
 		go func(net int) {
@@ -406,18 +374,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		result.NetworksError[net] = v
 	}
 
-	// if req.Network != "inc" && len(networkErr) == 1 {
-	// 	response.Result = result
-	// 	response.Error = NotTradeable.Error()
-	// 	c.JSON(200, response)
-	// 	return
-	// }
-	// if req.Network == "inc" && len(networkErr) == len(supportedNetworks) && pdexEstimate == nil {
-	// 	response.Result = result
-	// 	response.Error = NotTradeable.Error()
-	// 	c.JSON(200, response)
-	// 	return
-	// }
 	if len(pdexEstimate) != 0 {
 		result.Networks["inc"] = pdexEstimate
 	}
@@ -428,7 +384,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 	response.Result = result
 
 	c.PureJSON(200, response)
-
 }
 
 func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float, tkFromInfo *wcommon.TokenInfo) *QuoteDataResp {

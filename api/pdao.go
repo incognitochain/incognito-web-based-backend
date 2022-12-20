@@ -2,6 +2,11 @@ package api
 
 import (
 	"errors"
+	"log"
+	"math/big"
+	"net/http"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -12,10 +17,6 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/pdao/governance"
 	"github.com/incognitochain/incognito-web-based-backend/pdao/prvvote"
-	"log"
-	"math/big"
-	"net/http"
-	"strings"
 )
 
 const GOVERNANCE_CONTRACT_ADDRESS = "0x74E9a67bf51eaa27999d8D699d3Ae4bAdc8c2Af4"
@@ -32,11 +33,11 @@ func CreateNewProposal(c *gin.Context) {
 	}
 
 	// verify request: request no empty, burn tx must be valid
-	if len(req.Calldatas) != len(req.Targets) || len(req.Targets) != len(req.Values) || len(req.Targets) == 0 ||
-		len(common.Hex2Bytes(req.Signature)) != 65 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid proposal data"})
-		return
-	}
+	// if len(req.Calldatas) != len(req.Targets) || len(req.Targets) != len(req.Values) || len(req.Targets) == 0 ||
+	// 	len(common.Hex2Bytes(req.Signature)) != 65 {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid proposal data"})
+	// 	return
+	// }
 
 	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
@@ -114,8 +115,28 @@ func CreateNewProposal(c *gin.Context) {
 		return
 	}
 
+	// convert Targets address to hex address:
+	var targetsArr []common.Address
+	for _, address := range req.Targets {
+		//convert
+		targetsArr = append(targetsArr, common.HexToAddress(address))
+	}
+
+	var valuesArr []*big.Int
+	for _, value := range req.Values {
+		//convert
+		valueBigInt := big.NewInt(0)
+		valueBigInt, ok := valueBigInt.SetString(value, 10)
+
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not convert values to bigInt")})
+			return
+		}
+		valuesArr = append(valuesArr, valueBigInt)
+	}
+
 	// check proposal existed
-	propId, _ := gv.HashProposal(nil, req.Targets, req.Values, req.Calldatas, keccak256([]byte(req.Description)))
+	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, req.Calldatas, keccak256([]byte(req.Description)))
 	prop, _ := gv.Proposals(nil, propId)
 	if prop.StartBlock.Uint64() != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("prop id has created")})

@@ -106,7 +106,6 @@ func APIGetUnshieldStatus(c *gin.Context) {
 }
 
 func APIGetShieldStatus(c *gin.Context) {
-	//Todo: implement
 	var req SubmitTxListRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {

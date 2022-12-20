@@ -124,3 +124,5 @@ type DexSwapTrackData struct {
 	MinAmountOut     string `json:"amount_out" bson:"amount_out"`
 	UserAgent        string `json:"useragent" bson:"useragent"`
 }
+
+//TODO: 0xkraken add datamodel for mongo

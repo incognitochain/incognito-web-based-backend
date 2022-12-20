@@ -398,7 +398,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 			wg.Done()
 		}(network)
 	}
-	wg.Wait()
 
 	for net, v := range networkErr {
 		result.NetworksError[net] = v

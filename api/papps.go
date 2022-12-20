@@ -182,6 +182,14 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+
+	amount := new(big.Float)
+	amount, errBool := amount.SetString(req.Amount)
+	if !errBool {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
+		return
+	}
+
 	switch req.Network {
 	case "inc", "eth", "bsc", "plg", "ftm", "aurora", "avax":
 	default:
@@ -251,12 +259,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 	outofVaultNetworks := []int{}
 	if tkFromInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-		amount := new(big.Float)
-		amount, errBool := amount.SetString(req.Amount)
-		if !errBool {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
-			return
-		}
 		dm := new(big.Float)
 		dm.SetFloat64(math.Pow10(tkFromInfo.PDecimals))
 		amountUint64, _ := amount.Mul(amount, dm).Uint64()

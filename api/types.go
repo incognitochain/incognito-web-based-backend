@@ -1,8 +1,6 @@
 package api
 
 import (
-	common2 "github.com/ethereum/go-ethereum/common"
-	"math/big"
 	"time"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
@@ -451,32 +449,32 @@ type TokenStruct struct {
 
 // Pdao request
 type CreatProposal struct {
-	Txhash      string `json:"txhash" jsonschema:"required"`
+	Txhash      string `json:"txhash" binding:"required"`
 	TxRaw       string
-	Targets     []common2.Address `json:"targets" bson:"targets" jsonschema:"required"`
-	Values      []*big.Int        `json:"values" bson:"values" jsonschema:"required"`
-	Signatures  []string          `json:"signatures" bson:"signatures"`
-	Calldatas   [][]byte          `json:"calldatas" bson:"calldatas" jsonschema:"required"`
-	Description string            `json:"description" bson:"description"`
-	Reshield    string            `json:"reshield" bson:"reshield"`
-	Signature   string            `json:"signature" bson:"signature" jsonschema:"required"`
+	Targets     []string `json:"targets" binding:"required"`
+	Values      []string `json:"values" binding:"required"`
+	Signatures  []string `json:"signatures"`
+	Calldatas   [][]byte `json:"calldatas"  binding:"required"`
+	Description string   `json:"description"`
+	Reshield    string   `json:"reshield"`
+	Signature   string   `json:"signature" binding:"required"`
 }
 
 type SubmitVote struct {
-	Txhash     string `json:"txhash" jsonschema:"required"`
+	Txhash     string `json:"txhash" binding:"required"`
 	TxRaw      string
 	ProposalID string
 	Vote       uint8
 	Signature  string
-	Reshield   string `json:"reshield" bson:"reshield"`
+	Reshield   string `json:"reshield"`
 }
 
 type SubmitCancel struct {
-	Txhash     string `json:"txhash" jsonschema:"required"`
+	Txhash     string `json:"txhash" binding:"required"`
 	TxRaw      string
 	ProposalID string
 	Signature  string
-	Reshield   string `json:"reshield" bson:"reshield"`
+	Reshield   string `json:"reshield"`
 }
 
 type Reshield struct {

@@ -58,6 +58,13 @@ func main() {
 				log.Fatalln(err)
 			}
 		}()
+	case common.MODE_HIENSWAP:
+		go func() {
+			//TODO: 0xkraken
+			// if err := submitproof.StartWorker(keylist, config, serviceID); err != nil {
+			// 	log.Fatalln(err)
+			// }
+		}()
 	case common.MODE_API:
 		go func() {
 			if err := submitproof.StartAssigner(config, serviceID); err != nil {

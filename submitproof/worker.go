@@ -650,6 +650,5 @@ retry:
 
 }
 func speedupOutChainSwapTx(network int, evmTxHash string) error {
-	//TODO
 	return nil
 }

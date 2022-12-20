@@ -49,6 +49,8 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 		return err
 	}
 
+	//TODO: 0xkraken call mongo index function
+
 	DBCreateDefaultNetworkInfo(network)
 
 	return nil

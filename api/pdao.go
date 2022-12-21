@@ -27,7 +27,7 @@ const PRV_VOTE = "0x89b147db2f49c3bc03b3e737453457bEecb3D572"
 const PRV_THRESHOLD = "10000000000"
 
 func CreateNewProposal(c *gin.Context) {
-	var req CreatProposal
+	var req CreatProposalReq
 	userAgent := c.Request.UserAgent()
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -131,6 +131,25 @@ func CreateNewProposal(c *gin.Context) {
 	// update request status
 
 	// store request to DB
+	proposal := &wcommon.Proposal{
+		IncTx:               req.Txhash,
+		SubmitBurnTx:        req.Txhash,
+		SubmitProposalTx:    "",
+		Status:              wcommon.StatusSubmitting,
+		ProposalID:          "",
+		Proposer:            "",
+		Targets:             strings.Join(req.Targets, ","),
+		Values:              strings.Join(req.Values, ","),
+		Signatures:          strings.Join(req.Signatures, ","),
+		Calldatas:           strings.Join(req.Calldatas, ","),
+		CreatePropSignature: "",
+		DescriptionLink:     req.DescriptionLink,
+	}
+	// insert db
+	if err = database.DBInsertProposalTable(proposal); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not insert proposal to db")})
+		return
+	}
 
 	// todo: submit transaction to CS and update to DB to get next step
 	//burntAmount, _ := md.TotalBurningAmount()

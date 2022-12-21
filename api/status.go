@@ -419,3 +419,66 @@ func APITrackDEXSwap(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"Result": "ok"})
 	return
 }
+
+func checkUnshieldTxStatus(txhash string) map[string]interface{} {
+	result := make(map[string]interface{})
+	data, err := database.DBGetUnshieldTxByIncTx(txhash)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			result["error"] = err.Error()
+			return result
+		} else {
+			return result
+		}
+	}
+
+	result["inc_request_tx_status"] = data.Status
+	if data.Status != common.StatusAccepted {
+		if data.Error != "" {
+			result["error"] = data.Error
+		}
+	} else {
+		network := data.Networks[0]
+		result["network"] = network
+		outchainTx, err := database.DBGetExternalTxByIncTx(txhash, network)
+		if err != nil {
+			if err != mongo.ErrNoDocuments {
+				result["error"] = err.Error()
+			} else {
+				result["outchain_status"] = common.StatusSubmitting
+			}
+			result["status"] = common.StatusPending
+			return result
+		}
+		if outchainTx.Status == wcommon.StatusAccepted {
+			result["outchain_status"] = "success"
+		} else {
+			result["outchain_status"] = outchainTx.Status
+			result["status"] = outchainTx.Status
+		}
+
+		result["outchain_tx"] = outchainTx.Txhash
+		if outchainTx.Error != "" {
+			result["outchain_err"] = outchainTx.Error
+		}
+		if outchainTx.Status == common.StatusAccepted && outchainTx.OtherInfo != "" {
+			var outchainTxResult wcommon.ExternalTxSwapResult
+			err = json.Unmarshal([]byte(outchainTx.OtherInfo), &outchainTxResult)
+			if err != nil {
+				result["error"] = err.Error()
+			}
+			if outchainTxResult.IsReverted {
+				result["outchain_status"] = "reverted"
+				result["status"] = common.StatusFailed
+			} else {
+				result["outchain_status"] = "success"
+				result["status"] = common.StatusSuccess
+			}
+			if outchainTxResult.IsFailed {
+				result["outchain_status"] = "failed"
+				result["status"] = common.StatusFailed
+			}
+		}
+	}
+	return result
+}

@@ -6,6 +6,12 @@ const (
 )
 
 const (
+	UNSHIELD_GAS_LIMIT = 300000
+	MAX_PFEE_PAPP      = uint64(25)
+	MAX_PFEE_UNSHIELD  = uint64(30)
+)
+
+const (
 	cacheVaultStateKey           = "cache_vault_state"
 	cacheSupportedPappsTokensKey = "cache_supported_papps_tokens"
 	cacheTokenListKey            = "cache_token_list"

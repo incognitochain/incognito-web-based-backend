@@ -448,7 +448,7 @@ type TokenStruct struct {
 }
 
 // Pdao request
-type CreatProposal struct {
+type CreatProposalReq struct {
 	Txhash          string   `json:"Txhash" binding:"required"`
 	TxRaw           string   `json:"TxRaw" binding:"required"`
 	Targets         []string `json:"Targets" binding:"required"`

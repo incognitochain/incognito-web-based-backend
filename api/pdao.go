@@ -135,8 +135,13 @@ func CreateNewProposal(c *gin.Context) {
 		valuesArr = append(valuesArr, valueBigInt)
 	}
 
+	var calldataArr [][]byte
+	for _, calldata := range req.Calldatas {
+		calldataArr = append(calldataArr, []byte(calldata))
+	}
+
 	// check proposal existed
-	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, req.Calldatas, keccak256([]byte(req.Description)))
+	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.DescriptionLink)))
 	prop, _ := gv.Proposals(nil, propId)
 	if prop.StartBlock.Uint64() != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("prop id has created")})

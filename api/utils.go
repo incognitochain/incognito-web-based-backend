@@ -200,10 +200,10 @@ func pancakeDataExtractor(data []byte) (*PancakeQuote, error) {
 	return &result, nil
 }
 
-func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyType int) (*PappSupportedTokenData, error) {
+func getNativeTokenData(tokenList []PappSupportedTokenData, nativeTokenCurrencyType int) (*common.TokenInfo, error) {
 	for _, token := range tokenList {
 		if token.CurrencyType == nativeTokenCurrencyType {
-			return &token, nil
+			return getTokenInfo(token.ID)
 		}
 	}
 	return nil, errors.New("token native not found")

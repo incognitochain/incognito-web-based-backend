@@ -260,7 +260,7 @@ func parseDefaultToken() error {
 	tokenList = append(tokenList, plgList...)
 	tokenList = append(tokenList, ftmList...)
 	tokenList = append(tokenList, avaxList...)
-	tokenList = append(tokenList, nearList...)
+	// tokenList = append(tokenList, nearList...)
 
 	for _, token := range tokenList {
 		whiteListTokenContract[strings.ToLower(token.ID)] = struct{}{}

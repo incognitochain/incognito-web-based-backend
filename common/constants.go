@@ -23,6 +23,7 @@ const (
 	EVMGasLimitETH     = 800000
 	EVMGasLimitPancake = 600000
 	MinEVMTxs          = uint64(10)
+	PRV_TOKENID        = "0000000000000000000000000000000000000000000000000000000000000004"
 )
 
 const (
@@ -37,6 +38,8 @@ const (
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
+	StatusSuccess      = "success"
+	StatusFailed       = "failed"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"
@@ -168,8 +171,9 @@ const (
 	MainnetPortalV4BTCID = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 )
 const (
-	PappTypeUnknown = iota
-	PappTypeSwap
+	ExternalTxTypeUnknown = iota
+	ExternalTxTypeSwap
+	ExternalTxTypeUnshield
 )
 
 // Default param mainnet

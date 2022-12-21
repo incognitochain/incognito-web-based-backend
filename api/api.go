@@ -93,7 +93,7 @@ func StartAPIservice(cfg common.Config) {
 	//opensea api
 	pOpenSeaGroup.GET("/collections", APIGetCollections)
 	pOpenSeaGroup.GET("/nft-detail", APINFTDetail)
-	pOpenSeaGroup.GET("/collection-assets", APICollectionDetail)
+	pOpenSeaGroup.GET("/collection-assets", APICollectionAssets)
 	pOpenSeaGroup.GET("/collection-detail", APICollectionDetail)
 
 	unshieldGroup := r.Group("/unshield")

@@ -62,6 +62,13 @@ func APIUnshieldFeeEstimate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	switch network {
+	case "inc", "eth", "bsc", "plg", "ftm", "aurora", "avax":
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "unsupported network"})
+		return
+	}
+
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
 		fmt.Println("DBRetrieveFeeTable", err.Error())
@@ -75,6 +82,7 @@ func APIUnshieldFeeEstimate(c *gin.Context) {
 		return
 	}
 	spTkList := getSupportedTokenList()
+
 	feeAmount, err := estimateUnshieldFee(amountUint, burnTokenInfo, network, networkFees, spTkList)
 	if err != nil {
 		fmt.Println("estimateUnshieldFee", err.Error())
@@ -178,6 +186,34 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 }
 
 func estimateUnshieldFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network string, networkFees *wcommon.ExternalNetworksFeeData, spTkList []PappSupportedTokenData) (*UnshieldNetworkFee, error) {
+
+	networkID := wcommon.GetNetworkID(network)
+	isSupportedOutNetwork := false
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, childToken := range burnTokenInfo.ListUnifiedToken {
+			childNetID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
+			if err != nil {
+				return nil, err
+			}
+			if childNetID == networkID {
+				isSupportedOutNetwork = true
+				break
+			}
+		}
+
+	} else {
+		netID, err := getNetworkIDFromCurrencyType(burnTokenInfo.CurrencyType)
+		if err != nil {
+			return nil, err
+		}
+		if netID == networkID {
+			isSupportedOutNetwork = true
+		}
+	}
+	if !isSupportedOutNetwork {
+		return nil, errors.New("unsupported network")
+	}
+
 	feeTokenWhiteList, err := retrieveFeeTokenWhiteList()
 	if err != nil {
 		log.Println(err)
@@ -187,7 +223,6 @@ func estimateUnshieldFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, networ
 	if _, ok := feeTokenWhiteList[burnTokenInfo.TokenID]; ok {
 		isFeeWhitelist = true
 	}
-	networkID := wcommon.GetNetworkID(network)
 
 	if _, ok := networkFees.GasPrice[network]; !ok {
 		return nil, errors.New("network gasPrice not found")

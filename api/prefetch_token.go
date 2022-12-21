@@ -75,6 +75,7 @@ func getSupportedTokenList() []PappSupportedTokenData {
 
 var defaultTokenList []wcommon.TokenInfo
 var allTokenList []wcommon.TokenInfo
+var prvToken *wcommon.TokenInfo
 
 func preCalcDefaultTokenList(tokenList []wcommon.TokenInfo, pappTokens []PappSupportedTokenData) error {
 	var result []wcommon.TokenInfo
@@ -155,6 +156,9 @@ func preCalcAllTokenList(tokenList []wcommon.TokenInfo, pappTokens []PappSupport
 
 	for _, tk := range tokenList {
 		if _, exist := dupChecker[tk.TokenID]; !exist {
+			if tk.TokenID == common.PRV_TOKENID {
+				prvToken = &tk
+			}
 			if tk.CurrencyType == wcommon.UnifiedCurrencyType {
 				tk.IsSwapable = true
 				newUTkList := []wcommon.TokenInfo{}

@@ -1079,7 +1079,7 @@ func processPendingUnshieldTx(tx wcommon.UnshieldTxData) error {
 					return err
 				}
 				go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
-			case 1:
+			case 1, 3:
 				go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
 				err = database.DBUpdateUnshieldTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
 				if err != nil {

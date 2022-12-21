@@ -11,5 +11,6 @@
 	"CaptchaSecret": "",
 	"IncKey": "",
 	"EVMKey": "",
-	"CentralIncPaymentAddress": ""
+	"CentralIncPaymentAddress": "",
+	"OpenSeaAPIkey": ""
 }

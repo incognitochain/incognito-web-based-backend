@@ -449,15 +449,15 @@ type TokenStruct struct {
 
 // Pdao request
 type CreatProposal struct {
-	Txhash      string `json:"txhash" binding:"required"`
-	TxRaw       string
-	Targets     []string `json:"targets" binding:"required"`
-	Values      []string `json:"values" binding:"required"`
-	Signatures  []string `json:"signatures"`
-	Calldatas   [][]byte `json:"calldatas"  binding:"required"`
-	Description string   `json:"description"`
-	Reshield    string   `json:"reshield"`
-	Signature   string   `json:"signature" binding:"required"`
+	Txhash          string   `json:"Txhash" binding:"required"`
+	TxRaw           string   `json:"TxRaw" binding:"required"`
+	Targets         []string `json:"Targets" binding:"required"`
+	Values          []string `json:"Values" binding:"required"`
+	Signatures      []string `json:"Signatures"`
+	Calldatas       []string `json:"Calldatas"  binding:"required"`
+	DescriptionLink string   `json:"DescriptionLink"`
+	Reshield        bool     `json:"Reshield"`
+	Signature       string   `json:"signature" binding:"required"`
 }
 
 type SubmitVote struct {
@@ -470,11 +470,11 @@ type SubmitVote struct {
 }
 
 type SubmitCancel struct {
-	Txhash     string `json:"txhash" binding:"required"`
-	TxRaw      string
-	ProposalID string
-	Signature  string
-	Reshield   string `json:"reshield"`
+	Txhash     string `json:"Txhash" binding:"required"`
+	TxRaw      string `json:"TxRaw" binding:"required"`
+	ProposalID string `json:"ProposalID" binding:"required"`
+	Signature  string `json:"Signature" binding:"required"`
+	Reshield   bool   `json:"Reshield"`
 }
 
 type Reshield struct {

@@ -107,7 +107,7 @@ func StartAPIservice(cfg common.Config) {
 
 	//pdao
 	pDAOGroup := r.Group("/pdao")
-	unshieldGroup.GET("proposal/estimatefee", APIUnshieldFeeEstimate)
+	unshieldGroup.GET("proposal/estimatefee", APIPDaoFeeEstimate)
 	pDAOGroup.POST("proposal/create", CreateNewProposal)
 	// pDAOGroup.GET("proposal/list")
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/bridge-eth/common/base58"
+	scommon "github.com/incognitochain/go-incognito-sdk-v2/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
@@ -26,36 +28,16 @@ const GOVERNANCE_CONTRACT_ADDRESS = "0x74E9a67bf51eaa27999d8D699d3Ae4bAdc8c2Af4"
 const PRV_VOTE = "0x89b147db2f49c3bc03b3e737453457bEecb3D572"
 const PRV_THRESHOLD = "10000000000"
 
-// func APIPDaoFeeEstimate(c *gin.Context) {
-// 	network := "eth"
-// 	tokenid := c.Query("tokenid")
-// 	amount := c.Query("amount")
-// 	amountUint, err := strconv.ParseUint(amount, 10, 64)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-// 		return
-// 	}
-// 	networkFees, err := database.DBRetrieveFeeTable()
-// 	if err != nil {
-// 		fmt.Println("DBRetrieveFeeTable", err.Error())
-// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-// 		return
-// 	}
-// 	burnTokenInfo, err := getTokenInfo(tokenid)
-// 	if err != nil {
-// 		fmt.Println("getTokenInfo", err.Error())
-// 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
-// 		return
-// 	}
-// 	spTkList := getSupportedTokenList()
-// 	feeAmount, err := estimateUnshieldFee(amountUint, burnTokenInfo, network, networkFees, spTkList)
-// 	if err != nil {
-// 		fmt.Println("estimateUnshieldFee", err.Error())
-// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-// 		return
-// 	}
-// 	c.JSON(200, gin.H{"Result": feeAmount})
-// }
+func APIPDaoFeeEstimate(c *gin.Context) {
+
+	feeAmount, err := estimatePDaoFee()
+	if err != nil {
+		fmt.Println("estimatePDaoFee", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"Result": feeAmount})
+}
 
 func CreateNewProposal(c *gin.Context) {
 	var req CreatProposalReq
@@ -224,7 +206,7 @@ func CreateNewProposal(c *gin.Context) {
 		// todo: update sdk to get returnOTA
 	}
 
-	feeToken := "0000000000000000000000000000000000000000000000000000000000000004"
+	feeToken := wcommon.PRV_TOKEN
 	feeAmount := 0
 	pfeeAmount := 0
 
@@ -253,9 +235,45 @@ func GetPdaoStatus(c *gin.Context) {
 	c.JSON(200, responseBodyData)
 }
 
+// todo move this to lib folder ...
 func keccak256(b ...[]byte) [32]byte {
 	h := crypto.Keccak256(b...)
 	r := [32]byte{}
 	copy(r[:], h)
 	return r
+}
+
+// util function
+func estimatePDaoFee() (*PDaoNetworkFee, error) {
+
+	networkFees, err := database.DBRetrieveFeeTable()
+	if err != nil {
+		fmt.Println("DBRetrieveFeeTable", err.Error())
+		return nil, err
+	}
+
+	gasPrice := networkFees.GasPrice[wcommon.NETWORK_BSC]
+
+	gasFee := (UNSHIELD_GAS_LIMIT * gasPrice)
+
+	feeAddress := ""
+
+	feeAddressShardID := byte(0)
+	if incFeeKeySet != nil {
+		feeAddress, err = incFeeKeySet.GetPaymentAddress()
+		if err != nil {
+			return nil, err
+		}
+		_, feeAddressShardID = scommon.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
+	}
+
+	feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee), 18, 9)
+
+	return &PDaoNetworkFee{
+		FeeAddress:        feeAddress,
+		FeeAddressShardID: int(feeAddressShardID),
+		TokenID:           wcommon.ETH_UT_TOKEN,
+		FeeAmount:         feeAmount,
+	}, nil
+
 }

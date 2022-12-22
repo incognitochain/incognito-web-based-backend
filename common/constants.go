@@ -174,6 +174,7 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
+	ExternalTxTypeOpensea = 96
 )
 
 // Default param mainnet

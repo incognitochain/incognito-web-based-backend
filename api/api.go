@@ -23,12 +23,12 @@ func StartAPIservice(cfg common.Config) {
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
 	network := config.NetworkID
-	if cfg.IncKey != "" {
-		err := loadOTAKey(cfg.IncKey)
-		if err != nil {
-			panic(err)
-		}
-	}
+	// if cfg.IncKey != "" {
+	// 	err := loadOTAKey(cfg.IncKey)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 
 	if network == "mainnet" {
 		err := parseDefaultToken()
@@ -42,10 +42,10 @@ func StartAPIservice(cfg common.Config) {
 	}
 	store := persistence.NewInMemoryStore(time.Second)
 
-	go cacheVaultState()
-	go cacheSupportedPappsTokens()
-	go cacheTokenList()
-	go cacheBridgeNetworkInfos()
+	// go cacheVaultState()
+	// go cacheSupportedPappsTokens()
+	// go cacheTokenList()
+	// go cacheBridgeNetworkInfos()
 
 	r := gin.Default()
 
@@ -111,7 +111,7 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 
-	go prefetchSupportedTokenList()
+	// go prefetchSupportedTokenList()
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

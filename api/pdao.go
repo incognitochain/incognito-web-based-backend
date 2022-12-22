@@ -26,6 +26,37 @@ const GOVERNANCE_CONTRACT_ADDRESS = "0x74E9a67bf51eaa27999d8D699d3Ae4bAdc8c2Af4"
 const PRV_VOTE = "0x89b147db2f49c3bc03b3e737453457bEecb3D572"
 const PRV_THRESHOLD = "10000000000"
 
+// func APIPDaoFeeEstimate(c *gin.Context) {
+// 	network := "eth"
+// 	tokenid := c.Query("tokenid")
+// 	amount := c.Query("amount")
+// 	amountUint, err := strconv.ParseUint(amount, 10, 64)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+// 		return
+// 	}
+// 	networkFees, err := database.DBRetrieveFeeTable()
+// 	if err != nil {
+// 		fmt.Println("DBRetrieveFeeTable", err.Error())
+// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+// 		return
+// 	}
+// 	burnTokenInfo, err := getTokenInfo(tokenid)
+// 	if err != nil {
+// 		fmt.Println("getTokenInfo", err.Error())
+// 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+// 		return
+// 	}
+// 	spTkList := getSupportedTokenList()
+// 	feeAmount, err := estimateUnshieldFee(amountUint, burnTokenInfo, network, networkFees, spTkList)
+// 	if err != nil {
+// 		fmt.Println("estimateUnshieldFee", err.Error())
+// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+// 		return
+// 	}
+// 	c.JSON(200, gin.H{"Result": feeAmount})
+// }
+
 func CreateNewProposal(c *gin.Context) {
 	var req CreatProposalReq
 	userAgent := c.Request.UserAgent()

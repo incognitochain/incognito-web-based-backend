@@ -107,11 +107,12 @@ func StartAPIservice(cfg common.Config) {
 
 	//pdao
 	pDAOGroup := r.Group("/pdao")
+	unshieldGroup.GET("proposal/estimatefee", APIUnshieldFeeEstimate)
 	pDAOGroup.POST("proposal/create", CreateNewProposal)
-	pDAOGroup.GET("proposal/list")
+	// pDAOGroup.GET("proposal/list")
 
-	pDAOGroup.POST("proposal/vote")
-	pDAOGroup.POST("proposal/cancel")
+	// pDAOGroup.POST("proposal/vote")
+	// pDAOGroup.POST("proposal/cancel")
 
 	// go prefetchSupportedTokenList()
 

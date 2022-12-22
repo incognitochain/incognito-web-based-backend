@@ -483,3 +483,10 @@ type Reshield struct {
 	Amount           string
 	Timestamp        string
 }
+
+type PDaoNetworkFee struct {
+	FeeAddress        string `json:"feeAddress"`
+	FeeAddressShardID int    `json:"feeAddressShardID"`
+	TokenID           string `json:"tokenid"`
+	FeeAmount         uint64 `json:"feeAmount"`
+}

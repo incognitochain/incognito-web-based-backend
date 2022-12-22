@@ -433,12 +433,23 @@ func watchPendingPappTx() {
 	for {
 		txList, err := database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeSwap, 0, 0)
 		if err != nil {
-			log.Println("DBRetrievePendingPappTxs err:", err)
+			log.Println("DBRetrievePendingPappTxs Swap err:", err)
 		}
 		for _, txdata := range txList {
 			err := processPendingSwapTx(txdata)
 			if err != nil {
-				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+				log.Println("processPendingShieldTxs Swap err:", txdata.IncTx)
+			}
+		}
+
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpensea, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingOpenseaTx(txdata)
+			if err != nil {
+				log.Println("processPendingOpenseaTx OpenSea err:", txdata.IncTx)
 			}
 		}
 

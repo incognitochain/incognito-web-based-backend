@@ -93,7 +93,6 @@ func DBUpdateExternalTxOtherInfo(externalTx string, otherInfo string) error {
 	}
 	return nil
 }
-
 func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status, "error": errStr}}

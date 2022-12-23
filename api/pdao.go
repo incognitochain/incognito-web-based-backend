@@ -157,6 +157,7 @@ func CreateNewProposal(c *gin.Context) {
 		CreatePropSignature: "",
 		Reshield:            req.Reshield,
 		Description:         req.Description,
+		Title:               req.Title,
 	}
 	// insert db
 	if err = database.DBInsertProposalTable(proposal); err != nil {

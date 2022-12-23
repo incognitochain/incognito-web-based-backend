@@ -15,6 +15,7 @@ type Proposal struct {
 	Calldatas           string `bson:"calldatas"`
 	CreatePropSignature string `bson:"create_prop_signature"`
 	Description         string `bson:"description"`
+	Title               string `bson:"title"`
 	Reshield            string
 }
 

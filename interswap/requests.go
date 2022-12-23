@@ -16,6 +16,8 @@ type EstimateSwapParam struct {
 	Slippage  string
 	FromToken string // IncTokenID
 	ToToken   string // IncTokenID
+
+	IsInterswap bool
 }
 
 type PappNetworkFee struct {
@@ -47,6 +49,8 @@ type QuoteData struct {
 	RouteDebug           interface{}
 }
 
+
+
 type EstimateSwapResult struct {
 	Networks      map[string][]QuoteData
 	NetworksError map[string]interface{}
@@ -66,12 +70,14 @@ func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
 		FromToken string // IncTokenID
 		ToToken   string // IncTokenID
 		Slippage  string
+		IsInterswap bool,
 	}{
 		Network:   params.Network,
 		Amount:    params.Amount,
 		FromToken: params.FromToken,
 		ToToken:   params.ToToken,
 		Slippage:  params.Slippage,
+		IsInterswap: params.IsInterSwap,
 	}
 
 	estSwapResponse := EstimateSwapResponse{}

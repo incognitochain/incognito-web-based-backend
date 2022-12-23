@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-// type Path []QuoteData
-
 type InterSwapPath struct {
 	Paths     []*QuoteData
 	FromToken string
@@ -15,12 +13,17 @@ type InterSwapPath struct {
 	TotalFee  PappNetworkFee
 }
 
-type InterSwapEstimateResult struct {
-	Path InterSwapPath
+type InterSwapInfo struct {
+	QuoteData
+	FromToken string
+	ToToken   string
+	MidToken  string
+	TotalFee  PappNetworkFee
+	Details   []*QuoteData
 }
 
 // InterSwap estimate swap
-func EstimateSwap(params *EstimateSwapParam) (map[string][]QuoteData, error) {
+func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 	// validation
 
 	// * don't estimate inter swap if:
@@ -37,11 +40,12 @@ func EstimateSwap(params *EstimateSwapParam) (map[string][]QuoteData, error) {
 	for _, midToken := range SupportedMidTokens {
 		// estimate fromToken => midToken
 		p1 := &EstimateSwapParam{
-			Network:   IncNetworkStr,
-			Amount:    params.Amount,
-			FromToken: params.FromToken,
-			ToToken:   midToken,
-			Slippage:  params.Slippage,
+			Network:     IncNetworkStr,
+			Amount:      params.Amount,
+			FromToken:   params.FromToken,
+			ToToken:     midToken,
+			Slippage:    params.Slippage,
+			IsInterswap: true,
 		}
 		p1Bytes, _ := json.Marshal(p1)
 		fmt.Printf("Param 1: %s\n", string(p1Bytes))
@@ -66,11 +70,12 @@ func EstimateSwap(params *EstimateSwapParam) (map[string][]QuoteData, error) {
 
 		for network1, swapInfo1 := range bestPath1 {
 			p2 := &EstimateSwapParam{
-				Network:   params.Network,
-				Amount:    swapInfo1.AmountOut,
-				FromToken: midToken,
-				ToToken:   params.ToToken,
-				Slippage:  params.Slippage,
+				Network:     params.Network,
+				Amount:      swapInfo1.AmountOut,
+				FromToken:   midToken,
+				ToToken:     params.ToToken,
+				Slippage:    params.Slippage,
+				IsInterswap: true,
 			}
 			p2Bytes, _ := json.Marshal(p2)
 			fmt.Printf("Param 2: %s\n", string(p2Bytes))
@@ -155,6 +160,30 @@ func EstimateSwap(params *EstimateSwapParam) (map[string][]QuoteData, error) {
 	bytes, _ = json.Marshal(bestPath)
 	fmt.Printf("bestPath: %v\n", string(bytes))
 
-	return map[string][]QuoteData{}, nil
+	swapInfo := InterSwapInfo{
+		QuoteData: QuoteData{
+			AppName:              InterSwapStr,
+			AmountIn:             params.Amount,
+			AmountInRaw:          bestPath.Paths[0].AmountInRaw,
+			AmountOut:            bestPath.Paths[1].AmountOut,
+			AmountOutRaw:         bestPath.Paths[1].AmountOutRaw,
+			AmountOutPreSlippage: bestPath.Paths[1].AmountOutPreSlippage,
+			Rate:                 "", // TODO
+			Fee:                  []PappNetworkFee{bestPath.TotalFee},
+			FeeAddress:           bestPath.Paths[0].FeeAddress,
+			FeeAddressShardID:    bestPath.Paths[0].FeeAddressShardID,
+			Paths:                "", // TODO
+			ImpactAmount:         "", // TODO
+		},
+		FromToken: bestPath.FromToken,
+		ToToken:   bestPath.ToToken,
+		MidToken:  bestPath.MidToken,
+		TotalFee:  bestPath.TotalFee,
+		Details:   bestPath.Paths,
+	}
 
+	res := map[string]InterSwapInfo{
+		InterSwapStr: swapInfo,
+	}
+	return res, nil
 }

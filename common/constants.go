@@ -16,6 +16,7 @@ const (
 	MODE_API             = "api"
 	MODE_FEEESTIMATOR    = "feeestimator"
 	MODE_UNSHIELDWATCHER = "unshieldwatcher"
+	MODE_INTERSWAP       = "interswap"
 )
 
 const (

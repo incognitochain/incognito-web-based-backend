@@ -10,6 +10,7 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/feeestimator"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
@@ -58,12 +59,12 @@ func main() {
 				log.Fatalln(err)
 			}
 		}()
-	case common.MODE_HIENSWAP:
+	case common.MODE_INTERSWAP:
 		go func() {
-			//TODO: 0xkraken
-			// if err := submitproof.StartWorker(keylist, config, serviceID); err != nil {
-			// 	log.Fatalln(err)
-			// }
+			// InterSwap start service
+			if err := interswap.StartService(config, serviceID); err != nil {
+				log.Fatalln(err)
+			}
 		}()
 	case common.MODE_API:
 		go func() {

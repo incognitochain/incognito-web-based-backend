@@ -16,9 +16,11 @@ require (
 	github.com/adjust/rmq/v4 v4.0.5
 	github.com/gin-contrib/cache v1.2.0
 	github.com/gin-contrib/cors v1.4.0
+	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/google/uuid v1.2.0
 	github.com/incognitochain/bridge-eth v0.0.0-20220826034447-e3f063b9fef4
 	github.com/kamva/mgm/v3 v3.1.0
+	github.com/mileusna/useragent v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
 	go.mongodb.org/mongo-driver v1.9.0
@@ -69,7 +71,6 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/memcachier/mc/v3 v3.0.3 // indirect
-	github.com/mileusna/useragent v1.2.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect

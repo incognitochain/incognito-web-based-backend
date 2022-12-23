@@ -82,6 +82,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
+// TODO: 0xkraken write another one for IS to publish msg
 func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, pfeeAmount uint64, burntToken string, burntAmount uint64, swapInfo *common.PappSwapInfo, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string, userAgent string) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
@@ -109,6 +110,9 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		Networks:         networks,
 		Time:             time.Now(),
 		UserAgent:        userAgent,
+
+		// add more
+
 	}
 	taskBytes, _ := json.Marshal(task)
 

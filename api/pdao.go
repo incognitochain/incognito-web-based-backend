@@ -49,11 +49,13 @@ func CreateNewProposal(c *gin.Context) {
 	}
 
 	// query eth network info
-	networkInfo, err := database.DBGetBridgeNetworkInfo("eth")
+	networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
+
+	log.Println("check network ok!")
 
 	if len(req.Calldatas) > 0 && len(req.Values) > 0 && len(req.Signatures) > 0 {
 
@@ -146,6 +148,7 @@ func CreateNewProposal(c *gin.Context) {
 
 	// update request status
 
+	log.Println("Begin store db!")
 	// store request to DB
 	proposal := &wcommon.Proposal{
 		SubmitBurnTx:        req.Txhash,
@@ -164,9 +167,10 @@ func CreateNewProposal(c *gin.Context) {
 	}
 	// insert db
 	if err = database.DBInsertProposalTable(proposal); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not insert proposal to db")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	log.Println("Insert db success!")
 
 	// todo: submit transaction to CS and update to DB to get next step
 	//burntAmount, _ := md.TotalBurningAmount()

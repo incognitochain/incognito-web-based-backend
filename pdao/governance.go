@@ -18,8 +18,6 @@ import (
 	"time"
 )
 
-var config wcommon.Config
-
 const (
 	CREATE_PROP  = 1
 	VOTE_PROP    = 2
@@ -27,7 +25,7 @@ const (
 	EXECUTE_PROP = 4
 )
 
-func createOutChainTx(network string, incTxHash string, payload []byte, requestType uint8) (*wcommon.ExternalTxStatus, error) {
+func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
 	// networkID := wcommon.GetNetworkID(network)
@@ -36,7 +34,7 @@ func createOutChainTx(network string, incTxHash string, payload []byte, requestT
 		return nil, err
 	}
 
-	// todo: update query governance contract address
+	// todo thachtb: update query governance contract address
 	pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
 	if err != nil {
 		return nil, err
@@ -124,16 +122,16 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 		var values []*big.Int
 		var calldatas [][]byte
 		for i, _ := range targets {
-			targets = append(targets, common.HexToAddress(prop.Targets[i]))
-			value, _ := new(big.Int).SetString(prop.Values[i], 10)
+			targets = append(targets, common.HexToAddress(strings.Split(prop.Targets, ",")[i]))
+			value, _ := new(big.Int).SetString(strings.Split(prop.Values, ",")[i], 10)
 			values = append(values, value)
-			calldatas = append(calldatas, common.Hex2Bytes(prop.Calldatas[i]))
+			calldatas = append(calldatas, common.Hex2Bytes(strings.Split(prop.Calldatas, ",")[i]))
 		}
 		signature := common.Hex2Bytes(prop.CreatePropSignature)
 		tx, err = gov.ProposeBySig(
 			executor,
 			targets, values, calldatas,
-			prop.Description,
+			prop.DescriptionLink,
 			signature[64]+27,
 			toByte32(signature[:32]),
 			toByte32(signature[32:64]),

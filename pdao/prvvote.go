@@ -26,7 +26,7 @@ const (
 	SHIELD         = 3
 )
 
-func createPRVOutChainTx(network string, incTxHash string, payload []byte, requestType uint8) (*wcommon.ExternalTxStatus, error) {
+func CreatePRVOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
 	// networkID := wcommon.GetNetworkID(network)
@@ -35,7 +35,7 @@ func createPRVOutChainTx(network string, incTxHash string, payload []byte, reque
 		return nil, err
 	}
 
-	// todo: update query prv contract address
+	// todo thachtb: update query prv contract address
 	pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ retry:
 		result.Network = network
 		result.IncRequestTx = incTxHash
 
-		tx, err := submitTxPRVVoteOutChain(auth, requestType, payload, prv)
+		tx, err := submitTxPRVVoteOutChain(auth, requestType, payload, prv, config)
 		if err != nil {
 			log.Println(err)
 			if strings.Contains(err.Error(), "insufficient funds") {
@@ -109,7 +109,7 @@ retry:
 	return &result, nil
 }
 
-func submitTxPRVVoteOutChain(executor *bind.TransactOpts, submitType uint8, payload []byte, prv *prvvote.Prvvote) (*types.Transaction, error) {
+func submitTxPRVVoteOutChain(executor *bind.TransactOpts, submitType uint8, payload []byte, prv *prvvote.Prvvote, config wcommon.Config) (*types.Transaction, error) {
 	var tx *types.Transaction
 	var err error
 	switch submitType {

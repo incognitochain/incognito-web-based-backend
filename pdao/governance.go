@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
+	"math/big"
+	"strings"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -12,10 +17,6 @@ import (
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/pdao/governance"
-	"log"
-	"math/big"
-	"strings"
-	"time"
 )
 
 const (
@@ -131,7 +132,7 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 		tx, err = gov.ProposeBySig(
 			executor,
 			targets, values, calldatas,
-			prop.DescriptionLink,
+			prop.Description,
 			signature[64]+27,
 			toByte32(signature[:32]),
 			toByte32(signature[32:64]),

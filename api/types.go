@@ -449,15 +449,15 @@ type TokenStruct struct {
 
 // Pdao request
 type CreatProposalReq struct {
-	Txhash          string   `json:"Txhash" binding:"required"`
-	TxRaw           string   `json:"TxRaw" binding:"required"`
-	Targets         []string `json:"Targets" binding:"required"`
-	Values          []string `json:"Values" binding:"required"`
-	Signatures      []string `json:"Signatures"`
-	Calldatas       []string `json:"Calldatas"  binding:"required"`
-	DescriptionLink string   `json:"DescriptionLink"`
-	Reshield        bool     `json:"Reshield"`
-	Signature       string   `json:"signature" binding:"required"`
+	Txhash      string   `json:"Txhash" binding:"required"`
+	TxRaw       string   `json:"TxRaw" binding:"required"`
+	Targets     []string `json:"Targets" binding:"required"`
+	Values      []string `json:"Values" binding:"required"`
+	Signatures  []string `json:"Signatures"`
+	Calldatas   []string `json:"Calldatas"  binding:"required"`
+	Description string   `json:"Description"`
+	Reshield    string   `json:"Reshield"`
+	Signature   string   `json:"signature" binding:"required"`
 }
 
 type SubmitVote struct {

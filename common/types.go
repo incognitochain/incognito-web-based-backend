@@ -24,6 +24,9 @@ type Config struct {
 
 	GGCProject string
 	GGCAuth    string
+
+	// Interswap
+	ISIncPrivKey string
 }
 
 type TokenInfo struct {

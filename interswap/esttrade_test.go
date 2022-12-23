@@ -15,11 +15,12 @@ func TestEstimateSwap(t *testing.T) {
 	to := USDC
 
 	params := &EstimateSwapParam{
-		Network:   "bsc",
-		Amount:    "1",
-		FromToken: from,
-		ToToken:   to,
-		Slippage:  "0.5",
+		Network:     "bsc",
+		Amount:      "1",
+		FromToken:   from,
+		ToToken:     to,
+		Slippage:    "0.5",
+		IsInterswap: true,
 	}
 	res, err := EstimateSwap(params)
 	fmt.Printf("Res: %+v\n", res)

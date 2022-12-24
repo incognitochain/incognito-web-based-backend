@@ -457,30 +457,30 @@ type CreatProposalReq struct {
 	Signatures []string //`json:"Signatures"`
 	Calldatas  []string //`json:"Calldatas"  binding:"required"`
 
-	Description string `json:"Description"  binding:"required"`
-	Title       string `json:"Title"  binding:"required"`
-	Reshield    string `json:"Reshield"  binding:"required"`
-	Signature   string `json:"Signature" binding:"required"`
+	Description       string `json:"Description"  binding:"required"`
+	Title             string `json:"Title"  binding:"required"`
+	ReShieldSignature string `json:"ReShieldSignature"  binding:"required"`
+	Signature         string `json:"Signature" binding:"required"`
 }
 
 type SubmitVoteReq struct {
-	Txhash     string `json:"txhash" binding:"required"`
-	TxRaw      string
-	ProposalID string `json:"ProposalID" binding:"required"`
-	Vote       uint8  `json:"Vote" binding:"required"`
-	Signature  string `json:"Signature" binding:"required"`
-	Reshield   string `json:"Reshield" binding:"required"`
+	Txhash            string `json:"txhash" binding:"required"`
+	TxRaw             string
+	ProposalID        string `json:"ProposalID" binding:"required"`
+	Vote              uint8  `json:"Vote" binding:"required"`
+	Signature         string `json:"Signature" binding:"required"`
+	ReShieldSignature string `json:"ReShieldSignature" binding:"required"`
 }
 
 type SubmitCancelReq struct {
-	Txhash     string `json:"Txhash" binding:"required"`
-	TxRaw      string `json:"TxRaw" binding:"required"`
-	ProposalID string `json:"ProposalID" binding:"required"`
-	Signature  string `json:"Signature" binding:"required"`
-	Reshield   bool   `json:"Reshield" binding:"required"`
+	Txhash            string `json:"Txhash" binding:"required"`
+	TxRaw             string `json:"TxRaw" binding:"required"`
+	ProposalID        string `json:"ProposalID" binding:"required"`
+	Signature         string `json:"Signature" binding:"required"`
+	ReShieldSignature bool   `json:"ReShieldSignature" binding:"required"`
 }
 
-type ReshieldReq struct {
+type ReShieldSignatureReq struct {
 	Signature        string
 	IncognitoAddress string
 	Amount           string

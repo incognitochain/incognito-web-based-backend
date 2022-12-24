@@ -161,7 +161,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		Signatures:          strings.Join(req.Signatures, ","),
 		Calldatas:           strings.Join(req.Calldatas, ","),
 		CreatePropSignature: req.Signature,
-		Reshield:            req.Reshield,
+		ReShieldSignature:   req.ReShieldSignature,
 		Description:         req.Description,
 		Title:               req.Title,
 	}
@@ -249,8 +249,8 @@ func APIPDaoVoting(c *gin.Context) {
 		Status:       wcommon.StatusSubmitting,
 		ProposalID:   req.ProposalID,
 
-		VoteSignature: req.Signature,
-		Reshield:      req.Reshield,
+		VoteSignature:     req.Signature,
+		ReShieldSignature: req.ReShieldSignature,
 
 		Vote: req.Vote,
 	}

@@ -241,6 +241,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 
 			// store DB to InterSwap before broadcast tx
 			interSwapInfoStr, _ := json.MarshalIndent(req.AddOnSwapInfo, "", "\t")
+			status := interswap.FirstPending
 			interswapInfo := beCommon.InterSwapTxData{
 				TxID:          txHash,
 				TxRaw:         req.TxRaw,
@@ -250,7 +251,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				OTAToToken:    req.OTAToToken,
 
 				Status:    interswap.FirstPending,
-				StatusStr: interswap.StatusStr[interswap.FirstPending],
+				StatusStr: interswap.StatusStr[status],
 				UserAgent: userAgent,
 				Error:     "",
 			}
@@ -279,6 +280,10 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("broadcast pdex raw tx failed %v", err)})
 				return
 			}
+
+			// call assigner to publish msg to Interswap Worker
+			submitproof.PublishMsgInterswapTx(interswap.PdexToPApp, txHash, rawTxBytes, req.AddOnSwapInfo,
+				req.OTARefundFee, req.OTAFromToken, interswapInfo.OTAToToken, status, interswap.StatusStr[status], "")
 
 			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": interswap.FirstPending}})
 			return

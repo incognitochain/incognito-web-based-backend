@@ -96,7 +96,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		gvAbi, _ := abi.JSON(strings.NewReader(governance.GovernanceMetaData.ABI))
 		propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Description)
 		signData, _ := gv.GetDataSign(nil, keccak256(propEncode[4:]))
-		rcAddr, err := crypto.Ecrecover(signData[:], common.Hex2Bytes(req.Signature))
+		rcAddr, err := crypto.Ecrecover(signData[:], common.Hex2Bytes(req.CreatePropSignature))
 		// todo: compare address recover and address from burning metadata if has
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid signature"})
@@ -160,7 +160,8 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		Values:              strings.Join(req.Values, ","),
 		Signatures:          strings.Join(req.Signatures, ","),
 		Calldatas:           strings.Join(req.Calldatas, ","),
-		CreatePropSignature: req.Signature,
+		CreatePropSignature: req.CreatePropSignature,
+		PropVoteSignature:   req.PropVoteSignature,
 		ReShieldSignature:   req.ReShieldSignature,
 		Description:         req.Description,
 		Title:               req.Title,
@@ -249,7 +250,7 @@ func APIPDaoVoting(c *gin.Context) {
 		Status:       wcommon.StatusSubmitting,
 		ProposalID:   req.ProposalID,
 
-		VoteSignature:     req.Signature,
+		PropVoteSignature: req.PropVoteSignature,
 		ReShieldSignature: req.ReShieldSignature,
 
 		Vote: req.Vote,

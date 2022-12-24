@@ -457,10 +457,11 @@ type CreatProposalReq struct {
 	Signatures []string //`json:"Signatures"`
 	Calldatas  []string //`json:"Calldatas"  binding:"required"`
 
-	Description       string `json:"Description"  binding:"required"`
-	Title             string `json:"Title"  binding:"required"`
-	ReShieldSignature string `json:"ReShieldSignature"  binding:"required"`
-	Signature         string `json:"Signature" binding:"required"`
+	Description         string `json:"Description"  binding:"required"`
+	Title               string `json:"Title"  binding:"required"`
+	ReShieldSignature   string `json:"ReShieldSignature"  binding:"required"`
+	CreatePropSignature string `json:"CreatePropSignature" binding:"required"`
+	PropVoteSignature   string `json:"PropVoteSignature" binding:"required"`
 }
 
 type SubmitVoteReq struct {
@@ -468,7 +469,7 @@ type SubmitVoteReq struct {
 	TxRaw             string
 	ProposalID        string `json:"ProposalID" binding:"required"`
 	Vote              uint8  `json:"Vote" binding:"required"`
-	Signature         string `json:"Signature" binding:"required"`
+	PropVoteSignature string `json:"PropVoteSignature" binding:"required"`
 	ReShieldSignature string `json:"ReShieldSignature" binding:"required"`
 }
 

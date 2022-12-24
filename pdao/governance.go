@@ -144,7 +144,7 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 			return nil, err
 		}
 		propID, _ := new(big.Int).SetString(vote.ProposalID, 10)
-		signature := common.Hex2Bytes(vote.VoteSignature)
+		signature := common.Hex2Bytes(vote.PropVoteSignature)
 		tx, err = gov.CastVoteBySig(
 			executor,
 			propID,

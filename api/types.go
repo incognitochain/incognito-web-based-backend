@@ -463,31 +463,31 @@ type CreatProposalReq struct {
 	Signature   string `json:"Signature" binding:"required"`
 }
 
-type SubmitVote struct {
+type SubmitVoteReq struct {
 	Txhash     string `json:"txhash" binding:"required"`
 	TxRaw      string
-	ProposalID string
-	Vote       uint8
-	Signature  string
-	Reshield   string `json:"reshield"`
+	ProposalID string `json:"ProposalID" binding:"required"`
+	Vote       uint8  `json:"Vote" binding:"required"`
+	Signature  string `json:"Signature" binding:"required"`
+	Reshield   string `json:"Reshield" binding:"required"`
 }
 
-type SubmitCancel struct {
+type SubmitCancelReq struct {
 	Txhash     string `json:"Txhash" binding:"required"`
 	TxRaw      string `json:"TxRaw" binding:"required"`
 	ProposalID string `json:"ProposalID" binding:"required"`
 	Signature  string `json:"Signature" binding:"required"`
-	Reshield   bool   `json:"Reshield"`
+	Reshield   bool   `json:"Reshield" binding:"required"`
 }
 
-type Reshield struct {
+type ReshieldReq struct {
 	Signature        string
 	IncognitoAddress string
 	Amount           string
 	Timestamp        string
 }
 
-type PDaoNetworkFee struct {
+type PDaoNetworkFeeResp struct {
 	FeeAddress        string `json:"feeAddress"`
 	FeeAddressShardID int    `json:"feeAddressShardID"`
 	TokenID           string `json:"tokenid"`

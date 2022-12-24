@@ -337,3 +337,10 @@ func DecodeCurveCalldata(inputHex string) (*CurveDecodeData, error) {
 	}
 	return nil, errors.New("invalid abi")
 }
+
+// TODO:
+func BuildOpenSeaCalldata() {
+
+}
+
+func DecodeOpenSeaCalldata() {}

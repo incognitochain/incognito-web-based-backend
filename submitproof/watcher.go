@@ -150,6 +150,16 @@ func forwardCollectedFee() {
 			continue
 		}
 
+		pendingTokenUnshield, err := getPendingUnshieldsFee(-1)
+		if err != nil {
+			log.Println("getPendingUnshieldsFee", err)
+			continue
+		}
+
+		for token, amount := range pendingTokenUnshield {
+			pendingToken[token] += amount
+		}
+
 		coins, _, err := incClient.GetAllUTXOsV2(config.IncKey)
 		if err != nil {
 			log.Println("GetAllUTXOsV2", err)
@@ -981,7 +991,6 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 }
 
 func getPendingUnshieldsFee(shardID int) (map[string]uint64, error) {
-	//TODO
 	result := make(map[string]uint64)
 	var txList []wcommon.UnshieldTxData
 	var err error

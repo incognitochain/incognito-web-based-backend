@@ -145,7 +145,6 @@ func DBCreateIndex() error {
 			Keys:    bsonx.Doc{{Key: "inctx", Value: bsonx.Int32(1)}},
 			Options: options.Index().SetUnique(true),
 		},
-
 		{
 			Keys: bsonx.Doc{{Key: "externaltx", Value: bsonx.Int32(1)}},
 			// Options: options.Index().SetUnique(true),

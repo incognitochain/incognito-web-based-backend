@@ -17,6 +17,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
 	"github.com/incognitochain/go-incognito-sdk-v2/crypto"
+	"github.com/incognitochain/go-incognito-sdk-v2/key"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
@@ -61,41 +62,6 @@ func APISubmitSwapTx(c *gin.Context) {
 	}
 
 	var ok bool
-	// if req.TxHash != "" {
-	// 	txHash = req.TxHash
-
-	// 	statusResult := checkPappTxSwapStatus(txHash)
-	// 	if len(statusResult) > 0 {
-	// 		if er, ok := statusResult["error"]; ok {
-	// 			if er != "not found" {
-	// 				c.JSON(200, gin.H{"Result": statusResult})
-	// 				return
-	// 			}
-	// 		} else {
-	// 			c.JSON(200, gin.H{"Result": statusResult})
-	// 			return
-	// 		}
-	// 	}
-
-	// 	txDetail, err := incClient.GetTx(req.TxHash)
-	// 	if err != nil {
-	// 		c.JSON(http.StatusBadRequest, gin.H{"Error":  err.Error()})
-	// 		return
-	// 	}
-	// 	mdRaw = txDetail.GetMetadata()
-	// 	txType := txDetail.GetType()
-	// 	switch txType {
-	// 	case common.TxCustomTokenPrivacyType:
-	// 		isPRVTx = false
-	// 		txToken := txDetail.(tx_generic.TransactionToken)
-	// 		outCoins = append(outCoins, txToken.GetTxTokenData().TxNormal.GetProof().GetOutputCoins()...)
-	// 		// outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-	// 	case common.TxNormalType:
-	// 		isPRVTx = true
-	// 		// feeToken = common.PRVCoinID.String()
-	// 		outCoins = append(outCoins, txDetail.GetProof().GetOutputCoins()...)
-	// 	}
-	// } else {
 	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
@@ -142,7 +108,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
+	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList, wcommon.ExternalTxTypeSwap)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -151,7 +117,7 @@ func APISubmitSwapTx(c *gin.Context) {
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent, wcommon.ExternalTxTypeSwap)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
@@ -1292,7 +1258,43 @@ func getBridgeNetworkInfos() ([]wcommon.BridgeNetworkData, error) {
 	return result, nil
 }
 
-func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkList []PappSupportedTokenData) (bool, []string, string, uint64, uint64, int64, *wcommon.PappSwapInfo, error) {
+func checkReceiveOutCoinAmount(outCoins []coin.Coin, keySet *key.KeySet, burnToken string) (string, uint64, error) {
+	var outToken string
+	var outAmount uint64 = 0
+
+	// burnTokenAssetTag := crypto.HashToPoint(md.BurnTokenID[:])
+	for _, c := range outCoins {
+		feeCoin, rK := c.DoesCoinBelongToKeySet(&incFeeKeySet.KeySet)
+		if feeCoin {
+			if c.GetAssetTag() == nil {
+				outToken = common.PRVCoinID.String()
+			} else {
+				assetTag := c.GetAssetTag()
+				blinder, err := coin.ComputeAssetTagBlinder(rK)
+				if err != nil {
+					return "", 0, err
+				}
+				rawAssetTag := new(crypto.Point).Sub(
+					assetTag,
+					new(crypto.Point).ScalarMult(crypto.PedCom.G[coin.PedersenRandomnessIndex], blinder),
+				)
+				_ = rawAssetTag //TODO: verify more
+
+				outToken = burnToken
+			}
+
+			coin, err := c.Decrypt(&incFeeKeySet.KeySet)
+			if err != nil {
+				return "", 0, err
+			}
+			outAmount = coin.GetValue()
+		}
+	}
+
+	return outToken, outAmount, nil
+}
+
+func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkList []PappSupportedTokenData, pappType int) (bool, []string, string, uint64, uint64, int64, *wcommon.PappSwapInfo, error) {
 	var feeAmount uint64
 	var pfeeAmount uint64
 	var feeToken string
@@ -1318,33 +1320,38 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 	}
 
-	// burnTokenAssetTag := crypto.HashToPoint(md.BurnTokenID[:])
-	for _, c := range outCoins {
-		feeCoin, rK := c.DoesCoinBelongToKeySet(&incFeeKeySet.KeySet)
-		if feeCoin {
-			if c.GetAssetTag() == nil {
-				feeToken = common.PRVCoinID.String()
-			} else {
-				assetTag := c.GetAssetTag()
-				blinder, err := coin.ComputeAssetTagBlinder(rK)
-				if err != nil {
-					return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
-				}
-				rawAssetTag := new(crypto.Point).Sub(
-					assetTag,
-					new(crypto.Point).ScalarMult(crypto.PedCom.G[coin.PedersenRandomnessIndex], blinder),
-				)
-				_ = rawAssetTag
-				feeToken = md.BurnTokenID.String()
-			}
+	// for _, c := range outCoins {
+	// 	feeCoin, rK := c.DoesCoinBelongToKeySet(&incFeeKeySet.KeySet)
+	// 	if feeCoin {
+	// 		if c.GetAssetTag() == nil {
+	// 			feeToken = common.PRVCoinID.String()
+	// 		} else {
+	// 			assetTag := c.GetAssetTag()
+	// 			blinder, err := coin.ComputeAssetTagBlinder(rK)
+	// 			if err != nil {
+	// 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
+	// 			}
+	// 			rawAssetTag := new(crypto.Point).Sub(
+	// 				assetTag,
+	// 				new(crypto.Point).ScalarMult(crypto.PedCom.G[coin.PedersenRandomnessIndex], blinder),
+	// 			)
+	// 			_ = rawAssetTag
+	// 			feeToken = md.BurnTokenID.String()
+	// 		}
 
-			coin, err := c.Decrypt(&incFeeKeySet.KeySet)
-			if err != nil {
-				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
-			}
-			feeAmount = coin.GetValue()
-		}
+	// 		coin, err := c.Decrypt(&incFeeKeySet.KeySet)
+	// 		if err != nil {
+	// 			return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
+	// 		}
+	// 		feeAmount = coin.GetValue()
+	// 	}
+	// }
+
+	feeToken, feeAmount, err = checkReceiveOutCoinAmount(outCoins, &incFeeKeySet.KeySet, md.BurnTokenID.String())
+	if err != nil {
+		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, err
 	}
+
 	if feeAmount == 0 {
 		return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("you need to paid fee")
 	}
@@ -1358,10 +1365,15 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 		}
 		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
 		burnAmountStr := fmt.Sprintf("%f", burnAmountFloat)
-		quoteDatas, err := estimateSwapFee(md.BurnTokenID.String(), receiveToken, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo, nil)
-		if err != nil {
-			log.Println("estimateSwapFee error", err)
-			return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+		var quoteDatas []QuoteDataResp
+		if pappType == wcommon.ExternalTxTypeSwap {
+			quoteDatas, err = estimateSwapFee(md.BurnTokenID.String(), receiveToken, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo, nil)
+			if err != nil {
+				log.Println("estimateSwapFee error", err)
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+			}
+		} else {
+
 		}
 
 		for _, quote := range quoteDatas {
@@ -1374,6 +1386,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					TokenOut: receiveToken,
 				}
 				switch quote.AppName {
+				case "opensea":
 				case "curve":
 					data, err := papps.DecodeCurveCalldata(v.ExternalCalldata)
 					if err != nil {

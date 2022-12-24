@@ -23,12 +23,12 @@ func StartAPIservice(cfg common.Config) {
 	config = cfg
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
 	network := config.NetworkID
-	// if cfg.IncKey != "" {
-	// 	err := loadOTAKey(cfg.IncKey)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
+	if cfg.IncKey != "" {
+		err := loadOTAKey(cfg.IncKey)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	if network == "mainnet" {
 		err := parseDefaultToken()
@@ -130,7 +130,6 @@ func loadOTAKey(key string) error {
 		return err
 	}
 	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
-
 		return err
 	}
 	incFeeKeySet = wl

@@ -126,3 +126,43 @@ type DexSwapTrackData struct {
 }
 
 //TODO: 0xkraken add datamodel for mongo
+// DATA MODELS FOR INTERSWAP
+type InterSwapTxData struct {
+	mgm.DefaultModel `bson:",inline"`
+	// txID of the first tx, index for one interswap request
+	TxID  string `json:"txid" bson:"txid"`
+	TxRaw string `json:"txraw" bson:"txraw"`
+
+	// marshal QuoteData struct
+	AddOnSwapInfo string `json:"addon_swapinfo" bson:"addon_swapinfo"`
+
+	OTARefundFee string `json:"ota_refundfee" bson:"ota_refundfee"`
+	OTAFromToken string `json:"ota_fromtoken" bson:"ota_fromtoken"`
+	OTAToToken   string `json:"ota_totoken" bson:"ota_totoken"`
+
+	Status    int    `json:"status" bson:"status"`
+	StatusStr string `json:"statusstr" bson:"statusstr"`
+	UserAgent string `json:"useragent" bson:"useragent"`
+	Error     string `json:"error" bson:"error"`
+
+	// IncTx            string   `json:"inctx" bson:"inctx"`
+	// Networks         []string `json:"networks" bson:"networks"`
+	// Type             int      `json:"type" bson:"type"`
+	// IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
+	// FeeToken         string   `json:"feetoken" bson:"feetoken"`
+	// FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
+	// PFeeAmount       uint64   `json:"pfeeamount" bson:"pfeeamount"`
+	// BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
+	// BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
+	// PappSwapInfo     string   `json:"pappswapinfo" bson:"pappswapinfo"`
+	// Status           string   `json:"status" bson:"status"`
+	// IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	// RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
+	// RefundPrivacyFee bool     `json:"refundpfee" bson:"refundpfee"`
+	// FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
+	// FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	// ShardID          int      `json:"shardid" bson:"shardid"`
+	// OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
+	// UserAgent        string   `json:"useragent" bson:"useragent"`
+	// Error            string   `json:"error" bson:"error"`
+}

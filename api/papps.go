@@ -41,93 +41,90 @@ func APISubmitSwapTx(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	if req.IsInterop {
-		//TODO: 0xkraken
-	} else {
 
-		if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
+	if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
+		return
+	}
+
+	var md *bridge.BurnForCallRequest
+	var mdRaw metadataCommon.Metadata
+	var isPRVTx bool
+	var isUnifiedToken bool
+	var outCoins []coin.Coin
+	var txHash string
+	var rawTxBytes []byte
+
+	if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
+		return
+	}
+
+	var ok bool
+	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		return
+	}
+
+	mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	spTkList := getSupportedTokenList()
+
+	statusResult := checkPappTxSwapStatus(txHash, spTkList)
+	if len(statusResult) > 0 {
+		if er, ok := statusResult["error"]; ok {
+			if er != "not found" {
+				c.JSON(200, gin.H{"Result": statusResult})
+				return
+			}
+		} else {
+			c.JSON(200, gin.H{"Result": statusResult})
 			return
 		}
+	}
 
-		var md *bridge.BurnForCallRequest
-		var mdRaw metadataCommon.Metadata
-		var isPRVTx bool
-		var isUnifiedToken bool
-		var outCoins []coin.Coin
-		var txHash string
-		var rawTxBytes []byte
+	if mdRaw == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+	md, ok = mdRaw.(*bridge.BurnForCallRequest)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
 
-		if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
-			return
-		}
+	burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		isUnifiedToken = true
+	}
 
-		var ok bool
-		rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
-			return
-		}
+	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+		return
+	}
+	// valid = true
 
-		mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
+	burntAmount, _ := md.TotalBurningAmount()
+	if valid {
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
-
-		spTkList := getSupportedTokenList()
-
-		statusResult := checkPappTxSwapStatus(txHash, spTkList)
-		if len(statusResult) > 0 {
-			if er, ok := statusResult["error"]; ok {
-				if er != "not found" {
-					c.JSON(200, gin.H{"Result": statusResult})
-					return
-				}
-			} else {
-				c.JSON(200, gin.H{"Result": statusResult})
-				return
-			}
-		}
-
-		if mdRaw == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-			return
-		}
-		md, ok = mdRaw.(*bridge.BurnForCallRequest)
-		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-			return
-		}
-
-		burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-			return
-		}
-		if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-			isUnifiedToken = true
-		}
-
-		valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
-			return
-		}
-		// valid = true
-
-		burntAmount, _ := md.TotalBurningAmount()
-		if valid {
-			status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
-			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
-			return
-		}
+		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
+		return
 	}
+
 }
 
 func APIGetVaultState(c *gin.Context) {

@@ -49,6 +49,11 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 		panic(err)
 	}
 
+	interSwapTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + INTERSWAP_TX_TOPIC)
+	if err != nil {
+		panic(err)
+	}
+
 	err = initIncClient(network)
 	if err != nil {
 		return err

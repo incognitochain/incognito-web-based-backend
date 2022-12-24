@@ -39,7 +39,7 @@ func APIPDaoFeeEstimate(c *gin.Context) {
 	c.JSON(200, gin.H{"Result": feeAmount})
 }
 
-func CreateNewProposal(c *gin.Context) {
+func APIPDaoCreateNewProposal(c *gin.Context) {
 	var req CreatProposalReq
 	userAgent := c.Request.UserAgent()
 	err := c.ShouldBindJSON(&req)
@@ -160,7 +160,7 @@ func CreateNewProposal(c *gin.Context) {
 		Values:              strings.Join(req.Values, ","),
 		Signatures:          strings.Join(req.Signatures, ","),
 		Calldatas:           strings.Join(req.Calldatas, ","),
-		CreatePropSignature: "",
+		CreatePropSignature: req.Signature,
 		Reshield:            req.Reshield,
 		Description:         req.Description,
 		Title:               req.Title,
@@ -214,7 +214,7 @@ func CreateNewProposal(c *gin.Context) {
 		// todo: update sdk to get returnOTA
 	}
 
-	feeToken := wcommon.PRV_TOKEN
+	feeToken := wcommon.ETH_UT_TOKEN
 	feeAmount := 0
 	pfeeAmount := 0
 
@@ -229,8 +229,89 @@ func CreateNewProposal(c *gin.Context) {
 	//}
 }
 
-func ListProposal(c *gin.Context) {
+func APIPDaoListProposal(c *gin.Context) {
 	c.JSON(200, gin.H{"Result": database.DBListProposalTable()})
+}
+
+func APIPDaoVoting(c *gin.Context) {
+	var req SubmitVoteReq
+	userAgent := c.Request.UserAgent()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	log.Println("Begin store db!")
+	// store request to DB
+	vote := &wcommon.Vote{
+		SubmitBurnTx: req.Txhash,
+		Status:       wcommon.StatusSubmitting,
+		ProposalID:   req.ProposalID,
+
+		VoteSignature: req.Signature,
+		Reshield:      req.Reshield,
+
+		Vote: req.Vote,
+	}
+	// insert db
+	if err = database.DBInsertVoteTable(vote); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	log.Println("Insert the voting to db successful!")
+
+	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		return
+	}
+
+	mdRaw, isPRVTx, _, txHash, err := extractDataFromRawTx(rawTxBytes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	var md *bridge.BurningRequest
+	md, ok := mdRaw.(*bridge.BurningRequest)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata type"})
+		return
+	}
+	var burnTokenInfo *wcommon.TokenInfo
+	var burntAmount uint64
+	isUnifiedToken := false
+	networkList := []string{}
+	tokenID := ""
+	uTokenID := ""
+	externalAddr := ""
+	returnOTA := ""
+	if md != nil {
+		burnTokenInfo, err = getTokenInfo(md.TokenID.String())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+			return
+		}
+		tokenID = burnTokenInfo.TokenID
+		uTokenID = burnTokenInfo.TokenID
+		burntAmount = md.BurningAmount
+		externalAddr = md.RemoteAddress
+		// todo: update sdk to get returnOTA
+	}
+
+	feeToken := wcommon.ETH_UT_TOKEN
+	feeAmount := 0
+	pfeeAmount := 0
+
+	status, err := submitproof.SubmitUnshieldTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, uint64(feeAmount), uint64(pfeeAmount), tokenID, uTokenID, burntAmount, isUnifiedToken, externalAddr, networkList, returnOTA, "", userAgent)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}})
+
+	return
+
 }
 
 func GetPdaoStatus(c *gin.Context) {
@@ -256,7 +337,7 @@ func keccak256(b ...[]byte) [32]byte {
 }
 
 // util function
-func estimatePDaoFee() (*PDaoNetworkFee, error) {
+func estimatePDaoFee() (*PDaoNetworkFeeResp, error) {
 
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
@@ -281,7 +362,7 @@ func estimatePDaoFee() (*PDaoNetworkFee, error) {
 
 	feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee), 18, 9)
 
-	return &PDaoNetworkFee{
+	return &PDaoNetworkFeeResp{
 		FeeAddress:        feeAddress,
 		FeeAddressShardID: int(feeAddressShardID),
 		TokenID:           wcommon.ETH_UT_TOKEN,

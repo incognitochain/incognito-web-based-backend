@@ -105,16 +105,16 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 
-	//pdao router
+	//pdao router ================================================
 	pDAOGroup := r.Group("/pdao")
 	pDAOGroup.GET("proposal/estimatefee", APIPDaoFeeEstimate)
-	pDAOGroup.POST("proposal/create", CreateNewProposal)
-	pDAOGroup.GET("proposal/list", ListProposal)
+	pDAOGroup.POST("proposal/create", APIPDaoCreateNewProposal)
+	pDAOGroup.GET("proposal/list", APIPDaoListProposal)
 
-	// pDAOGroup.POST("proposal/vote")
+	pDAOGroup.POST("proposal/vote", APIPDaoVoting)
 	// pDAOGroup.POST("proposal/cancel")
 
-	//end pdao router
+	//end pdao router ==========================================
 
 	// go prefetchSupportedTokenList()
 

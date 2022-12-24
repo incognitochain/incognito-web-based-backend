@@ -1,4 +1,4 @@
-package submitproof
+package interswap
 
 import (
 	"context"
@@ -9,9 +9,7 @@ import (
 )
 
 var (
-	psclient      *pubsub.Client
-	shieldTxTopic *pubsub.Topic
-	pappTxTopic   *pubsub.Topic
+	psclient *pubsub.Client
 
 	interSwapTxTopic *pubsub.Topic
 )

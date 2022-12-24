@@ -62,7 +62,7 @@ func main() {
 	case common.MODE_INTERSWAP:
 		go func() {
 			// InterSwap start service
-			if err := interswap.StartService(config, serviceID); err != nil {
+			if err := interswap.StartWorker(config, serviceID); err != nil {
 				log.Fatalln(err)
 			}
 		}()

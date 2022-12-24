@@ -49,8 +49,6 @@ type QuoteData struct {
 	RouteDebug           interface{}
 }
 
-
-
 type EstimateSwapResult struct {
 	Networks      map[string][]QuoteData
 	NetworksError map[string]interface{}
@@ -61,23 +59,40 @@ type EstimateSwapResponse struct {
 	Error  interface{}
 }
 
+type SubmitpAppSwapTxRequest struct {
+	TxRaw        string
+	TxHash       string
+	FeeRefundOTA string
+	// FeeRefundAddress string  // NOTE: don't use this field
+}
+
+type SubmitpAppSwapTxResponse struct {
+	Result map[string]interface{}
+}
+
+type TxStatusRespond struct {
+	TxHash string
+	Status string
+	Error  string
+}
+
 // CallEstimateSwap call request to estimate swap
 // for both pdex and papp
 func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
 	req := struct {
-		Network   string
-		Amount    string // without decimal
-		FromToken string // IncTokenID
-		ToToken   string // IncTokenID
-		Slippage  string
-		IsInterswap bool,
+		Network     string
+		Amount      string // without decimal
+		FromToken   string // IncTokenID
+		ToToken     string // IncTokenID
+		Slippage    string
+		IsInterswap bool
 	}{
-		Network:   params.Network,
-		Amount:    params.Amount,
-		FromToken: params.FromToken,
-		ToToken:   params.ToToken,
-		Slippage:  params.Slippage,
-		IsInterswap: params.IsInterSwap,
+		Network:     params.Network,
+		Amount:      params.Amount,
+		FromToken:   params.FromToken,
+		ToToken:     params.ToToken,
+		Slippage:    params.Slippage,
+		IsInterswap: params.IsInterswap,
 	}
 
 	estSwapResponse := EstimateSwapResponse{}
@@ -107,6 +122,89 @@ func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
 
 	return &estSwapResponse.Result, nil
 }
+
+// CallSubmitPappSwapTx calls request to submit tx papp
+func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string) (map[string]interface{}, error) {
+	req := SubmitpAppSwapTxRequest{
+		TxRaw:        txRaw,
+		TxHash:       txHash,
+		FeeRefundOTA: feeRefundOTA,
+	}
+
+	estSwapResponse := SubmitpAppSwapTxResponse{}
+
+	fmt.Printf("APIEndpoint: %v\n", APIEndpoint)
+	response, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").SetBody(req).
+		SetResult(&estSwapResponse).
+		Post(APIEndpoint + "/papps/submitswaptx")
+	if err != nil {
+		err := fmt.Errorf("[ERR] Call API /papps/submitswaptx request error: %v", err)
+		log.Println(err)
+		return nil, err
+	}
+	if response.StatusCode() != 200 {
+		err := fmt.Errorf("[ERR] Call API /papps/submitswaptx status code error: %v", response.StatusCode())
+		log.Println(err)
+		return nil, err
+	}
+
+	// if estSwapResponse.Error != nil {
+	// 	err := fmt.Errorf("[ERR] Call API /papps/submitswaptx response error: %v", err)
+	// 	log.Println(err)
+	// 	return nil, err
+	// }
+
+	return estSwapResponse.Result, nil
+}
+
+// // CallEstimateSwap call request to estimate swap
+// // for both pdex and papp
+// func CallGetPdexTxStatus(params *EstimateSwapParam) (*EstimateSwapResult, error) {
+// 	req := struct {
+// 		Network     string
+// 		Amount      string // without decimal
+// 		FromToken   string // IncTokenID
+// 		ToToken     string // IncTokenID
+// 		Slippage    string
+// 		IsInterswap bool
+// 	}{
+// 		Network:     params.Network,
+// 		Amount:      params.Amount,
+// 		FromToken:   params.FromToken,
+// 		ToToken:     params.ToToken,
+// 		Slippage:    params.Slippage,
+// 		IsInterswap: params.IsInterswap,
+// 	}
+
+// 	estSwapResponse := EstimateSwapResponse{}
+
+// 	fmt.Printf("APIEndpoint: %v\n", APIEndpoint)
+// 	response, err := restyClient.R().
+// 		EnableTrace().
+// 		SetHeader("Content-Type", "application/json").SetBody(req).
+// 		SetResult(&estSwapResponse).
+// 		Post(APIEndpoint + "/papps/estimateswapfee")
+// 	if err != nil {
+// 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee request error: %v", err)
+// 		log.Println(err)
+// 		return nil, err
+// 	}
+// 	if response.StatusCode() != 200 {
+// 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee status code error: %v", response.StatusCode())
+// 		log.Println(err)
+// 		return nil, err
+// 	}
+
+// 	if estSwapResponse.Error != nil {
+// 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee response error: %v", err)
+// 		log.Println(err)
+// 		return nil, err
+// 	}
+
+// 	return &estSwapResponse.Result, nil
+// }
 
 // isBetterQuoteData returns true if d1 is better than d2
 func isBetterQuoteData(d1 QuoteData, d2 QuoteData) (bool, error) {

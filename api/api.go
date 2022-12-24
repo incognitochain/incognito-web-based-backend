@@ -90,6 +90,9 @@ func StartAPIservice(cfg common.Config) {
 
 	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 
+	// InterSwap
+	pAppsGroup.POST("/submitinterswaptx", APISubmitInterSwapTx)
+
 	//admin
 	adminGroup := r.Group("/admin")
 	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)

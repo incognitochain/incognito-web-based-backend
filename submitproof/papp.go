@@ -51,7 +51,7 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 	if time.Since(m.PublishTime) > time.Hour {
 		status := wcommon.ExternalTxStatus{
 			IncRequestTx: task.IncTxhash,
-			Type:         wcommon.ExternalTxTypeSwap,
+			Type:         task.Type,
 			Status:       wcommon.StatusSubmitFailed,
 			Network:      task.Network,
 			Error:        "timeout",
@@ -102,7 +102,7 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 		}
 	}
 
-	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken)
+	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken, task.Type)
 	if err != nil {
 		log.Println("createOutChainSwapTx error", err)
 		time.Sleep(15 * time.Second)
@@ -149,7 +149,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 	data := wcommon.PappTxData{
 		IncTx:            task.TxHash,
 		IncTxData:        string(task.TxRawData),
-		Type:             wcommon.ExternalTxTypeSwap,
+		Type:             task.TxType,
 		Status:           wcommon.StatusSubmitting,
 		IsUnifiedToken:   task.IsUnifiedToken,
 		FeeToken:         task.FeeToken,
@@ -229,51 +229,56 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			return
 		}
 	}
-	go func() {
-		slackep := os.Getenv("SLACK_SWAP_ALERT")
-		if slackep != "" {
-			swapAlert := ""
-			pappTxData := data
-			if pappTxData.PappSwapInfo != "" {
-				networkID := wcommon.GetNetworkID(task.Networks[0])
-				tkInInfo, _ := getTokenInfo(task.PappSwapInfo.TokenIn)
-				amount := new(big.Float).SetInt(task.PappSwapInfo.TokenInAmount)
-				decimal := new(big.Float)
-				decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
-				if err != nil {
-					log.Println("getTokenDecimalOnNetwork1", err)
-					return
+	switch task.TxType {
+	case wcommon.ExternalTxTypeSwap:
+		go func() {
+			slackep := os.Getenv("SLACK_SWAP_ALERT")
+			if slackep != "" {
+				swapAlert := ""
+				pappTxData := data
+				if pappTxData.PappSwapInfo != "" {
+					networkID := wcommon.GetNetworkID(task.Networks[0])
+					tkInInfo, _ := getTokenInfo(task.PappSwapInfo.TokenIn)
+					amount := new(big.Float).SetInt(task.PappSwapInfo.TokenInAmount)
+					decimal := new(big.Float)
+					decimalInt, err := getTokenDecimalOnNetwork(tkInInfo, networkID)
+					if err != nil {
+						log.Println("getTokenDecimalOnNetwork1", err)
+						return
+					}
+					decimal.SetFloat64(math.Pow10(int(-decimalInt)))
+
+					amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
+					tokenInSymbol := tkInInfo.Symbol
+
+					tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
+					amount = new(big.Float).SetInt(task.PappSwapInfo.MinOutAmount)
+
+					decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
+					if err != nil {
+						log.Println("getTokenDecimalOnNetwork2", err)
+						return
+					}
+					decimal.SetFloat64(math.Pow10(int(-decimalInt)))
+					amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
+					tokenOutSymbol := tkOutInfo.Symbol
+
+					uaStr := parseUserAgent(task.UserAgent)
+
+					swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, pappTxData.Networks[0], uaStr, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+					log.Println(swapAlert)
+					slacknoti.SendWithCustomChannel(swapAlert, slackep)
 				}
-				decimal.SetFloat64(math.Pow10(int(-decimalInt)))
-
-				amountInFloat := amount.Mul(amount, decimal).Text('f', -1)
-				tokenInSymbol := tkInInfo.Symbol
-
-				tkOutInfo, _ := getTokenInfo(task.PappSwapInfo.TokenOut)
-				amount = new(big.Float).SetInt(task.PappSwapInfo.MinOutAmount)
-
-				decimalInt, err = getTokenDecimalOnNetwork(tkOutInfo, networkID)
-				if err != nil {
-					log.Println("getTokenDecimalOnNetwork2", err)
-					return
-				}
-				decimal.SetFloat64(math.Pow10(int(-decimalInt)))
-				amountOutFloat := amount.Mul(amount, decimal).Text('f', -1)
-				tokenOutSymbol := tkOutInfo.Symbol
-
-				uaStr := parseUserAgent(task.UserAgent)
-
-				swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, pappTxData.Networks[0], uaStr, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
-				log.Println(swapAlert)
-				slacknoti.SendWithCustomChannel(swapAlert, slackep)
 			}
-		}
-	}()
+		}()
+	case wcommon.ExternalTxTypeOpensea:
+
+	}
 
 	m.Ack()
 }
 
-func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool) (*wcommon.ExternalTxStatus, error) {
+func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool, txType int) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
 	// networkID := wcommon.GetNetworkID(network)
@@ -353,7 +358,7 @@ retry:
 			auth.GasLimit = wcommon.EVMGasLimit
 		}
 
-		result.Type = wcommon.ExternalTxTypeSwap
+		result.Type = txType
 		result.Network = network
 		result.IncRequestTx = incTxHash
 

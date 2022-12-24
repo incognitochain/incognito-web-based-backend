@@ -24,7 +24,7 @@ CONFIG_JSON=$(cat <<EOF
   "GGCProject": "$GOOGLE_CLOUD_PROJECT",
   "GGCAuth":"$GOOGLE_CLOUD_ACC",
   "OpenSeaAPI":"$OPENSEA_API",
-  "OpenSeaAPI":"$OPENSEA_API_KEY"
+  "OpenSeaAPIKey":"$OPENSEA_API_KEY"
 }
 EOF
 )

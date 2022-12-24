@@ -14,6 +14,7 @@ type OpenseaCollectionData struct {
 
 type OpenseaAssetData struct {
 	mgm.DefaultModel `bson:",inline"`
+	UID              string             `bson:"uid"`
 	Address          string             `bson:"address"`
 	TokenID          string             `bson:"token_id"`
 	Name             string             `bson:"name"`

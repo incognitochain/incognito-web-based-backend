@@ -26,7 +26,7 @@ const (
 	EXECUTE_PROP = 4
 )
 
-func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config) (*wcommon.ExternalTxStatus, error) {
+func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config, pappType int) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
 	// networkID := wcommon.GetNetworkID(network)
@@ -82,7 +82,7 @@ retry:
 
 		auth.GasPrice = gasPrice
 		auth.GasLimit = wcommon.EVMGasLimitETH
-		result.Type = wcommon.ExternalTxTypeUnshield
+		result.Type = pappType
 		result.Network = network
 		result.IncRequestTx = incTxHash
 

@@ -44,6 +44,13 @@ const (
 )
 
 const (
+	StatusPdaOutchainTxFailed     = "pdao_outchain_failed"
+	StatusPdaOutchainTxSubmitting = "pdao_outchain_submitting"
+	StatusPdaOutchainTxPending    = "pdao_outchain_pending"
+	StatusPdaOutchainTxSuccess    = "pdao_outchain_success"
+)
+
+const (
 	NETWORK_INC    = "inc"
 	NETWORK_ETH    = "eth"
 	NETWORK_BSC    = "bsc"
@@ -171,6 +178,9 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
+	ExternalTxTypePdaoProposal = 69
+	ExternalTxTypePdaoVote     = 70
+	ExternalTxTypePdaoCancel   = 71
 )
 
 // Default param mainnet

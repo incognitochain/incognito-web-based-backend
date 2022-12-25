@@ -4,6 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
+	"math/big"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -13,11 +19,6 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/evmproof"
 	"github.com/incognitochain/incognito-web-based-backend/pdao/prvvote"
-	"log"
-	"math/big"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 	SHIELD         = 3
 )
 
-func CreatePRVOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config) (*wcommon.ExternalTxStatus, error) {
+func CreatePRVOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config, pappType int) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
 	// networkID := wcommon.GetNetworkID(network)
@@ -82,7 +83,7 @@ retry:
 
 		auth.GasPrice = gasPrice
 		auth.GasLimit = wcommon.EVMGasLimitETH
-		result.Type = wcommon.ExternalTxTypeUnshield
+		result.Type = pappType
 		result.Network = network
 		result.IncRequestTx = incTxHash
 

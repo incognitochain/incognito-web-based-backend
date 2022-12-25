@@ -284,3 +284,77 @@ func SubmitUnshieldTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken st
 
 	return "submitting", nil
 }
+
+func SubmitPdaoOutchainTx(incTxHash string, network string, retry bool, reqType, txType int) (interface{}, error) {
+	currentStatus, err := database.DBGetExternalTxStatusByIncTx(incTxHash, network)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			return "", err
+		}
+	}
+	if currentStatus != "" {
+		if currentStatus != common.StatusSubmitFailed || !retry {
+			return currentStatus, nil
+		}
+	}
+
+	task := SubmitPDaoTask{
+		IncTxhash: incTxHash,
+		Network:   network,
+		ReqType:   reqType,
+		IsRetry:   retry,
+		Type:      txType,
+		Time:      time.Now(),
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	ctx := context.Background()
+	switch txType {
+	case common.ExternalTxTypePdaoProposal:
+		msg := &pubsub.Message{
+			Attributes: map[string]string{
+				"txhash": incTxHash,
+				"task":   PdaoSubmitProposalExtTask,
+			},
+			Data: taskBytes,
+		}
+		msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		log.Println("publish msgID:", msgID)
+		break
+	case common.ExternalTxTypePdaoVote:
+		msg := &pubsub.Message{
+			Attributes: map[string]string{
+				"txhash": incTxHash,
+				"task":   PdaoSubmitVoteExtTask,
+			},
+			Data: taskBytes,
+		}
+		msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		log.Println("publish msgID:", msgID)
+		break
+	case common.ExternalTxTypePdaoCancel:
+		msg := &pubsub.Message{
+			Attributes: map[string]string{
+				"txhash": incTxHash,
+				"task":   PdaoSubmitCancelExtTask,
+			},
+			Data: taskBytes,
+		}
+		msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		log.Println("publish msgID:", msgID)
+		break
+	default:
+		log.Println("unknown txType")
+	}
+
+	return "submitting", nil
+}

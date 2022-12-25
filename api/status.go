@@ -436,7 +436,7 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 			result["error"] = data.Error
 		}
 	} else {
-		network := wcommon.GetNetworkName(data.NetworkID)
+		network := data.Networks[0]
 		networkResult := make(map[string]interface{})
 		networkResult["network"] = network
 		outchainTx, err := database.DBGetExternalTxByIncTx(txhash, network)

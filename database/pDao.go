@@ -25,6 +25,17 @@ func DBListProposalTable() []common.Proposal {
 	return p
 }
 
+//get by id
+func DBgetProposalTable(id string) (*common.Proposal, error) {
+
+	p := &common.Proposal{}
+	err := mgm.Coll(p).FindByID(id, p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 // create a voting:
 func DBInsertVoteTable(data *common.Vote) error {
 	return mgm.Coll(data).Create(data)

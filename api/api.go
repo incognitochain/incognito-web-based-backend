@@ -24,10 +24,10 @@ func StartAPIservice(cfg common.Config) {
 	cachedb = cache.New(5*time.Minute, 5*time.Minute)
 	network := config.NetworkID
 	if cfg.IncKey != "" {
-		// err := loadOTAKey(cfg.IncKey)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		err := loadOTAKey(cfg.IncKey)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	if network == "mainnet" {
@@ -110,6 +110,7 @@ func StartAPIservice(cfg common.Config) {
 	pDAOGroup.GET("proposal/estimatefee", APIPDaoFeeEstimate)
 	pDAOGroup.POST("proposal/create", APIPDaoCreateNewProposal)
 	pDAOGroup.GET("proposal/list", APIPDaoListProposal)
+	pDAOGroup.GET("proposal/detail/:id", APIPDaoDetailProposal)
 
 	pDAOGroup.POST("proposal/vote", APIPDaoVoting)
 	// pDAOGroup.POST("proposal/cancel")

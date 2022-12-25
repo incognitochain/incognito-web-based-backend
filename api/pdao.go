@@ -233,6 +233,14 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 func APIPDaoListProposal(c *gin.Context) {
 	c.JSON(200, gin.H{"Result": database.DBListProposalTable()})
 }
+func APIPDaoDetailProposal(c *gin.Context) {
+	p, err := database.DBgetProposalTable(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"Result": p})
+}
 
 func APIPDaoVoting(c *gin.Context) {
 	var req SubmitVoteReq

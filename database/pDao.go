@@ -103,52 +103,6 @@ func DBUpdatePdaoCancelStatus(incTx string, status string) error {
 	return nil
 }
 
-// // //TODO: @phuong
-// func DBUpdatePdaoVoteTxStatus(incTx string, status string) error {
-// 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
-// 	update := bson.M{"$set": bson.M{"status": status}}
-// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// // //TODO: @phuong
-// func DBUpdatePdaoCancelTxStatus(incTx string, status string) error {
-// 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
-// 	update := bson.M{"$set": bson.M{"status": status}}
-// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 	_, err := mgm.Coll(&common.Cancel{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// func DBUpdatePdaoProposalOutchainTx(incTx string, externalTx string, status string) error {
-// 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
-// 	update := bson.M{"$set": bson.M{"outchain_status": status, "submit_proposal_tx": externalTx}}
-// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 	_, err := mgm.Coll(&common.Proposal{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// func DBUpdatePdaoVoteOutchainTx(incTx string, externalTx string, status string) error {
-// 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
-// 	update := bson.M{"$set": bson.M{"outchain_status": status, "submit_proposal_tx": externalTx}}
-// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
 // create a voting:
 func DBInsertVoteTable(data *common.Vote) error {
 	return mgm.Coll(data).Create(data)

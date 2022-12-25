@@ -54,6 +54,7 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go forwardCollectedFee()
 	go watchVaultState()
 	go trackDexSwap()
+	go watchPendingProposal()
 
 	return nil
 }
@@ -671,6 +672,25 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					return err
 				}
 				break
+			case wcommon.ExternalTxTypePdaoProposal:
+				txtype = "pdao-proposal"
+				err = database.DBUpdatePdaoProposalStatus(tx.IncRequestTx, wcommon.StatusPdaOutchainTxSuccess)
+				if err != nil {
+					return err
+				}
+			case wcommon.ExternalTxTypePdaoVote:
+				txtype = "pdao-vote"
+				err = database.DBUpdatePdaoVoteStatus(tx.IncRequestTx, wcommon.StatusPdaOutchainTxSuccess)
+				if err != nil {
+					return err
+				}
+			case wcommon.ExternalTxTypePdaoCancel:
+				txtype = "pdao-cancel"
+				err = database.DBUpdatePdaoCancelStatus(tx.IncRequestTx, wcommon.StatusPdaOutchainTxSuccess)
+				if err != nil {
+					return err
+				}
+
 			default:
 				txtype = "unknown"
 			}

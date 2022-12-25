@@ -96,5 +96,6 @@ type SubmitPDaoTask struct {
 	Payload   []byte
 	IsRetry   bool
 	Type      int
+	ReqType   int
 	Time      time.Time
 }

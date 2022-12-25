@@ -36,6 +36,10 @@ func ProcessPappTxRequest(ctx context.Context, m *pubsub.Message) {
 		processSubmitPappExtTask(ctx, m)
 	case PappSubmitFeeRefundTask:
 		processSubmitRefundFeeTask(ctx, m)
+	case PdaoSubmitProposalExtTask:
+		processSubmitPdaoRequest(ctx, m)
+	case PdaoSubmitVoteExtTask:
+		processSubmitPrvRequest(ctx, m)
 	}
 }
 

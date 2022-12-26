@@ -181,22 +181,21 @@ func processSubmitPrvRequest(ctx context.Context, m *pubsub.Message) {
 		}
 	}
 
-	// todo: @phuong update here Vote?
+	vote, err := database.DBGetVoteByIncTx(task.IncTxhash)
+	if err != nil {
+		log.Println("DBGetVoteByIncTx error", err)
+		m.Ack()
+		return
+	}
 
-	// proposal, err := database.DBGetProposalByIncTx(task.IncTxhash)
-	// if err != nil {
-	// 	log.Println("DBGetProposalByIncTx error", err)
-	// 	m.Ack()
-	// 	return
-	// }
-
-	// proposal.SubmitProposalTx = status.Txhash
-	// proposal.Status = wcommon.StatusPdaOutchainTxPending
-	// err = database.DBUpdateProposalTable(proposal)
-	// if err != nil {
-	// 	log.Println("DBUpdateProposalTable err:", err)
-	// 	continue
-	// }
+	vote.SubmitVoteTx = status.Txhash
+	vote.Status = wcommon.StatusPdaOutchainTxPending
+	err = database.DBUpdateVoteTable(vote)
+	if err != nil {
+		log.Println("DBUpdateVoteTable err:", err)
+		m.Ack()
+		return
+	}
 
 	m.Ack()
 }

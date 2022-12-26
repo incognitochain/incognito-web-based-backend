@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -14,8 +15,8 @@ import (
 
 func DBSaveCollectionsInfo(list []popensea.CollectionDetail) error {
 	for _, collection := range list {
-		filter := bson.M{"address": bson.M{operator.Eq: collection.PrimaryAssetContracts[0].Address}}
-		update := bson.M{"$set": bson.M{"address": collection.PrimaryAssetContracts[0].Address, "name": collection.Name, "detail": collection, "updated_at": time.Now()}}
+		filter := bson.M{"address": bson.M{operator.Eq: strings.ToLower(collection.PrimaryAssetContracts[0].Address)}}
+		update := bson.M{"$set": bson.M{"address": strings.ToLower(collection.PrimaryAssetContracts[0].Address), "name": collection.Name, "detail": collection, "updated_at": time.Now()}}
 		ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 		_, err := mgm.Coll(&common.OpenseaCollectionData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 		if err != nil {
@@ -27,7 +28,7 @@ func DBSaveCollectionsInfo(list []popensea.CollectionDetail) error {
 
 func DBGetCollectionsInfo(address string) (*common.OpenseaCollectionData, error) {
 	var result common.OpenseaCollectionData
-	filter := bson.M{"address": bson.M{operator.Eq: address}}
+	filter := bson.M{"address": bson.M{operator.Eq: strings.ToLower(address)}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	dbresult := mgm.Coll(&common.OpenseaCollectionData{}).FindOne(ctx, filter)
 	if dbresult.Err() != nil {
@@ -67,4 +68,18 @@ func DBGetCollectionNFTs(address string) (*common.OpenseaAssetData, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func DBGetDefaultCollectionList() ([]common.OpenseaDefaultCollectionData, error) {
+	var result []common.OpenseaDefaultCollectionData
+	limit := int64(1000)
+	filter := bson.M{"verify": bson.M{operator.Eq: true}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.OpenseaDefaultCollectionData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

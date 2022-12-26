@@ -54,6 +54,7 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go forwardCollectedFee()
 	go watchVaultState()
 	go trackDexSwap()
+	go updateOpenSeaCollections()
 
 	return nil
 }

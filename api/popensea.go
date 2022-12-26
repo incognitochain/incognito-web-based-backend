@@ -177,17 +177,31 @@ func APISubmitBuyTx(c *gin.Context) {
 }
 
 func APIGetCollections(c *gin.Context) {
-	collections, err := popensea.RetrieveCollectionList(config.OpenSeaAPI, config.OpenSeaAPIKey, 20, 0)
+	defaultList, err := database.DBGetDefaultCollectionList()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"Result": collections})
+	result := []popensea.CollectionDetail{}
+	for _, coll := range defaultList {
+		data, err := database.DBGetCollectionsInfo(coll.Address)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		result = append(result, data.Detail)
+	}
+	// collections, err := popensea.RetrieveCollectionList(config.OpenSeaAPI, config.OpenSeaAPIKey, 20, 0)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+	// 	return
+	// }
+	c.JSON(http.StatusOK, gin.H{"Result": result})
 }
 func APINFTDetail(c *gin.Context) {
 	contract := c.Query("contract")
-	tokenID := c.Query("token_id")
-	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, tokenID)
+	nftid := c.Query("nftid")
+	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -212,7 +226,7 @@ func APICollectionAssets(c *gin.Context) {
 			result = append(result, asset)
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"Result": assetList})
+	c.JSON(http.StatusOK, gin.H{"Result": result})
 }
 func APICollectionDetail(c *gin.Context) {}
 

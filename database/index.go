@@ -264,5 +264,20 @@ func DBCreateOpenSeaIndex() error {
 		return err
 	}
 
+	defaultCollectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "verify", Value: bsonx.Int32(1)}, {Key: "address", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err = mgm.Coll(&common.OpenseaDefaultCollectionData{}).Indexes().CreateMany(context.Background(), defaultCollectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
 	return nil
 }

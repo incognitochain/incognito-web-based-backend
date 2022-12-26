@@ -4,18 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/bridge-eth/common/base58"
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	scommon "github.com/incognitochain/go-incognito-sdk-v2/common"
+	wcrypto "github.com/incognitochain/go-incognito-sdk-v2/crypto"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
@@ -96,6 +100,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		gvAbi, _ := abi.JSON(strings.NewReader(governance.GovernanceMetaData.ABI))
 		propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Description)
 		signData, _ := gv.GetDataSign(nil, keccak256(propEncode[4:]))
+
 		rcAddr, err := crypto.Ecrecover(signData[:], common.Hex2Bytes(req.CreatePropSignature))
 		// todo: compare address recover and address from burning metadata if has
 		if err != nil {
@@ -146,8 +151,6 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 	}
 
-	// update request status
-
 	log.Println("Begin store db!")
 	// store request to DB
 	proposal := &wcommon.Proposal{
@@ -173,9 +176,18 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	}
 	log.Println("Insert db success!")
 
-	// todo: submit transaction to CS and update to DB to get next step
-	//burntAmount, _ := md.TotalBurningAmount()
-	//if valid {
+	// check valid info:
+	var feeAmount uint64
+	var pfeeAmount uint64
+	var feeToken string
+
+	var requireFee uint64
+	var requireFeeToken string
+	var externalAddr string
+
+	var burntAmount uint64
+
+	feeDiff := int64(-1)
 
 	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
@@ -183,7 +195,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		return
 	}
 
-	mdRaw, isPRVTx, _, txHash, err := extractDataFromRawTx(rawTxBytes)
+	mdRaw, isPRVTx, outCoins, txHash, err := extractDataFromRawTx(rawTxBytes)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -195,13 +207,14 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		return
 	}
 	var burnTokenInfo *wcommon.TokenInfo
-	var burntAmount uint64
+
 	isUnifiedToken := false
 	networkList := []string{}
+
 	tokenID := ""
 	uTokenID := ""
-	externalAddr := ""
 	returnOTA := ""
+
 	if md != nil {
 		burnTokenInfo, err = getTokenInfo(md.TokenID.String())
 		if err != nil {
@@ -215,24 +228,70 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		// todo: update sdk to get returnOTA
 	}
 
-	feeToken := wcommon.ETH_UT_TOKEN_MAINNET
+	// verify fee eth (UT):
+	for _, cn := range outCoins {
+		feeCoin, rK := cn.DoesCoinBelongToKeySet(&incFeeKeySet.KeySet)
+		if feeCoin {
+			if cn.GetAssetTag() == nil {
+				feeToken = scommon.PRVCoinID.String()
+			} else {
+				assetTag := cn.GetAssetTag()
+				blinder, err := coin.ComputeAssetTagBlinder(rK)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+					return
+				}
+				rawAssetTag := new(wcrypto.Point).Sub(
+					assetTag,
+					new(wcrypto.Point).ScalarMult(wcrypto.PedCom.G[coin.PedersenRandomnessIndex], blinder),
+				)
+				_ = rawAssetTag
+				feeToken = burnTokenInfo.TokenID
+			}
 
-	if config.NetworkID == "testnet" {
-		feeToken = wcommon.ETH_UT_TOKEN_TESTNET
+			coin, err := cn.Decrypt(&incFeeKeySet.KeySet)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+			}
+			feeAmount = coin.GetValue()
+		}
 	}
 
-	feeAmount := 0
-	pfeeAmount := 0
+	feeDao, err := estimatePDaoFee()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+		return
+	}
 
-	status, err := submitproof.SubmitUnshieldTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, uint64(feeAmount), uint64(pfeeAmount), tokenID, uTokenID, burntAmount, isUnifiedToken, externalAddr, networkList, returnOTA, "", userAgent)
+	requireFee = feeDao.FeeAmount
+	requireFeeToken = feeDao.TokenID
+
+	// check token fee:
+	if feeToken != requireFeeToken {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))})
+		return
+	}
+
+	// feeDiff >= 5%
+	feeDiff = int64(feeAmount) - int64(feeDao.FeeAmount)
+	if feeDiff < 0 {
+		feeDiffFloat := math.Abs(float64(feeDiff))
+		diffPercent := feeDiffFloat / float64(feeDao.FeeAmount) * 100
+		if diffPercent > wcommon.PercentFeeDiff {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))})
+			return
+		}
+	}
+
+	status, err := submitproof.SubmitUnshieldTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, uint64(feeAmount), pfeeAmount, tokenID, uTokenID, burntAmount, isUnifiedToken, externalAddr, networkList, returnOTA, "", userAgent)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}})
 
+	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
 	return
-	//}
+
 }
 
 func APIPDaoListProposal(c *gin.Context) {
@@ -365,7 +424,7 @@ func estimatePDaoFee() (*PDaoNetworkFeeResp, error) {
 
 	gasPrice := networkFees.GasPrice[wcommon.NETWORK_BSC]
 
-	gasFee := (UNSHIELD_GAS_LIMIT * gasPrice)
+	gasFee := (PDAO_CREATE_PROPOSAL_GAS_LIMIT * gasPrice)
 
 	feeAddress := ""
 

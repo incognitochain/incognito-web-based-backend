@@ -196,6 +196,26 @@ func APIEstimateSwapFee(c *gin.Context) {
 	result.Networks = make(map[string]interface{})
 	result.NetworksError = make(map[string]interface{})
 
+	// estimate with Interswap
+	if !req.IsFromInterswap {
+		interSwapParams := &interswap.EstimateSwapParam{
+			Network:   req.Network,
+			Amount:    req.Amount,
+			Slippage:  req.Slippage,
+			FromToken: req.FromToken,
+			ToToken:   req.ToToken,
+		}
+
+		interSwapRes, err := interswap.EstimateSwap(interSwapParams)
+		if err != nil {
+			result.NetworksError[interswap.InterSwapStr] = err
+		} else {
+			for k, v := range interSwapRes {
+				result.Networks[k] = v
+			}
+		}
+	}
+
 	tkFromInfo, err := getTokenInfo(req.FromToken)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -377,26 +397,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 	}
 	if len(result.Networks) == 0 && len(pdexEstimate) == 0 {
 		response.Error = NotTradeable.Error()
-	}
-
-	// estimate with Interswap
-	if !req.IsFromInterswap {
-		interSwapParams := &interswap.EstimateSwapParam{
-			Network:   req.Network,
-			Amount:    req.Amount,
-			Slippage:  req.Slippage,
-			FromToken: req.FromToken,
-			ToToken:   req.ToToken,
-		}
-
-		interSwapRes, err := interswap.EstimateSwap(interSwapParams)
-		if err != nil {
-			result.NetworksError[interswap.InterSwapStr] = err
-		} else {
-			for k, v := range interSwapRes {
-				result.Networks[k] = v
-			}
-		}
 	}
 
 	response.Result = result

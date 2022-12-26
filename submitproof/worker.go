@@ -136,7 +136,7 @@ func StartWorker(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) erro
 	var unshieldSub *pubsub.Subscription
 	unshieldSubID := cfg.NetworkID + "_" + serviceID.String() + "_unshield"
 	unshieldSub, err = psclient.CreateSubscription(context.Background(), unshieldSubID,
-		pubsub.SubscriptionConfig{Topic: shieldTxTopic})
+		pubsub.SubscriptionConfig{Topic: unshieldTxTopic})
 	if err != nil {
 		unshieldSub = psclient.Subscription(unshieldSubID)
 	}

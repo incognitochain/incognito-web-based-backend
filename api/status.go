@@ -427,6 +427,8 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 		if err != mongo.ErrNoDocuments {
 			result["error"] = err.Error()
 			return result
+		} else {
+			return result
 		}
 	}
 
@@ -437,8 +439,7 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 		}
 	} else {
 		network := data.Networks[0]
-		networkResult := make(map[string]interface{})
-		networkResult["network"] = network
+		result["network"] = network
 		outchainTx, err := database.DBGetExternalTxByIncTx(txhash, network)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
@@ -446,33 +447,37 @@ func checkUnshieldTxStatus(txhash string) map[string]interface{} {
 			} else {
 				result["outchain_status"] = common.StatusSubmitting
 			}
+			result["status"] = common.StatusPending
 			return result
 		}
 		if outchainTx.Status == wcommon.StatusAccepted {
 			result["outchain_status"] = "success"
 		} else {
 			result["outchain_status"] = outchainTx.Status
+			result["status"] = outchainTx.Status
 		}
 
-		networkResult["outchain_tx"] = outchainTx.Txhash
+		result["outchain_tx"] = outchainTx.Txhash
 		if outchainTx.Error != "" {
-			networkResult["outchain_err"] = outchainTx.Error
+			result["outchain_err"] = outchainTx.Error
 		}
 		if outchainTx.Status == common.StatusAccepted && outchainTx.OtherInfo != "" {
 			var outchainTxResult wcommon.ExternalTxSwapResult
 			err = json.Unmarshal([]byte(outchainTx.OtherInfo), &outchainTxResult)
 			if err != nil {
-				networkResult["error"] = err.Error()
+				result["error"] = err.Error()
 			}
 			if outchainTxResult.IsReverted {
-				networkResult["outchain_status"] = "reverted"
+				result["outchain_status"] = "reverted"
+				result["status"] = common.StatusFailed
 			} else {
-				networkResult["outchain_status"] = "success"
+				result["outchain_status"] = "success"
+				result["status"] = common.StatusSuccess
 			}
 			if outchainTxResult.IsFailed {
-				networkResult["outchain_status"] = "failed"
+				result["outchain_status"] = "failed"
+				result["status"] = common.StatusFailed
 			}
-
 		}
 	}
 	return result

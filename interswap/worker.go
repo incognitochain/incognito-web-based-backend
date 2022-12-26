@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strconv"
 	"strings"
 
 	"cloud.google.com/go/pubsub"
@@ -47,8 +46,6 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 		return err
 	}
 
-	APIEndpoint = "0.0.0.0:" + strconv.Itoa(cfg.Port)
-
 	// submit OTA key to fullnode
 	if cfg.ISIncPrivKey != "" {
 		wl, err := wallet.Base58CheckDeserialize(cfg.ISIncPrivKey)
@@ -77,7 +74,6 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 
 	// init subscription
 	var interswapSub *pubsub.Subscription
-	// TODO: 0xkraken review pubsub ID
 	interswapSubID := cfg.NetworkID + "_" + serviceID.String() + "_interswap"
 	interswapSub, err = psclient.CreateSubscription(context.Background(), interswapSubID,
 		pubsub.SubscriptionConfig{Topic: interSwapTxTopic})
@@ -179,7 +175,7 @@ func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
 			// updatedAddonSwapInfo.AmountIn = amountStrMidToken
 			// updatedAddonSwapInfo.AmountInRaw = pdexStatus.RespondAmounts[0]
 
-			// // check minAcceptedAmoutn of AddOn tx is still valid or not
+			// // check minAcceptedAmount of AddOn tx is still valid or not
 
 		} else if pdexStatus.Status == "refund" {
 

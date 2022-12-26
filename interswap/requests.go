@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/incognitochain/incognito-web-based-backend/common"
 )
@@ -118,7 +119,7 @@ type TransactionDetail struct {
 
 // CallEstimateSwap call request to estimate swap
 // for both pdex and papp
-func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
+func CallEstimateSwap(params *EstimateSwapParam, cfg common.Config) (*EstimateSwapResult, error) {
 	req := struct {
 		Network         string
 		Amount          string // without decimal
@@ -136,13 +137,11 @@ func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
 	}
 
 	estSwapResponse := EstimateSwapResponse{}
-
-	fmt.Printf("APIEndpoint: %v\n", APIEndpoint)
 	response, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").SetBody(req).
 		SetResult(&estSwapResponse).
-		Post(APIEndpoint + "/papps/estimateswapfee")
+		Post("http://localhost:" + strconv.Itoa(config.Port) + "/papps/estimateswapfee")
 	if err != nil {
 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee request error: %v", err)
 		log.Println(err)
@@ -164,7 +163,7 @@ func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
 }
 
 // CallSubmitPappSwapTx calls request to submit tx papp
-func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string) (map[string]interface{}, error) {
+func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config common.Config) (map[string]interface{}, error) {
 	req := SubmitpAppSwapTxRequest{
 		TxRaw:        txRaw,
 		TxHash:       txHash,
@@ -173,12 +172,11 @@ func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string) (map[string]interf
 
 	estSwapResponse := SubmitpAppSwapTxResponse{}
 
-	fmt.Printf("APIEndpoint: %v\n", APIEndpoint)
 	response, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").SetBody(req).
 		SetResult(&estSwapResponse).
-		Post(APIEndpoint + "/papps/submitswaptx")
+		Post("http://localhost:" + strconv.Itoa(config.Port) + "/papps/submitswaptx")
 	if err != nil {
 		err := fmt.Errorf("[ERR] Call API /papps/submitswaptx request error: %v", err)
 		log.Println(err)

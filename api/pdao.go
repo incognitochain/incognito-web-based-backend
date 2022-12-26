@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/bridge-eth/common/base58"
 	scommon "github.com/incognitochain/go-incognito-sdk-v2/common"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
@@ -188,8 +189,8 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	var md *bridge.BurningRequest
-	md, ok := mdRaw.(*bridge.BurningRequest)
+	var md *metadata.BurningPRVRequest
+	md, ok := mdRaw.(*metadata.BurningPRVRequest)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata type"})
 		return

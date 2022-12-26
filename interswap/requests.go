@@ -119,7 +119,7 @@ type TransactionDetail struct {
 
 // CallEstimateSwap call request to estimate swap
 // for both pdex and papp
-func CallEstimateSwap(params *EstimateSwapParam, cfg common.Config) (*EstimateSwapResult, error) {
+func CallEstimateSwap(params *EstimateSwapParam, config common.Config) (*EstimateSwapResult, error) {
 	req := struct {
 		Network         string
 		Amount          string // without decimal

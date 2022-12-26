@@ -234,3 +234,35 @@ func DBCreatePappSupportTokenIndex() error {
 	}
 	return nil
 }
+
+func DBCreateOpenSeaIndex() error {
+	startTime := time.Now()
+	collectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.OpenseaCollectionData{}).Indexes().CreateMany(context.Background(), collectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
+	assetModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "uid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)
+	if err != nil {
+		log.Printf("failed to index op-asset in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}

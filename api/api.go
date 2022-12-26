@@ -87,9 +87,9 @@ func StartAPIservice(cfg common.Config) {
 	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
 
 	pOpenSeaGroup := pAppsGroup.Group("/opensea")
-	pOpenSeaGroup.POST("/estimatebuyfee", APIEstimateBuyFee)
+	pOpenSeaGroup.GET("/estimatebuyfee", APIEstimateBuyFee)
 	pOpenSeaGroup.POST("/submitbuytx", APISubmitBuyTx)
-	pOpenSeaGroup.POST("/buystatus", APIGetBuyTxStatus)
+	pOpenSeaGroup.POST("/buystatus", APIGetSwapTxStatus)
 	//opensea api
 	pOpenSeaGroup.GET("/collections", APIGetCollections)
 	pOpenSeaGroup.GET("/nft-detail", APINFTDetail)

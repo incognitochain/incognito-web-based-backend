@@ -1373,7 +1373,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 			}
 		} else {
-
+			//TODO: opensea
 		}
 
 		for _, quote := range quoteDatas {
@@ -1387,6 +1387,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				}
 				switch quote.AppName {
 				case "opensea":
+					//TODO: opensea
 				case "curve":
 					data, err := papps.DecodeCurveCalldata(v.ExternalCalldata)
 					if err != nil {

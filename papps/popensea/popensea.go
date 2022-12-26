@@ -71,11 +71,11 @@ func RetrieveCollectionAssets(OSEndpoint string, apiKey string, collectionContra
 
 func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID string) (*NFTDetail, error) {
 	var respond struct {
-		NFTDetail
-		Success bool `json:"success"`
+		Assets  []NFTDetail `json:"assets"`
+		Success bool        `json:"success"`
 	}
 	// url := "https://testnets-api.opensea.io/api/v1/asset/0x362f0d993d0743ff5948507b49cda94d7d593593/0/"
-	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&token_ids=%v&order_direction=desc&offset=0&limit=1", OSEndpoint, collectionContract, tokenID)
+	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&token_ids=%v&order_direction=desc&include_orders=true&offset=0&limit=1", OSEndpoint, collectionContract, tokenID)
 
 	req, _ := http.NewRequest("GET", url, nil)
 
@@ -93,5 +93,5 @@ func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID st
 	if err != nil {
 		return nil, err
 	}
-	return &respond.NFTDetail, nil
+	return &respond.Assets[0], nil
 }

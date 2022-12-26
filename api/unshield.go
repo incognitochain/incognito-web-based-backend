@@ -202,13 +202,27 @@ func estimateUnshieldFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, networ
 		}
 
 	} else {
-		netID, err := getNetworkIDFromCurrencyType(burnTokenInfo.CurrencyType)
-		if err != nil {
-			return nil, err
+		if burnTokenInfo.TokenID == wcommon.PRV_TOKENID {
+			for _, v := range burnTokenInfo.ListChildToken {
+				childNetID, err := wcommon.GetNetworkIDFromCurrencyType(v.CurrencyType)
+				if err != nil {
+					return nil, err
+				}
+				if childNetID == networkID {
+					isSupportedOutNetwork = true
+					break
+				}
+			}
+		} else {
+			netID, err := getNetworkIDFromCurrencyType(burnTokenInfo.CurrencyType)
+			if err != nil {
+				return nil, err
+			}
+			if netID == networkID {
+				isSupportedOutNetwork = true
+			}
 		}
-		if netID == networkID {
-			isSupportedOutNetwork = true
-		}
+
 	}
 	if !isSupportedOutNetwork {
 		return nil, errors.New("unsupported network")

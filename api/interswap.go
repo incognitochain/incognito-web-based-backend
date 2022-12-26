@@ -211,7 +211,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			}
 
 			// call api submitswaptx to broadcast papp swap tx to BE
-			_, err = interswap.CallSubmitPappSwapTx(req.TxRaw, txHash, req.OTARefundFee)
+			_, err = interswap.CallSubmitPappSwapTx(req.TxRaw, txHash, req.OTARefundFee, config)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("submit papp tx failed %v", err)})
 				//

@@ -206,7 +206,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			ToToken:   req.ToToken,
 		}
 
-		interSwapRes, err := interswap.EstimateSwap(interSwapParams)
+		interSwapRes, err := interswap.EstimateSwap(interSwapParams, config)
 		if err != nil {
 			result.NetworksError[interswap.InterSwapStr] = err
 		} else {

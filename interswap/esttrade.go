@@ -3,6 +3,8 @@ package interswap
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 type InterSwapPath struct {
@@ -33,7 +35,7 @@ type AddOnSwapInfo struct {
 }
 
 // InterSwap estimate swap
-func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
+func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]InterSwapInfo, error) {
 	// validation
 
 	// * don't estimate inter swap if:
@@ -50,16 +52,16 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 	for _, midToken := range SupportedMidTokens {
 		// estimate fromToken => midToken
 		p1 := &EstimateSwapParam{
-			Network:     IncNetworkStr,
-			Amount:      params.Amount,
-			FromToken:   params.FromToken,
-			ToToken:     midToken,
-			Slippage:    params.Slippage,
+			Network:   IncNetworkStr,
+			Amount:    params.Amount,
+			FromToken: params.FromToken,
+			ToToken:   midToken,
+			Slippage:  params.Slippage,
 		}
 		p1Bytes, _ := json.Marshal(p1)
 		fmt.Printf("Param 1: %s\n", string(p1Bytes))
 
-		est1, err := CallEstimateSwap(p1)
+		est1, err := CallEstimateSwap(p1, config)
 		if err != nil {
 			continue
 		}
@@ -79,16 +81,16 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 
 		for network1, swapInfo1 := range bestPath1 {
 			p2 := &EstimateSwapParam{
-				Network:     params.Network,
-				Amount:      swapInfo1.AmountOut,
-				FromToken:   midToken,
-				ToToken:     params.ToToken,
-				Slippage:    params.Slippage,
+				Network:   params.Network,
+				Amount:    swapInfo1.AmountOut,
+				FromToken: midToken,
+				ToToken:   params.ToToken,
+				Slippage:  params.Slippage,
 			}
 			p2Bytes, _ := json.Marshal(p2)
 			fmt.Printf("Param 2: %s\n", string(p2Bytes))
 
-			est2, err := CallEstimateSwap(p2)
+			est2, err := CallEstimateSwap(p2, config)
 			if err != nil {
 				continue
 			}

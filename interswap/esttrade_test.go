@@ -6,7 +6,6 @@ import (
 )
 
 func TestEstimateSwap(t *testing.T) {
-	APIEndpoint = "http://51.161.117.193:8898"
 	InitSupportedMidTokens("mainnet")
 
 	XMR := "c01e7dc1d1aba995c19b257412340b057f8ad1482ccb6a9bb0adce61afbf05d4"
@@ -15,13 +14,13 @@ func TestEstimateSwap(t *testing.T) {
 	to := USDC
 
 	params := &EstimateSwapParam{
-		Network:     "bsc",
-		Amount:      "1",
-		FromToken:   from,
-		ToToken:     to,
-		Slippage:    "0.5",
+		Network:   "bsc",
+		Amount:    "1",
+		FromToken: from,
+		ToToken:   to,
+		Slippage:  "0.5",
 	}
-	res, err := EstimateSwap(params, )
+	res, err := EstimateSwap(params)
 	fmt.Printf("Res: %+v\n", res)
 	fmt.Printf("err: %+v\n", err)
 }

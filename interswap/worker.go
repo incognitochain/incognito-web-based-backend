@@ -16,9 +16,6 @@ import (
 
 var config wcommon.Config
 
-// endpoint Be to call request to estimate swap info
-var APIEndpoint string
-
 func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	network := cfg.NetworkID
 	config = cfg

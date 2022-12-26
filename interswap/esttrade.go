@@ -55,7 +55,6 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 			FromToken:   params.FromToken,
 			ToToken:     midToken,
 			Slippage:    params.Slippage,
-			IsInterswap: true,
 		}
 		p1Bytes, _ := json.Marshal(p1)
 		fmt.Printf("Param 1: %s\n", string(p1Bytes))
@@ -85,7 +84,6 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 				FromToken:   midToken,
 				ToToken:     params.ToToken,
 				Slippage:    params.Slippage,
-				IsInterswap: true,
 			}
 			p2Bytes, _ := json.Marshal(p2)
 			fmt.Printf("Param 2: %s\n", string(p2Bytes))

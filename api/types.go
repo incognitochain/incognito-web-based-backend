@@ -50,6 +50,8 @@ type EstimateSwapRequest struct {
 	MinSplit    int
 	FromToken   string // IncTokenID
 	ToToken     string // IncTokenID
+
+	IsFromInterswap bool // dafault false
 }
 
 type EstimateSwapRespond struct {

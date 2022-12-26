@@ -18,8 +18,6 @@ type EstimateSwapParam struct {
 	Slippage  string
 	FromToken string // IncTokenID
 	ToToken   string // IncTokenID
-
-	IsInterswap bool
 }
 
 type PappNetworkFee struct {
@@ -122,19 +120,19 @@ type TransactionDetail struct {
 // for both pdex and papp
 func CallEstimateSwap(params *EstimateSwapParam) (*EstimateSwapResult, error) {
 	req := struct {
-		Network     string
-		Amount      string // without decimal
-		FromToken   string // IncTokenID
-		ToToken     string // IncTokenID
-		Slippage    string
-		IsInterswap bool
+		Network         string
+		Amount          string // without decimal
+		FromToken       string // IncTokenID
+		ToToken         string // IncTokenID
+		Slippage        string
+		IsFromInterswap bool
 	}{
-		Network:     params.Network,
-		Amount:      params.Amount,
-		FromToken:   params.FromToken,
-		ToToken:     params.ToToken,
-		Slippage:    params.Slippage,
-		IsInterswap: params.IsInterswap,
+		Network:         params.Network,
+		Amount:          params.Amount,
+		FromToken:       params.FromToken,
+		ToToken:         params.ToToken,
+		Slippage:        params.Slippage,
+		IsFromInterswap: true,
 	}
 
 	estSwapResponse := EstimateSwapResponse{}

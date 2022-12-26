@@ -29,6 +29,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
 	"github.com/incognitochain/incognito-web-based-backend/papps"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
@@ -376,6 +377,26 @@ func APIEstimateSwapFee(c *gin.Context) {
 	}
 	if len(result.Networks) == 0 && len(pdexEstimate) == 0 {
 		response.Error = NotTradeable.Error()
+	}
+
+	// estimate with Interswap
+	if !req.IsFromInterswap {
+		interSwapParams := &interswap.EstimateSwapParam{
+			Network:   req.Network,
+			Amount:    req.Amount,
+			Slippage:  req.Slippage,
+			FromToken: req.FromToken,
+			ToToken:   req.ToToken,
+		}
+
+		interSwapRes, err := interswap.EstimateSwap(interSwapParams)
+		if err != nil {
+			result.NetworksError[interswap.InterSwapStr] = err
+		} else {
+			for k, v := range interSwapRes {
+				result.Networks[k] = v
+			}
+		}
 	}
 
 	response.Result = result

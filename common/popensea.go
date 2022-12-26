@@ -20,3 +20,10 @@ type OpenseaAssetData struct {
 	Name             string             `bson:"name"`
 	Detail           popensea.NFTDetail `bson:"detail"`
 }
+
+type OpenseaDefaultCollectionData struct {
+	mgm.DefaultModel `bson:",inline"`
+	Address          string `bson:"address"`
+	Slug             string `bson:"slug"`
+	Verify           bool   `bson:"verify"`
+}

@@ -71,21 +71,26 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 func updateOpenSeaCollections() {
 	for {
 		time.Sleep(8 * time.Second)
-		result, err := popensea.RetrieveCollectionList(config.OpenSeaAPI, config.OpenSeaAPIKey, 20, 0)
+		defaultList, err := database.DBGetDefaultCollectionList()
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		err = database.DBSaveCollectionsInfo(result)
-		if err != nil {
-			log.Println(err)
-			continue
+		collections := []popensea.CollectionDetail{}
+		for _, collection := range defaultList {
+			collectionDetail, err := popensea.RetrieveCollectionDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, collection.Slug)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			collections = append(collections, *collectionDetail)
+			time.Sleep(1500 * time.Millisecond)
 		}
-	}
-}
 
-func watchCollections() {
-	for {
-		time.Sleep(8 * time.Second)
+		err = database.DBSaveCollectionsInfo(collections)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 	}
 }

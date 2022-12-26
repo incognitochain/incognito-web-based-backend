@@ -26,7 +26,8 @@ func StartAPIservice(cfg common.Config) {
 	if cfg.IncKey != "" {
 		err := loadOTAKey(cfg.IncKey)
 		if err != nil {
-			panic(err)
+			// panic(err)
+			log.Println("err loadOTAKey: ", err)
 		}
 	}
 

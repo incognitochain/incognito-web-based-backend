@@ -92,7 +92,7 @@ func DBUpdatePdaoVoteStatus(incTx string, status string) error {
 }
 
 func DBUpdatePdaoCancelStatus(incTx string, status string) error {
-	//TODO: @phuong
+	//TODO: @phuong => don't need yes for now.
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
@@ -119,4 +119,21 @@ func DBListVoteTable() []common.Vote {
 	l := []common.Vote{}
 	mgm.Coll(&common.Vote{}).SimpleFind(&l, bson.M{})
 	return l
+}
+
+func DBGetVoteByIncTx(incReqTx string) (*common.Vote, error) {
+
+	result := common.Vote{}
+	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incReqTx}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.Vote{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

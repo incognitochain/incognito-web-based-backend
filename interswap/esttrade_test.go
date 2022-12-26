@@ -20,7 +20,6 @@ func TestEstimateSwap(t *testing.T) {
 		FromToken:   from,
 		ToToken:     to,
 		Slippage:    "0.5",
-		IsInterswap: true,
 	}
 	res, err := EstimateSwap(params)
 	fmt.Printf("Res: %+v\n", res)

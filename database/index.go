@@ -32,6 +32,38 @@ func DBCreateShieldTxIndex() error {
 	return nil
 }
 
+func DBCreateUnshieldTxIndex() error {
+	startTime := time.Now()
+	unshieldTxModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "inctx", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "created_at", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "type", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "refundsubmitted", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}, {Key: "refundsubmitted", Value: bsonx.Int32(1)}, {Key: "refundpfee", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "outchain_status", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.UnshieldTxData{}).Indexes().CreateMany(context.Background(), unshieldTxModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}
+
 func DBCreateFeeIndex() error {
 	startTime := time.Now()
 	feeModel := []mongo.IndexModel{

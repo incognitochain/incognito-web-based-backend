@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
+
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 
@@ -21,6 +22,7 @@ var APIEndpoint string
 
 func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	network := cfg.NetworkID
+	config = cfg
 
 	// start client
 	err := startPubsubClient(cfg.GGCProject, cfg.GGCAuth)
@@ -111,7 +113,7 @@ func ProcessInterswapTxRequest(ctx context.Context, m *pubsub.Message) {
 type InterswapSubmitTxTask struct {
 	TxID          string
 	TxRawBytes    []byte
-	AddOnSwapInfo QuoteData
+	AddOnSwapInfo AddOnSwapInfo
 
 	OTARefundFee string
 	OTAFromToken string
@@ -129,6 +131,62 @@ func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
 		log.Println("processInterswapPathType1Task error decoding message", err)
 		m.Ack()
 		return
+	}
+
+	// get tx by hash
+	// txDetail, err := CallGetTxDetails(task.TxID)
+
+	// txDetail, err := incClient.GetTxDetail(task.TxID)
+	// if err != nil {
+	// 	log.Println("GetTxDetail err", err)
+	// } else {
+	// 	if txDetail.IsInMempool {
+	// 		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusPending, "")
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			m.Nack()
+	// 			return
+	// 		}
+	// 	}
+	// 	if txDetail.IsInBlock {
+	// 		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusExecuting, "")
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			m.Nack()
+	// 			return
+	// 		}
+	// 	}
+	// 	m.Ack()
+	// 	return
+	// }
+
+	// get swap tx status by calling api
+	_, pdexStatus, err := CallGetPdexSwapTxStatus(task.TxID, "")
+	if err != nil {
+		log.Println(err)
+		m.Nack()
+		return
+	}
+	if len(pdexStatus.RespondTxs) > 1 {
+		if pdexStatus.Status == "accepted" {
+			// // update addon swap info: amountFrom
+			// updatedAddonSwapInfo := task.AddOnSwapInfo
+
+			// // re-calculate AmountIn for AddOn tx
+			// midTokenAmt := pdexStatus.RespondAmounts[0]
+			// amountStrMidToken := convertToWithoutDecStr(pdexStatus.RespondAmounts[0], pdexStatus.RespondTokens[0])
+
+			// updatedAddonSwapInfo.AmountIn = amountStrMidToken
+			// updatedAddonSwapInfo.AmountInRaw = pdexStatus.RespondAmounts[0]
+
+			// // check minAcceptedAmoutn of AddOn tx is still valid or not
+
+		} else if pdexStatus.Status == "refund" {
+
+		} else {
+
+		}
+
 	}
 
 	// get swap tx status by calling api

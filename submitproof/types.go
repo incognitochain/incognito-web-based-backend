@@ -32,6 +32,25 @@ type SubmitPappTxTask struct {
 	UserAgent        string
 }
 
+type SubmitUnshieldTxTask struct {
+	TxHash           string
+	TxRawData        []byte
+	IsPRVTx          bool
+	IsUnifiedToken   bool
+	FeeToken         string
+	FeeAmount        uint64
+	PFeeAmount       uint64
+	FeeRefundOTA     string
+	FeeRefundAddress string
+	Token            string
+	UToken           string
+	BurntAmount      uint64
+	ExternalAddress  string
+	Networks         []string
+	Time             time.Time
+	UserAgent        string
+}
+
 type SubmitRefundFeeTask struct {
 	IncReqTx string
 	Token    string
@@ -43,11 +62,12 @@ type SubmitRefundFeeTask struct {
 	Time               time.Time
 }
 
-type SubmitPappProofOutChainTask struct {
+type SubmitProofOutChainTask struct {
 	IncTxhash      string
 	Network        string
 	IsUnifiedToken bool
 	IsRetry        bool
+	Type           int
 	Time           time.Time
 }
 

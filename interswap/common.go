@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 var incClient *incclient.IncClient
@@ -78,18 +79,90 @@ func addStrs(str1, str2 string) (string, error) {
 	return float64ToStr(f1 + f2), nil
 }
 
-// TODO:
-func convertAmountUint64(amt uint64, fromToken, toToken string) uint64 {
-	return amt
+func subStrs(str1, str2 string) (string, error) {
+	f1, err := strToFloat64(str1)
+	if err != nil {
+		return "", err
+	}
+
+	f2, err := strToFloat64(str2)
+	if err != nil {
+		return "", err
+	}
+	if f1 < f2 {
+		return "", fmt.Errorf("%v is less than %v", str1, str2)
+	}
+	return float64ToStr(f1 - f2), nil
 }
 
+func divStrs(str1, str2 string) (string, error) {
+	f1, err := strToFloat64(str1)
+	if err != nil {
+		return "", err
+	}
 
-// TODO:
-func convertAmountStr(amt string, fromToken, toToken string) string {
-	return amt
+	f2, err := strToFloat64(str2)
+	if err != nil {
+		return "", err
+	}
+
+	return float64ToStr(f1 / f2), nil
 }
 
-func convertToWithoutDecStr(amt uint64, tokenID string) string {
+func convertAmountUint64(amt uint64, fromToken, toToken string) (uint64, error) {
+	tokenInfos, err := getTokensInfo([]string{fromToken, toToken})
+	if err != nil {
+		return 0, err
+	}
+
+	fromTokenInfo := common.TokenInfo{}
+	toTokenInfo := common.TokenInfo{}
+	for _, info := range tokenInfos {
+		if info.TokenID == fromToken {
+			fromTokenInfo = info
+		} else if info.TokenID == toToken {
+			toTokenInfo = info
+		}
+	}
+
+	if fromTokenInfo.TokenID == "" || toTokenInfo.TokenID == "" {
+		return 0, errors.New("Can not get token info")
+	}
+
+	amtInUSD := float64(amt) * fromTokenInfo.ExternalPriceUSD
+	amtTo := amtInUSD / toTokenInfo.ExternalPriceUSD
+
+	return uint64(amtTo), nil
+}
+
+// TODO:
+// func convertAmountStr(amt string, fromToken, toToken string) string {
+// 	return amt
+// }
+
+func convertToWithoutDecStr(amt uint64, tokenID string) (string, error) {
+	tokenInfo, err := getTokenInfo(tokenID)
+	if err != nil {
+		return "", nil
+	}
+	tmp := float64(amt) / float64(math.Pow(10, float64(tokenInfo.PDecimals)))
+	return float64ToStr(tmp), nil
+}
+
+func convertToDecAmtStr(amt string, tokenID string) (string, error) {
+	tokenInfo, err := getTokenInfo(tokenID)
+	if err != nil {
+		return "", nil
+	}
+	amtTmp, err := strToFloat64(amt)
+	if err != nil {
+		return "", nil
+	}
+	tmp := uint64(float64(amtTmp) * float64(math.Pow(10, float64(tokenInfo.PDecimals))))
+	return fmt.Sprint(tmp), nil
+}
+
+func convertFloat64ToWithoutDecStr(amt uint64, tokenID string) string {
 	tmp := float64(amt) / float64(math.Pow(10, DefaultDecimal))
 	return float64ToStr(tmp)
 }

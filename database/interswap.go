@@ -17,6 +17,7 @@ func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, 
 	update := bson.M{"$set": bson.M{
 		"created_at":     time.Now(),
 		"txraw":          txdata.TxRaw,
+		"tx"
 		"addon_swapinfo": txdata.AddOnSwapInfo,
 		"ota_refundfee":  txdata.OTARefundFee,
 		"ota_fromtoken":  txdata.OTAFromToken,

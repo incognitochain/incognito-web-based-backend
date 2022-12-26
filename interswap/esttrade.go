@@ -140,6 +140,9 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 	}
 	bytes, _ := json.Marshal(paths)
 	fmt.Printf("paths: %v\n", string(bytes))
+	if len(paths) == 0 {
+		return nil, nil
+	}
 
 	// find the best path
 	bestPath := InterSwapPath{}

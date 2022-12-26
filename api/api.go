@@ -30,6 +30,12 @@ func StartAPIservice(cfg common.Config) {
 			panic(err)
 		}
 	}
+	if cfg.ISIncPrivKey != "" {
+		err := InitInterswapIncKeySet(cfg.ISIncPrivKey)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	if network == "mainnet" {
 		err := parseDefaultToken()
@@ -133,5 +139,17 @@ func loadOTAKey(key string) error {
 		return err
 	}
 	incFeeKeySet = wl
+	return nil
+}
+
+func InitInterswapIncKeySet(key string) error {
+	wl, err := wallet.Base58CheckDeserialize(key)
+	if err != nil {
+		return err
+	}
+	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
+		return err
+	}
+	interswap.InterswapIncKeySet = wl
 	return nil
 }

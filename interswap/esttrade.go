@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
@@ -15,12 +16,13 @@ type InterSwapPath struct {
 	TotalFee  PappNetworkFee
 }
 
-type InterSwapInfo struct {
+type InterSwapEstRes struct {
 	QuoteData
 	PathType  int
 	FromToken string
 	ToToken   string
 	MidToken  string
+	MidOTA    string
 	TotalFee  PappNetworkFee
 	Details   []*QuoteData
 }
@@ -35,7 +37,7 @@ type AddOnSwapInfo struct {
 }
 
 // InterSwap estimate swap
-func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]InterSwapInfo, error) {
+func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]InterSwapEstRes, error) {
 	// validation
 
 	// * don't estimate inter swap if:
@@ -185,7 +187,13 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 		return nil, err
 	}
 
-	swapInfo := InterSwapInfo{
+	otaReceiver := &coin.OTAReceiver{}
+	err = otaReceiver.FromAddress(InterswapIncKeySet.KeySet.PaymentAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	swapInfo := InterSwapEstRes{
 		// this object to get info to show on UI
 		QuoteData: QuoteData{
 			AppName:              InterSwapStr,
@@ -201,6 +209,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 			Paths:                "", // TODO
 			ImpactAmount:         "", // TODO
 		},
+		MidOTA:    otaReceiver.String(),
 		FromToken: bestPath.FromToken,
 		ToToken:   bestPath.ToToken,
 		MidToken:  bestPath.MidToken,
@@ -209,7 +218,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 		Details: bestPath.Paths,
 	}
 
-	res := map[string]InterSwapInfo{
+	res := map[string]InterSwapEstRes{
 		InterSwapStr: swapInfo,
 	}
 	return res, nil

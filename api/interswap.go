@@ -96,6 +96,7 @@ func ValidateAddOnSwapInfo(addOnSwapInfo interswap.AddOnSwapInfo, expectSwapType
 // TODO: 0xkraken
 // IsValidOTA returns true if ota belongs to privKey
 func IsValidOTA(ota coin.OTAReceiver, privKey string) (bool, error) {
+	// NOTE: only can check when receive the response tx
 
 	return true, nil
 }

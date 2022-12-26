@@ -15,6 +15,7 @@ import (
 )
 
 var config wcommon.Config
+var InterswapIncKeySet *wallet.KeyWallet
 
 func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	network := cfg.NetworkID

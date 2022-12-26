@@ -7,6 +7,7 @@ const InterSwapStr = "interswap"
 const pDEXType = 1
 const pAppType = 2
 
+// path type
 const PdexToPApp = 1
 const PAppToPdex = 2
 
@@ -38,5 +39,6 @@ var StatusStr = map[int]string{
 
 const INTERSWAP_TX_TOPIC = "interswaptx_topic"
 
+// task by swap path
 const InterswapPdexPappTxTask = "interswaptx_pathtype1" // Path 1: pDEX => pApp
-const InterswapPathType2Task = "interswaptx_pathtype2"  // Path 2: pApp => pDEX
+const InterswapPappPdexTask = "interswaptx_pathtype2"   // Path 2: pApp => pDEX

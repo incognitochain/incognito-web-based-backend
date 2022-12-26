@@ -306,16 +306,6 @@ func PublishMsgInterswapTx(
 	StatusStr string,
 	err string,
 ) (interface{}, error) {
-	// currentStatus, err := database.DBGetPappTxStatus(txhash)
-	// if err != nil {
-	// 	if err != mongo.ErrNoDocuments {
-	// 		return "", err
-	// 	}
-	// }
-	// if currentStatus != "" {
-	// 	return currentStatus, nil
-	// }
-
 	task := interswap.InterswapSubmitTxTask{
 		TxID:          txhash,
 		TxRawBytes:    rawTxData,
@@ -331,11 +321,16 @@ func PublishMsgInterswapTx(
 	}
 	taskBytes, _ := json.Marshal(task)
 
+	taskType := interswap.InterswapPdexPappTxTask
+	if pathType == interswap.PAppToPdex {
+		taskType = interswap.InterswapPappPdexTask
+	}
+
 	ctx := context.Background()
 	msg := &pubsub.Message{
 		Attributes: map[string]string{
 			"txhash": txhash,
-			"task":   PappSubmitIncTask,
+			"task":   taskType,
 		},
 		Data: taskBytes,
 	}

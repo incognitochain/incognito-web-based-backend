@@ -38,10 +38,10 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 		return err
 	}
 
-	err = InitSupportedMidTokens(network)
-	if err != nil {
-		return err
-	}
+	// err = InitSupportedMidTokens(network)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// submit OTA key to fullnode
 	if cfg.ISIncPrivKey != "" {

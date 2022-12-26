@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -41,6 +42,12 @@ func StartAPIservice(cfg common.Config) {
 		panic(err)
 	}
 	store := persistence.NewInMemoryStore(time.Second)
+
+	// init interswap info
+	err = interswap.InitSupportedMidTokens(network)
+	if err != nil {
+		panic(err)
+	}
 
 	go cacheVaultState()
 	go cacheSupportedPappsTokens()

@@ -15,9 +15,9 @@ import (
 func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, error) {
 	filter := bson.M{"txid": bson.M{operator.Eq: txdata.TxID}}
 	update := bson.M{"$set": bson.M{
-		"created_at":     time.Now(),
-		"txraw":          txdata.TxRaw,
-		"tx"
+		"created_at": time.Now(),
+		"txraw":      txdata.TxRaw,
+		// "tx"
 		"addon_swapinfo": txdata.AddOnSwapInfo,
 		"ota_refundfee":  txdata.OTARefundFee,
 		"ota_fromtoken":  txdata.OTAFromToken,

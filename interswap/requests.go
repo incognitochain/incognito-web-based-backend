@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+
+	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 type EstimateSwapParam struct {
@@ -47,6 +49,8 @@ type QuoteData struct {
 	Calldata             string
 	ImpactAmount         string
 	RouteDebug           interface{}
+
+	// TODO: add fromToken
 }
 
 type EstimateSwapResult struct {
@@ -74,6 +78,44 @@ type TxStatusRespond struct {
 	TxHash string
 	Status string
 	Error  string
+}
+
+type TransactionDetail struct {
+	BlockHash   string `json:"BlockHash"`
+	BlockHeight uint64 `json:"BlockHeight"`
+	TxSize      uint64 `json:"TxSize"`
+	Index       uint64 `json:"Index"`
+	ShardID     byte   `json:"ShardID"`
+	Hash        string `json:"Hash"`
+	Version     int8   `json:"Version"`
+	Type        string `json:"Type"` // Transaction type
+	LockTime    string `json:"LockTime"`
+	RawLockTime int64  `json:"RawLockTime,omitempty"`
+	Fee         uint64 `json:"Fee"` // Fee applies: always consant
+	Image       string `json:"Image"`
+
+	IsPrivacy bool `json:"IsPrivacy"`
+	// Proof           privacy.Proof `json:"Proof"`
+	// ProofDetail     interface{}   `json:"ProofDetail"`
+	InputCoinPubKey string `json:"InputCoinPubKey"`
+	SigPubKey       string `json:"SigPubKey,omitempty"` // 64 bytes
+	RawSigPubKey    []byte `json:"RawSigPubKey,omitempty"`
+	Sig             string `json:"Sig,omitempty"` // 64 bytes
+
+	Metadata                      string      `json:"Metadata"`
+	CustomTokenData               string      `json:"CustomTokenData"`
+	PrivacyCustomTokenID          string      `json:"PrivacyCustomTokenID"`
+	PrivacyCustomTokenName        string      `json:"PrivacyCustomTokenName"`
+	PrivacyCustomTokenSymbol      string      `json:"PrivacyCustomTokenSymbol"`
+	PrivacyCustomTokenData        string      `json:"PrivacyCustomTokenData"`
+	PrivacyCustomTokenProofDetail interface{} `json:"PrivacyCustomTokenProofDetail"`
+	PrivacyCustomTokenIsPrivacy   bool        `json:"PrivacyCustomTokenIsPrivacy"`
+	PrivacyCustomTokenFee         uint64      `json:"PrivacyCustomTokenFee"`
+
+	IsInMempool bool `json:"IsInMempool"`
+	IsInBlock   bool `json:"IsInBlock"`
+
+	Info string `json:"Info"`
 }
 
 // CallEstimateSwap call request to estimate swap
@@ -149,14 +191,99 @@ func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string) (map[string]interf
 		log.Println(err)
 		return nil, err
 	}
+	return estSwapResponse.Result, nil
+}
 
-	// if estSwapResponse.Error != nil {
-	// 	err := fmt.Errorf("[ERR] Call API /papps/submitswaptx response error: %v", err)
-	// 	log.Println(err)
-	// 	return nil, err
+func genRPCBody(method string, params []interface{}) interface{} {
+	type RPC struct {
+		ID      int           `json:"id"`
+		JsonRPC string        `json:"jsonrpc"`
+		Method  string        `json:"method"`
+		Params  []interface{} `json:"params"`
+	}
+
+	req := RPC{
+		ID:      1,
+		JsonRPC: "1.0",
+		Method:  method,
+		Params:  params,
+	}
+	return req
+}
+
+func CallGetTxDetails(txhash string) (*TransactionDetail, error) {
+	reqRPC := genRPCBody("gettransactionbyhash", []interface{}{
+		txhash,
+	})
+
+	type TxDetailRespond struct {
+		Result TransactionDetail
+		Error  *string
+	}
+
+	var responseBodyData TxDetailRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqRPC).
+		Post(config.FullnodeURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if responseBodyData.Error != nil {
+		return nil, fmt.Errorf("%v", responseBodyData.Error)
+	}
+	return &responseBodyData.Result, nil
+}
+
+func CallGetPdexSwapTxStatus(txhash, tokenOut string) (bool, *common.TradeDataRespond, error) {
+	type APIRespond struct {
+		Result []common.TradeDataRespond
+		Error  *string
+	}
+
+	var responseBodyData APIRespond
+
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).
+		Get(config.CoinserviceURL + "/pdex/v3/tradedetail?txhash=" + txhash)
+	if err != nil {
+		log.Println("CallGetPdexSwapTxStatus", err)
+		return false, nil, err
+	}
+	if responseBodyData.Error != nil {
+		log.Println("CallGetPdexSwapTxStatus", errors.New(*responseBodyData.Error))
+		return false, nil, errors.New(*responseBodyData.Error)
+	}
+
+	if len(responseBodyData.Result) == 0 {
+		return false, nil, errors.New("not found")
+	}
+
+	swapResult := responseBodyData.Result[0]
+	return true, &swapResult, nil
+
+	// if len(swapResult.RespondTxs) > 0 {
+	// 	if swapResult.Status == "accepted" {
+	// 		outAmountBig := new(big.Float).SetUint64(swapResult.RespondAmounts[0])
+	// 		var outDecimal *big.Float
+	// 		tokenOutInfo, err := getTokenInfo(tokenOut)
+	// 		if err != nil {
+	// 			return false, "", errors.New("not found")
+	// 		}
+	// 		outDecimal = new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
+	// 		outAmountfl64, _ := new(big.Float).Mul(outAmountBig, outDecimal).Float64()
+	// 		outAmount := fmt.Sprintf("%f", outAmountfl64)
+	// 		return true, outAmount, nil
+	// 	} else {
+	// 		return true, "", nil
+	// 	}
 	// }
 
-	return estSwapResponse.Result, nil
+	// return false, "", nil
 }
 
 // // CallEstimateSwap call request to estimate swap
@@ -306,9 +433,19 @@ func calTotalFee(interswapPath InterSwapPath) (*PappNetworkFee, error) {
 
 	// total fee paid in the token fee of the first swap info
 	feeToken := fee1.TokenID
-	amount := fee1.Amount + convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken)
-	amountInBuyToken := convertAmountUint64(amount, feeToken, interswapPath.ToToken)
-	amountInBuyTokenStr := convertToWithoutDecStr(amountInBuyToken, interswapPath.ToToken)
+	feeAmt2, err := convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken)
+	if err != nil {
+		return nil, err
+	}
+	amount := fee1.Amount + feeAmt2
+	amountInBuyToken, err := convertAmountUint64(amount, feeToken, interswapPath.ToToken)
+	if err != nil {
+		return nil, err
+	}
+	amountInBuyTokenStr, err := convertToWithoutDecStr(amountInBuyToken, interswapPath.ToToken)
+	if err != nil {
+		return nil, err
+	}
 
 	res := &PappNetworkFee{
 		TokenID:          feeToken,
@@ -321,4 +458,60 @@ func calTotalFee(interswapPath InterSwapPath) (*PappNetworkFee, error) {
 	fmt.Printf("Calculate total fee : %+v\n", res)
 
 	return res, nil
+}
+
+func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
+	type APIRespond struct {
+		Result []common.TokenInfo
+		Error  *string
+	}
+
+	reqBody := struct {
+		TokenIDs []string
+	}{
+		TokenIDs: []string{pUTokenID},
+	}
+
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqBody).
+		Post(config.CoinserviceURL + "/coins/tokeninfo")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(responseBodyData.Result) == 1 {
+		return &responseBodyData.Result[0], nil
+	}
+	return nil, errors.New(fmt.Sprintf("token not found"))
+}
+
+func getTokensInfo(pUTokenID []string) ([]common.TokenInfo, error) {
+	type APIRespond struct {
+		Result []common.TokenInfo
+		Error  *string
+	}
+
+	reqBody := struct {
+		TokenIDs []string
+	}{
+		TokenIDs: pUTokenID,
+	}
+
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqBody).
+		Post(config.CoinserviceURL + "/coins/tokeninfo")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(responseBodyData.Result) == 0 {
+		return nil, errors.New(fmt.Sprintf("tokens not found"))
+	}
+	return responseBodyData.Result, nil
 }

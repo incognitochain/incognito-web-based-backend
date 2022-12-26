@@ -93,6 +93,11 @@ func StartAPIservice(cfg common.Config) {
 	// InterSwap
 	pAppsGroup.POST("/submitinterswaptx", APISubmitInterSwapTx)
 
+	unshieldGroup := r.Group("/unshield")
+	unshieldGroup.POST("/status", APIGetUnshieldTxStatus)
+	unshieldGroup.POST("/submittx", APISubmitUnshieldTxNew)
+	unshieldGroup.GET("/estimatefee", APIUnshieldFeeEstimate)
+
 	//admin
 	adminGroup := r.Group("/admin")
 	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)

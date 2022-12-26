@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	psclient      *pubsub.Client
-	shieldTxTopic *pubsub.Topic
-	pappTxTopic   *pubsub.Topic
+	psclient        *pubsub.Client
+	shieldTxTopic   *pubsub.Topic
+	unshieldTxTopic *pubsub.Topic
+	pappTxTopic     *pubsub.Topic
 
 	interSwapTxTopic *pubsub.Topic
 )

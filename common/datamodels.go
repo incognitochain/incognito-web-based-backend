@@ -14,6 +14,30 @@ type ShieldTxData struct {
 	Error            string `json:"error" bson:"error"`
 }
 
+type UnshieldTxData struct {
+	mgm.DefaultModel `bson:",inline"`
+	Status           string   `json:"status" bson:"status"`
+	OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
+	NetworkID        int      `json:"networkid" bson:"networkid"`
+	TokenID          string   `json:"tokenid" bson:"tokenid"`
+	UTokenID         string   `json:"utokenid" bson:"utokenid"`
+	ExternalAddress  string   `json:"externaladdress" bson:"externaladdress"`
+	Amount           uint64   `json:"amount" bson:"amount"`
+	Networks         []string `json:"networks" bson:"networks"`
+	IncTx            string   `json:"inctx" bson:"inctx"`
+	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
+	FeeToken         string   `json:"feetoken" bson:"feetoken"`
+	FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
+	PFeeAmount       uint64   `json:"pfeeamount" bson:"pfeeamount"`
+	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
+	RefundPrivacyFee bool     `json:"refundpfee" bson:"refundpfee"`
+	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
+	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	UserAgent        string   `json:"useragent" bson:"useragent"`
+	Error            string   `json:"error" bson:"error"`
+}
+
 type ExternalNetworksFeeData struct {
 	mgm.DefaultModel `bson:",inline"`
 	GasPrice         map[string]uint64 `json:"fees" bson:"fees"`

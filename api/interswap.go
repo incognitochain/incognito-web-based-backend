@@ -46,23 +46,44 @@ type SubmitInterSwapTxRequest struct {
 
 	TxRaw         string
 	TxHash        string
-	AddOnSwapInfo interswap.QuoteData
+	PathType      int
+	AddOnSwapInfo interswap.AddOnSwapInfo
 
-	OTARefundFee string // user's OTA to receive refunded swap papp fee
+	OTARefundFee string // user's OTA to receive refunded swap papp fee (sender is BE, receiver is user)
+	OTARefund    string // user's OTA to receive fund from InterswapBE only in case PappPdexType and the first tx is reverted (sender is InterswapBE, receiver is user)
 	OTAFromToken string // user's OTA to receive refunded swap amount (sell token || mid token)
 	OTAToToken   string // user's OTA to receive buy token
-
 }
 
-// TODO: 0xkraken
-func ValidateAddOnSwapInfo(addOnSwapInfo interswap.QuoteData, expectSwapType int, expectedFromToken string) (bool, error) {
+func ValidateAddOnSwapInfo(addOnSwapInfo interswap.AddOnSwapInfo, expectSwapType int, expectedFromToken string) (bool, error) {
+	if addOnSwapInfo.FromToken != expectedFromToken {
+		return false, fmt.Errorf("From token in addon swap info is invalid: expected %v - got %v", expectedFromToken, addOnSwapInfo.FromToken)
+	}
+
+	if addOnSwapInfo.ToToken == "" {
+		return false, errors.New("The add on swap info ToToken is required")
+	}
+
+	if addOnSwapInfo.MinExpectedAmt == 0 {
+		return false, errors.New("The add on swap info MinExpectedAmt must be greater than 0")
+	}
+
 	switch expectSwapType {
 	case PdexSwapType:
 		{
+			if addOnSwapInfo.AppName != "pdex" {
+				return false, errors.New("The add on swap info must be pdex")
+			}
 			return true, nil
 		}
 	case PappSwapType:
 		{
+			if addOnSwapInfo.AppName == "pdex" {
+				return false, errors.New("The add on swap info must be papp")
+			}
+			if addOnSwapInfo.CallContract == "" {
+				return false, errors.New("The add on swap info CallContract is required")
+			}
 			return true, nil
 		}
 	default:
@@ -70,7 +91,6 @@ func ValidateAddOnSwapInfo(addOnSwapInfo interswap.QuoteData, expectSwapType int
 			return false, errors.New("Invalid swap type")
 		}
 	}
-
 }
 
 // TODO: 0xkraken

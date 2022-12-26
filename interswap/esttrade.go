@@ -15,11 +15,21 @@ type InterSwapPath struct {
 
 type InterSwapInfo struct {
 	QuoteData
+	PathType  int
 	FromToken string
 	ToToken   string
 	MidToken  string
 	TotalFee  PappNetworkFee
 	Details   []*QuoteData
+}
+
+type AddOnSwapInfo struct {
+	AppName      string
+	CallContract string
+	FromToken    string
+	ToToken      string
+
+	MinExpectedAmt uint64
 }
 
 // InterSwap estimate swap
@@ -105,11 +115,7 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 						FromToken: params.FromToken,
 						ToToken:   params.ToToken,
 					}
-
-					// bytes, _ = json.Marshal(path)
-					// fmt.Printf("Path case 1: %+v\n", bytes)
 					paths = append(paths, path)
-
 				}
 			default:
 				{
@@ -127,14 +133,10 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 						FromToken: params.FromToken,
 						ToToken:   params.ToToken,
 					}
-					// bytes, _ = json.Marshal(path)
-					// fmt.Printf("Path case 2: %+v\n", bytes)
 					paths = append(paths, path)
 				}
 			}
-
 		}
-
 	}
 	bytes, _ := json.Marshal(paths)
 	fmt.Printf("paths: %v\n", string(bytes))
@@ -160,16 +162,37 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 	bytes, _ = json.Marshal(bestPath)
 	fmt.Printf("bestPath: %v\n", string(bytes))
 
+	// deduct the fee of the second of tx from MinAcceptedAmt
+	amountOut, err := subStrs(bestPath.Paths[1].AmountOut, bestPath.Paths[1].Fee[0].AmountInBuyToken)
+	if err != nil {
+		return nil, err
+	}
+
+	amountOutPreSlippage, err := subStrs(bestPath.Paths[1].AmountOutPreSlippage, bestPath.Paths[1].Fee[0].AmountInBuyToken)
+	if err != nil {
+		return nil, err
+	}
+	amountOutRaw, err := convertToDecAmtStr(amountOut, bestPath.ToToken)
+	if err != nil {
+		return nil, err
+	}
+
+	rate, err := divStrs(amountOutPreSlippage, params.Amount)
+	if err != nil {
+		return nil, err
+	}
+
 	swapInfo := InterSwapInfo{
+		// this object to get info to show on UI
 		QuoteData: QuoteData{
 			AppName:              InterSwapStr,
 			AmountIn:             params.Amount,
 			AmountInRaw:          bestPath.Paths[0].AmountInRaw,
-			AmountOut:            bestPath.Paths[1].AmountOut,
-			AmountOutRaw:         bestPath.Paths[1].AmountOutRaw,
-			AmountOutPreSlippage: bestPath.Paths[1].AmountOutPreSlippage,
-			Rate:                 "", // TODO
-			Fee:                  []PappNetworkFee{bestPath.TotalFee},
+			AmountOut:            amountOut,
+			AmountOutRaw:         amountOutRaw,
+			AmountOutPreSlippage: amountOutPreSlippage,
+			Rate:                 rate,
+			Fee:                  bestPath.Paths[0].Fee, // only show the fee of the first tx
 			FeeAddress:           bestPath.Paths[0].FeeAddress,
 			FeeAddressShardID:    bestPath.Paths[0].FeeAddressShardID,
 			Paths:                "", // TODO
@@ -179,7 +202,8 @@ func EstimateSwap(params *EstimateSwapParam) (map[string]InterSwapInfo, error) {
 		ToToken:   bestPath.ToToken,
 		MidToken:  bestPath.MidToken,
 		TotalFee:  bestPath.TotalFee,
-		Details:   bestPath.Paths,
+		// use the first item in the array to create the first tx
+		Details: bestPath.Paths,
 	}
 
 	res := map[string]InterSwapInfo{

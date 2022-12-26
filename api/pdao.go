@@ -215,7 +215,12 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		// todo: update sdk to get returnOTA
 	}
 
-	feeToken := wcommon.ETH_UT_TOKEN
+	feeToken := wcommon.ETH_UT_TOKEN_MAINNET
+
+	if config.NetworkID == "testnet" {
+		feeToken = wcommon.ETH_UT_TOKEN_TESTNET
+	}
+
 	feeAmount := 0
 	pfeeAmount := 0
 
@@ -308,7 +313,11 @@ func APIPDaoVoting(c *gin.Context) {
 		// todo: update sdk to get returnOTA
 	}
 
-	feeToken := wcommon.ETH_UT_TOKEN
+	feeToken := wcommon.ETH_UT_TOKEN_MAINNET
+	if config.NetworkID == "testnet" {
+		feeToken = wcommon.ETH_UT_TOKEN_TESTNET
+	}
+
 	feeAmount := 0
 	pfeeAmount := 0
 
@@ -371,10 +380,15 @@ func estimatePDaoFee() (*PDaoNetworkFeeResp, error) {
 
 	feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee), 18, 9)
 
+	feeToken := wcommon.ETH_UT_TOKEN_MAINNET
+	if config.NetworkID == "testnet" {
+		feeToken = wcommon.ETH_UT_TOKEN_TESTNET
+	}
+
 	return &PDaoNetworkFeeResp{
 		FeeAddress:        feeAddress,
 		FeeAddressShardID: int(feeAddressShardID),
-		TokenID:           wcommon.ETH_UT_TOKEN,
+		TokenID:           feeToken,
 		FeeAmount:         feeAmount,
 	}, nil
 

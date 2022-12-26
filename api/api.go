@@ -42,10 +42,10 @@ func StartAPIservice(cfg common.Config) {
 	}
 	store := persistence.NewInMemoryStore(time.Second)
 
-	// go cacheVaultState()
-	// go cacheSupportedPappsTokens()
-	// go cacheTokenList()
-	// go cacheBridgeNetworkInfos()
+	go cacheVaultState()
+	go cacheSupportedPappsTokens()
+	go cacheTokenList()
+	go cacheBridgeNetworkInfos()
 
 	r := gin.Default()
 
@@ -117,7 +117,7 @@ func StartAPIservice(cfg common.Config) {
 
 	//end pdao router ==========================================
 
-	// go prefetchSupportedTokenList()
+	go prefetchSupportedTokenList()
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
 	if err != nil {

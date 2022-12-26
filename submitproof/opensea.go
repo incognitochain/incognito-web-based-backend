@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 )
 
@@ -64,4 +66,26 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 
 	}
 	return nil
+}
+
+func updateOpenSeaCollections() {
+	for {
+		time.Sleep(8 * time.Second)
+		result, err := popensea.RetrieveCollectionList(config.OpenSeaAPI, config.OpenSeaAPIKey, 20, 0)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		err = database.DBSaveCollectionsInfo(result)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+	}
+}
+
+func watchCollections() {
+	for {
+		time.Sleep(8 * time.Second)
+	}
 }

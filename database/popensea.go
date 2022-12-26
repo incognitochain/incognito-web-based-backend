@@ -15,7 +15,7 @@ import (
 func DBSaveCollectionsInfo(list []popensea.CollectionDetail) error {
 	for _, collection := range list {
 		filter := bson.M{"address": bson.M{operator.Eq: collection.PrimaryAssetContracts[0].Address}}
-		update := bson.M{"$set": bson.M{"address": collection.PrimaryAssetContracts[0].Address, "name": collection.Name, "detail": collection}}
+		update := bson.M{"$set": bson.M{"address": collection.PrimaryAssetContracts[0].Address, "name": collection.Name, "detail": collection, "updated_at": time.Now()}}
 		ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 		_, err := mgm.Coll(&common.OpenseaCollectionData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 		if err != nil {
@@ -44,7 +44,7 @@ func DBSaveNFTDetail(list []popensea.NFTDetail) error {
 	for _, nft := range list {
 		uid := nft.AssetContract.Address + "-" + nft.TokenID
 		filter := bson.M{"uid": bson.M{operator.Eq: uid}}
-		update := bson.M{"$set": bson.M{"uid": uid, "address": nft.AssetContract.Address, "token_id": nft.TokenID, "name": nft.AssetContract.Name, "detail": nft}}
+		update := bson.M{"$set": bson.M{"uid": uid, "address": nft.AssetContract.Address, "token_id": nft.TokenID, "name": nft.AssetContract.Name, "detail": nft, "updated_at": time.Now()}}
 		ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 		_, err := mgm.Coll(&common.OpenseaAssetData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 		if err != nil {

@@ -100,7 +100,7 @@ func preCalcDefaultTokenList(tokenList []wcommon.TokenInfo, pappTokens []PappSup
 							if err != nil {
 								swapContractID, err = getSwapContractID(utk.TokenID, netID, pappTokens)
 								if err != nil {
-									log.Println(err)
+									// log.Println(err)
 								}
 							}
 						}

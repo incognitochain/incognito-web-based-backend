@@ -23,6 +23,7 @@ const (
 	EVMGasLimitETH     = 800000
 	EVMGasLimitPancake = 600000
 	MinEVMTxs          = uint64(10)
+	PRV_TOKENID        = "0000000000000000000000000000000000000000000000000000000000000004"
 )
 
 const (
@@ -37,6 +38,8 @@ const (
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
+	StatusSuccess      = "success"
+	StatusFailed       = "failed"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"

@@ -30,7 +30,7 @@ func DBRetrievePendingUnshieldTxs(offset, limit int64) ([]common.UnshieldTxData,
 	if limit == 0 {
 		limit = int64(10000)
 	}
-	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPending, common.StatusExecuting}}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.UnshieldTxData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Skip:  &offset,

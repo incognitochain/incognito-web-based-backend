@@ -122,12 +122,12 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 		var targets []common.Address
 		var values []*big.Int
 		var calldatas [][]byte
-		for i, _ := range targets {
-			targets = append(targets, common.HexToAddress(strings.Split(prop.Targets, ",")[i]))
-			value, _ := new(big.Int).SetString(strings.Split(prop.Values, ",")[i], 10)
-			values = append(values, value)
-			calldatas = append(calldatas, common.Hex2Bytes(strings.Split(prop.Calldatas, ",")[i]))
-		}
+		// for i, _ := range targets {
+		targets = append(targets, common.HexToAddress(strings.Split(prop.Targets, ",")[0]))
+		value, _ := new(big.Int).SetString(strings.Split(prop.Values, ",")[0], 10)
+		values = append(values, value)
+		calldatas = append(calldatas, common.Hex2Bytes(strings.Split(prop.Calldatas, ",")[0]))
+		// }
 		signature := common.Hex2Bytes(prop.CreatePropSignature)
 		tx, err = gov.ProposeBySig(
 			executor,

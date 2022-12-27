@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	UNSHIELD_PRV   = 1
-	SHIELD_BY_SIGN = 2
-	SHIELD         = 3
+	UNSHIELD_PRV     = 1
+	SHIELD_BY_SIGN   = 2
+	RESHIELD_BY_SIGN = 3
 )
 
 func CreatePRVOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config, pappType int) (*wcommon.ExternalTxStatus, error) {
@@ -150,7 +150,20 @@ func submitTxPRVVoteOutChain(executor *bind.TransactOpts, submitType uint8, payl
 			toByte32(signature[:32]),
 			toByte32(signature[32:64]),
 		)
-	case SHIELD:
+	case RESHIELD_BY_SIGN:
+		var rShield Reshield
+		err = json.Unmarshal(payload, &rShield)
+		if err != nil {
+			return nil, err
+		}
+		signature := common.Hex2Bytes(rShield.Signature)
+		tx, err = prv.BurnBySignUnShieldTx(
+			executor,
+			common.HexToHash(rShield.BurnTxId),
+			signature[64]+27,
+			toByte32(signature[:32]),
+			toByte32(signature[32:64]),
+		)
 	default:
 		return nil, errors.New("invalid submit type")
 	}

@@ -1381,8 +1381,19 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				log.Println("estimateSwapFee error", err)
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 			}
+			pappList, err := database.DBRetrievePAppsByNetwork(callNetworkList[0])
+			if err != nil {
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+
+			}
+			contract, exist := pappList.AppContracts["opensea"]
+			if !exist {
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+
+			}
 			quoteDatas = append(quoteDatas, QuoteDataResp{
-				AppName: "opensea",
+				AppName:      "opensea",
+				CallContract: contract,
 				Fee: []PappNetworkFee{{
 					TokenID: openseaFee.TokenID,
 					Amount:  openseaFee.Amount,

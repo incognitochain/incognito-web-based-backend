@@ -2,6 +2,7 @@ package interswap
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
@@ -147,8 +148,9 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 	}
 
 	// find the best path
-	bestPath := InterSwapPath{}
-	for _, path := range paths {
+	bestPath := paths[0]
+	for i := 1; i < len(paths); i++ {
+		path := paths[i]
 
 		totalFee, err := calTotalFee(path)
 		if err != nil {
@@ -166,6 +168,10 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 
 	bytes, _ = json.Marshal(bestPath)
 	fmt.Printf("bestPath: %v\n", string(bytes))
+
+	if len(bestPath.Paths) != 2 {
+		return nil, errors.New("Interswap Invalid best path")
+	}
 
 	// deduct the fee of the second of tx from MinAcceptedAmt
 	amountOut, err := subStrs(bestPath.Paths[1].AmountOut, bestPath.Paths[1].Fee[0].AmountInBuyToken)

@@ -36,11 +36,16 @@ func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte
 	}
 
 	// todo thachtb: update query governance contract address
-	pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
+	// pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	papps, err := database.DBRetrievePAppsByNetwork(network)
 	if err != nil {
 		return nil, err
 	}
-
+	contract := papps.AppContracts["pdao"]
 	networkChainId := networkInfo.ChainID
 
 	networkChainIdInt := new(big.Int)
@@ -59,7 +64,7 @@ retry:
 			continue
 		}
 
-		gv, err := governance.NewGovernance(common.HexToAddress(pappAddress.ContractAddress), evmClient)
+		gv, err := governance.NewGovernance(common.HexToAddress(contract), evmClient)
 		if err != nil {
 			log.Println(err)
 			continue

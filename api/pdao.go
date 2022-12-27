@@ -152,34 +152,9 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 	}
 
-	log.Println("Begin store db!")
-	// store request to DB
-	proposal := &wcommon.Proposal{
-		SubmitBurnTx:        req.Txhash,
-		SubmitProposalTx:    "",
-		Status:              wcommon.StatusSubmitting,
-		ProposalID:          "",
-		Proposer:            "",
-		Targets:             strings.Join(req.Targets, ","),
-		Values:              strings.Join(req.Values, ","),
-		Signatures:          strings.Join(req.Signatures, ","),
-		Calldatas:           strings.Join(req.Calldatas, ","),
-		CreatePropSignature: req.CreatePropSignature,
-		PropVoteSignature:   req.PropVoteSignature,
-		ReShieldSignature:   req.ReShieldSignature,
-		Description:         req.Description,
-		Title:               req.Title,
-	}
-	// insert db
-	if err = database.DBInsertProposalTable(proposal); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
-	log.Println("Insert db success!")
-
 	// check valid info:
 	var feeAmount uint64
-	var pfeeAmount uint64
+	var pfeeAmount uint64 // 0.3% no care
 	var feeToken string
 
 	var requireFee uint64
@@ -224,8 +199,12 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 		tokenID = burnTokenInfo.TokenID
 		uTokenID = burnTokenInfo.TokenID
+
 		burntAmount = md.BurningAmount
+
 		externalAddr = md.RemoteAddress
+
+		isUnifiedToken = true
 		// todo: update sdk to get returnOTA
 	}
 
@@ -258,6 +237,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 	}
 
+	// get fee info from estFee function for checking:
 	feeDao, err := estimatePDaoFee()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
@@ -289,6 +269,31 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+
+	log.Println("Begin store db!")
+	// store request to DB
+	proposal := &wcommon.Proposal{
+		SubmitBurnTx:        req.Txhash,
+		SubmitProposalTx:    "",
+		Status:              wcommon.StatusSubmitting,
+		ProposalID:          "",
+		Proposer:            "",
+		Targets:             strings.Join(req.Targets, ","),
+		Values:              strings.Join(req.Values, ","),
+		Signatures:          strings.Join(req.Signatures, ","),
+		Calldatas:           strings.Join(req.Calldatas, ","),
+		CreatePropSignature: req.CreatePropSignature,
+		PropVoteSignature:   req.PropVoteSignature,
+		ReShieldSignature:   req.ReShieldSignature,
+		Description:         req.Description,
+		Title:               req.Title,
+	}
+	// insert db
+	if err = database.DBInsertProposalTable(proposal); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	log.Println("Insert db success!")
 
 	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
 	return
@@ -370,6 +375,9 @@ func APIPDaoVoting(c *gin.Context) {
 		uTokenID = burnTokenInfo.TokenID
 		burntAmount = md.BurningAmount
 		externalAddr = md.RemoteAddress
+
+		isUnifiedToken = true
+
 		// todo: update sdk to get returnOTA
 	}
 
@@ -438,12 +446,25 @@ func estimatePDaoFee() (*PDaoNetworkFeeResp, error) {
 		_, feeAddressShardID = scommon.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
 	}
 
-	feeAmount := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee), 18, 9)
-
-	feeToken := wcommon.ETH_UT_TOKEN_MAINNET
+	ethToken := wcommon.ETH_UT_TOKEN_MAINNET
 	if config.NetworkID == "testnet" {
-		feeToken = wcommon.ETH_UT_TOKEN_TESTNET
+		ethToken = wcommon.ETH_UT_TOKEN_TESTNET
 	}
+
+	feeAmountEth := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(fmt.Sprintf("%v", gasFee), 18, 9)
+
+	ethTokenInfo, err := getTokenInfo(ethToken)
+	if err != nil {
+		fmt.Println("getTokenInfo", err.Error())
+		return nil, err
+	}
+
+	// for now, get PRV fee, will be remove when we have new update....
+	privacyFee := uint64(float64(feeAmountEth) * ethTokenInfo.PricePrv)
+	fmt.Println("PRV Fee =================> ", privacyFee)
+
+	feeToken := wcommon.PRV_TOKEN
+	feeAmount := privacyFee
 
 	return &PDaoNetworkFeeResp{
 		FeeAddress:        feeAddress,

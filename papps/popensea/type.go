@@ -277,7 +277,7 @@ type NFTDetail struct {
 	} `json:"creator"`
 	Traits []struct {
 		TraitType   string      `json:"trait_type"`
-		Value       string      `json:"value"`
+		Value       interface{} `json:"value"`
 		DisplayType interface{} `json:"display_type"`
 		MaxValue    interface{} `json:"max_value"`
 		TraitCount  int         `json:"trait_count"`

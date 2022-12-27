@@ -674,19 +674,23 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				break
 			case wcommon.ExternalTxTypePdaoProposal:
 				txtype = "pdao-proposal"
-				err = database.DBUpdatePdaoProposalStatus(tx.IncRequestTx, wcommon.StatusPdaOutchainTxSuccess)
+
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
 				if err != nil {
 					return err
 				}
 			case wcommon.ExternalTxTypePdaoVote:
 				txtype = "pdao-vote"
-				err = database.DBUpdatePdaoVoteStatus(tx.IncRequestTx, wcommon.StatusPdaOutchainTxSuccess)
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
 				if err != nil {
 					return err
 				}
 			case wcommon.ExternalTxTypePdaoCancel:
 				txtype = "pdao-cancel"
-				err = database.DBUpdatePdaoCancelStatus(tx.IncRequestTx, wcommon.StatusPdaOutchainTxSuccess)
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				err = database.DBUpdatePdaoCancelStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
 				if err != nil {
 					return err
 				}

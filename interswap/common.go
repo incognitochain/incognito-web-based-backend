@@ -41,8 +41,8 @@ func InitSupportedMidTokens(network string) error {
 	case "testnet":
 		SupportedMidTokens = []string{
 			"b35756452dc1fa1260513fa121c20c2b516a8645f8d496fa4235274dac0b1b52", // LINK (unified)
-			"3a526c0fa9abfc3e3e37becc52c5c10abbb7897b0534ad17018e766fc6133590", // USDT
-			"b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d", // ETH
+			// "3a526c0fa9abfc3e3e37becc52c5c10abbb7897b0534ad17018e766fc6133590", // USDT
+			// "b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d", // ETH
 		}
 	default:
 		return errors.New("Invalid supported network")

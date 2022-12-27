@@ -144,7 +144,18 @@ func processInterswapPendingFirstTx(txData common.InterSwapTxData) error {
 							isMidRefund = true
 						}
 
+						minAmountOut, err := strToFloat64(pAppAddOn.AmountOutRaw)
+						if err != nil {
+							log.Printf("InterswapID %v Addon Estimate swap can not convert AmountOutRaw err\n", interswapTxID, err)
+							return fmt.Errorf("InterswapID %v Addon Estimate swap can not convert AmountOutRaw err\n", interswapTxID, err)
+						}
+
+						if uint64(minAmountOut) < txData.FinalMinExpectedAmt {
+							log.Printf("InterswapID %v Addon Estimate swap %v not valid with FinalMinExpectedAmt\n", interswapTxID, uint64(minAmountOut))
+							isMidRefund = true
+						}
 					} else {
+						log.Printf("InterswapID %v Not found trade path for add on tx\n", interswapTxID)
 						isMidRefund = true
 					}
 
@@ -168,13 +179,33 @@ func processInterswapPendingFirstTx(txData common.InterSwapTxData) error {
 						return nil
 					}
 
-					// log.Printf("InterswapID %v Not found trade path for add on tx\n", interswapTxID)
+					if pAppAddOn.Fee[0].TokenID != txData.MidToken {
+						log.Printf("InterswapID %v Estimate swap fee invalid, expected %v, got %v\n", interswapTxID, txData.MidToken, pAppAddOn.Fee[0].TokenID)
+						return fmt.Errorf("InterswapID %v Estimate swap fee invalid, expected %v, got %v\n", interswapTxID, txData.MidToken, pAppAddOn.Fee[0].TokenID)
+					}
+
+					addonSwapAmt := amtMidToken - pAppAddOn.Fee[0].Amount
 
 					// create addon tx
-					data := metadataBridge.BurnForCallRequestData{}
-					tx, err := incClient.CreateAndSendBurnForCallRequestTransaction(config.ISIncPrivKey, txData.MidToken, data, []string{}, []uint64{},
+					data := metadataBridge.BurnForCallRequestData{
+						BurningAmount: addonSwapAmt,
+
+						// ExternalNetworkID  : uint8(0),
+						// IncTokenID          :common.Hash {},
+						// ExternalCalldata    string           `json:"ExternalCalldata"`
+						// ExternalCallAddress string           `json:"ExternalCallAddress"`
+						// ReceiveToken        string           `json:"ReceiveToken"`
+						// RedepositReceiver   coin.OTAReceiver `json:"RedepositReceiver"`
+						// WithdrawAddress     string           `json:"WithdrawAddress"`
+					}
+					txBytes, _, err := incClient.CreateBurnForCallRequestTransaction(config.ISIncPrivKey, txData.MidToken, data, []string{}, []uint64{},
 						[]coin.PlainCoin{}, []uint64{}, []coin.PlainCoin{}, []uint64{})
-					fmt.Printf("tx addon: %v - Err %v", tx, err)
+					if err != nil {
+						log.Printf("InterswapID %v Create papp swap tx error %v\n", interswapTxID, err)
+						return fmt.Errorf("InterswapID %v Create papp swap tx error %v\n", interswapTxID, err)
+					}
+
+					fmt.Printf("tx addon: %v - Err %v", txBytes, err)
 
 					// // update addon swap info: amountFrom
 					// updatedAddonSwapInfo := task.AddOnSwapInfo

@@ -274,7 +274,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		SubmitBurnTx:        req.Txhash,
 		SubmitProposalTx:    "",
 		Status:              wcommon.StatusSubmitting,
-		ProposalID:          "",
+		ProposalID:          req.ProposalID,
 		Proposer:            "",
 		Targets:             strings.Join(req.Targets, ","),
 		Values:              strings.Join(req.Values, ","),

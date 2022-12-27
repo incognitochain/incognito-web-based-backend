@@ -452,10 +452,12 @@ type CreatProposalReq struct {
 	Txhash string `json:"Txhash" binding:"required"`
 	TxRaw  string `json:"TxRaw" binding:"required"`
 
-	Targets    []string //`json:"Targets" binding:"required"`
-	Values     []string //`json:"Values" binding:"required"`
-	Signatures []string //`json:"Signatures"`
-	Calldatas  []string //`json:"Calldatas"  binding:"required"`
+	ProposalID string `json:"ProposalID" binding:"required"`
+
+	Targets    []string `json:"Targets" binding:"required"`
+	Values     []string `json:"Values" binding:"required"`
+	Signatures []string `json:"Signatures"`
+	Calldatas  []string `json:"Calldatas"  binding:"required"`
 
 	Description         string `json:"Description"  binding:"required"`
 	Title               string `json:"Title"  binding:"required"`
@@ -465,7 +467,7 @@ type CreatProposalReq struct {
 }
 
 type SubmitVoteReq struct {
-	Txhash            string `json:"txhash" binding:"required"`
+	Txhash            string `json:"Txhash" binding:"required"`
 	TxRaw             string
 	ProposalID        string `json:"ProposalID" binding:"required"`
 	Vote              uint8  `json:"Vote" binding:"required"`

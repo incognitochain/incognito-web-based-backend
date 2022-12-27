@@ -21,3 +21,4 @@ devenv/data
 webservice
 ggc.json
 service.env
+deploy.sh

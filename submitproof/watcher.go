@@ -678,25 +678,46 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				txtype = "pdao-proposal"
 
 				inctx := strings.Split(tx.IncRequestTx, "_")
-				err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
-				if err != nil {
-					return err
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
 				}
+
 			case wcommon.ExternalTxTypePdaoVote:
 				txtype = "pdao-vote"
 				inctx := strings.Split(tx.IncRequestTx, "_")
-				err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
-				if err != nil {
-					return err
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
 				}
 			case wcommon.ExternalTxTypePdaoCancel:
 				txtype = "pdao-cancel"
 				inctx := strings.Split(tx.IncRequestTx, "_")
-				err = database.DBUpdatePdaoCancelStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
-				if err != nil {
-					return err
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoCancelStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoCancelStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
 				}
-
 			default:
 				txtype = "unknown"
 			}

@@ -31,6 +31,7 @@ type PappNetworkFee struct {
 
 type QuoteData struct {
 	AppName              string
+	PAppNetwork          string
 	CallContract         string
 	AmountIn             string
 	AmountInRaw          string
@@ -403,6 +404,7 @@ func GetBestRoute(paths map[string][]QuoteData) map[string]*QuoteData {
 
 		// find the best one for all papp
 		if network != IncNetworkStr {
+			tmpBestPath.PAppNetwork = network
 			if bestPAppPath.AppName == "" {
 				bestPAppPath = tmpBestPath
 			} else if isBetter, err := isBetterQuoteData(tmpBestPath, bestPAppPath); err == nil && isBetter {

@@ -167,3 +167,22 @@ func convertFloat64ToWithoutDecStr(amt uint64, tokenID string) string {
 	tmp := float64(amt) / float64(math.Pow(10, DefaultDecimal))
 	return float64ToStr(tmp)
 }
+
+func getExternalNetworkID(networkIDStr string) (int, error) {
+	switch networkIDStr {
+	case common.NETWORK_ETH:
+		return common.NETWORK_ETH_ID, nil
+	case common.NETWORK_BSC:
+		return common.NETWORK_BSC_ID, nil
+	case common.NETWORK_PLG:
+		return common.NETWORK_PLG_ID, nil
+	case common.NETWORK_FTM:
+		return common.NETWORK_FTM_ID, nil
+	case common.NETWORK_AVAX:
+		return common.NETWORK_AVAX_ID, nil
+	case common.NETWORK_AURORA:
+		return common.NETWORK_AURORA_ID, nil
+	default:
+		return 0, errors.New("Invalid networkIDStr")
+	}
+}

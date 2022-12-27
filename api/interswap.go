@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -44,10 +43,18 @@ type SubmitInterSwapTxRequest struct {
 	// store DB InterSwap
 	// worker: get status by load from DB (Lam)
 
-	TxRaw         string
-	TxHash        string
-	PathType      int
-	AddOnSwapInfo interswap.AddOnSwapInfo
+	TxRaw  string
+	TxHash string
+
+	FromToken           string
+	ToToken             string
+	MidToken            string
+	FinalMinExpectedAmt uint64
+	Slippage            string
+
+	PAppName     string
+	PAppNetwork  string
+	PAppContract string
 
 	OTARefundFee string // user's OTA to receive refunded swap papp fee (sender is BE, receiver is user)
 	OTARefund    string // user's OTA to receive fund from InterswapBE only in case PappPdexType and the first tx is reverted (sender is InterswapBE, receiver is user)
@@ -55,42 +62,54 @@ type SubmitInterSwapTxRequest struct {
 	OTAToToken   string // user's OTA to receive buy token
 }
 
-func ValidateAddOnSwapInfo(addOnSwapInfo interswap.AddOnSwapInfo, expectSwapType int, expectedFromToken string) (bool, error) {
-	if addOnSwapInfo.FromToken != expectedFromToken {
-		return false, fmt.Errorf("From token in addon swap info is invalid: expected %v - got %v", expectedFromToken, addOnSwapInfo.FromToken)
+// TODO: 0xkraken
+// validate sanity request
+func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest) (bool, error) {
+	if interswap.IsMidTokens(req.ToToken) || interswap.IsMidTokens(req.FromToken) {
+		return false, errors.New("FromToken and ToToken should be diff from midToken")
 	}
 
-	if addOnSwapInfo.ToToken == "" {
-		return false, errors.New("The add on swap info ToToken is required")
+	if !interswap.IsMidTokens(req.MidToken) {
+		return false, errors.New("MidToken is invalid")
 	}
 
-	if addOnSwapInfo.MinExpectedAmt == 0 {
-		return false, errors.New("The add on swap info MinExpectedAmt must be greater than 0")
-	}
+	return true, nil
 
-	switch expectSwapType {
-	case PdexSwapType:
-		{
-			if addOnSwapInfo.AppName != "pdex" {
-				return false, errors.New("The add on swap info must be pdex")
-			}
-			return true, nil
-		}
-	case PappSwapType:
-		{
-			if addOnSwapInfo.AppName == "pdex" {
-				return false, errors.New("The add on swap info must be papp")
-			}
-			if addOnSwapInfo.CallContract == "" {
-				return false, errors.New("The add on swap info CallContract is required")
-			}
-			return true, nil
-		}
-	default:
-		{
-			return false, errors.New("Invalid swap type")
-		}
-	}
+	// if addOnSwapInfo.FromToken != expectedFromToken {
+	// 	return false, fmt.Errorf("From token in addon swap info is invalid: expected %v - got %v", expectedFromToken, addOnSwapInfo.FromToken)
+	// }
+
+	// if addOnSwapInfo.ToToken == "" {
+	// 	return false, errors.New("The add on swap info ToToken is required")
+	// }
+
+	// if addOnSwapInfo.MinExpectedAmt == 0 {
+	// 	return false, errors.New("The add on swap info MinExpectedAmt must be greater than 0")
+	// }
+
+	// switch expectSwapType {
+	// case PdexSwapType:
+	// 	{
+	// 		if addOnSwapInfo.AppName != "pdex" {
+	// 			return false, errors.New("The add on swap info must be pdex")
+	// 		}
+	// 		return true, nil
+	// 	}
+	// case PappSwapType:
+	// 	{
+	// 		if addOnSwapInfo.AppName == "pdex" {
+	// 			return false, errors.New("The add on swap info must be papp")
+	// 		}
+	// 		if addOnSwapInfo.CallContract == "" {
+	// 			return false, errors.New("The add on swap info CallContract is required")
+	// 		}
+	// 		return true, nil
+	// 	}
+	// default:
+	// 	{
+	// 		return false, errors.New("Invalid swap type")
+	// 	}
+	// }
 }
 
 // TODO: 0xkraken
@@ -118,13 +137,14 @@ func APISubmitInterSwapTx(c *gin.Context) {
 	var txHash string
 	var rawTxBytes []byte
 
-	// TODO: validate FinalOTAReceivers
-	// if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
-	// 	return
-	// }
+	// validate sanity req
+	isValidSanity, err := ValidateSubmitInterSwapTxRequest(req)
+	if err != nil || !isValidSanity {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid submit interswap req %v", err)})
+		return
+	}
 
-	// validate raw tx 1
+	// decode raw tx 1
 	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid raw tx")})
@@ -173,24 +193,30 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 
-			// validate add-on swap info
-			isValidAddOn, err := ValidateAddOnSwapInfo(req.AddOnSwapInfo, PdexSwapType, md.Data[0].ReceiveToken)
-			if err != nil || !isValidAddOn {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid addon swap info  %v", err)})
-				return
-			}
+			// TODO: validate tx info with req (fromToken, midToken,...)
 
 			// store DB to InterSwap
 			// to avoid missing db record since the storing db error occurs in while the tx swap was submitted
-			interSwapInfoStr, _ := json.MarshalIndent(req.AddOnSwapInfo, "", "\t")
 			status := interswap.FirstPending
 			interswapInfo := beCommon.InterSwapTxData{
-				TxID:          txHash,
-				TxRaw:         req.TxRaw,
-				AddOnSwapInfo: string(interSwapInfoStr),
-				OTARefundFee:  req.OTARefundFee,
-				OTAFromToken:  req.OTAFromToken,
-				OTAToToken:    req.OTAToToken,
+				TxID:  txHash,
+				TxRaw: req.TxRaw,
+
+				OTARefundFee: req.OTARefundFee,
+				OTARefund:    req.OTARefund,
+				OTAFromToken: req.OTAFromToken,
+				OTAToToken:   req.OTAToToken,
+
+				FromToken:           md.BurnTokenID.String(),
+				ToToken:             req.ToToken,
+				MidToken:            req.MidToken,
+				PathType:            interswap.PAppToPdex,
+				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
+				Slippage:            req.Slippage,
+
+				PAppName:     req.PAppName,
+				PAppNetwork:  req.PAppNetwork,
+				PAppContract: req.PAppContract,
 
 				Status:    status,
 				StatusStr: interswap.StatusStr[status],
@@ -219,10 +245,38 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				// TODO: update DB status failed
 				return
 			}
+			msgParam := interswap.InterswapSubmitTxTask{
+				TxID:       txHash,
+				TxRawBytes: rawTxBytes,
+
+				OTARefundFee: req.OTARefundFee,
+				OTARefund:    req.OTARefund,
+				OTAFromToken: req.OTAFromToken,
+				OTAToToken:   req.OTAToToken,
+
+				FromToken:           md.BurnTokenID.String(),
+				ToToken:             req.ToToken,
+				MidToken:            req.MidToken,
+				PathType:            interswap.PAppToPdex,
+				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
+
+				PAppName:     req.PAppName,
+				PAppNetwork:  req.PAppNetwork,
+				PAppContract: req.PAppContract,
+
+				Status:    status,
+				StatusStr: interswap.StatusStr[status],
+				UserAgent: userAgent,
+				Error:     "",
+			}
 
 			// call assigner to publish msg to Interswap Worker
-			submitproof.PublishMsgInterswapTx(interswap.PAppToPdex, txHash, rawTxBytes, req.AddOnSwapInfo,
-				req.OTARefundFee, req.OTAFromToken, interswapInfo.OTAToToken, status, interswap.StatusStr[status], "")
+			_, err = submitproof.PublishMsgInterswapTx(msgParam)
+			if err != nil {
+				// TODO: Update DB status failed
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+				return
+			}
 
 			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": interswap.FirstPending}})
 			return
@@ -253,23 +307,28 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 
-			// validate add-on swap info
-			isValidAddOn, err := ValidateAddOnSwapInfo(req.AddOnSwapInfo, PappSwapType, buyTokenID.String())
-			if err != nil || !isValidAddOn {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid addon swap info  %v", err)})
-				return
-			}
-
 			// store DB to InterSwap before broadcast tx
-			interSwapInfoStr, _ := json.MarshalIndent(req.AddOnSwapInfo, "", "\t")
+
 			status := interswap.FirstPending
 			interswapInfo := beCommon.InterSwapTxData{
-				TxID:          txHash,
-				TxRaw:         req.TxRaw,
-				AddOnSwapInfo: string(interSwapInfoStr),
-				OTARefundFee:  req.OTARefundFee,
-				OTAFromToken:  req.OTAFromToken,
-				OTAToToken:    req.OTAToToken,
+				TxID:  txHash,
+				TxRaw: req.TxRaw,
+
+				OTARefundFee: req.OTARefundFee,
+				OTARefund:    req.OTARefund,
+				OTAFromToken: req.OTAFromToken,
+				OTAToToken:   req.OTAToToken,
+
+				FromToken:           req.FromToken,
+				ToToken:             req.ToToken,
+				MidToken:            req.MidToken,
+				PathType:            interswap.PdexToPApp,
+				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
+				Slippage:            req.Slippage,
+
+				PAppName:     req.PAppName,
+				PAppNetwork:  req.PAppNetwork,
+				PAppContract: req.PAppContract,
 
 				Status:    interswap.FirstPending,
 				StatusStr: interswap.StatusStr[status],
@@ -302,9 +361,38 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 
+			msgParam := interswap.InterswapSubmitTxTask{
+				TxID:       txHash,
+				TxRawBytes: rawTxBytes,
+
+				OTARefundFee: req.OTARefundFee,
+				OTARefund:    req.OTARefund,
+				OTAFromToken: req.OTAFromToken,
+				OTAToToken:   req.OTAToToken,
+
+				FromToken:           req.FromToken,
+				ToToken:             req.ToToken,
+				MidToken:            req.MidToken,
+				PathType:            interswap.PdexToPApp,
+				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
+
+				PAppName:     req.PAppName,
+				PAppNetwork:  req.PAppNetwork,
+				PAppContract: req.PAppContract,
+
+				Status:    interswap.FirstPending,
+				StatusStr: interswap.StatusStr[status],
+				UserAgent: userAgent,
+				Error:     "",
+			}
+
 			// call assigner to publish msg to Interswap Worker
-			submitproof.PublishMsgInterswapTx(interswap.PdexToPApp, txHash, rawTxBytes, req.AddOnSwapInfo,
-				req.OTARefundFee, req.OTAFromToken, interswapInfo.OTAToToken, status, interswap.StatusStr[status], "")
+			_, err = submitproof.PublishMsgInterswapTx(msgParam)
+			if err != nil {
+				// TODO: Update DB status failed
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+				return
+			}
 
 			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": interswap.FirstPending}})
 			return

@@ -295,41 +295,19 @@ func SubmitUnshieldTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken st
 }
 
 func PublishMsgInterswapTx(
-	pathType int,
-	txhash string,
-	rawTxData []byte,
-	AddOnSwapInfo interswap.AddOnSwapInfo,
-	OTARefundFee string,
-	OTAFromToken string,
-	OTAToToken string,
-	Status int,
-	StatusStr string,
-	err string,
+	task interswap.InterswapSubmitTxTask,
 ) (interface{}, error) {
-	task := interswap.InterswapSubmitTxTask{
-		TxID:          txhash,
-		TxRawBytes:    rawTxData,
-		AddOnSwapInfo: AddOnSwapInfo,
-
-		OTARefundFee: OTARefundFee,
-		OTAFromToken: OTAFromToken,
-		OTAToToken:   OTAToToken,
-
-		Status:    Status,
-		StatusStr: StatusStr,
-		Error:     err,
-	}
 	taskBytes, _ := json.Marshal(task)
 
 	taskType := interswap.InterswapPdexPappTxTask
-	if pathType == interswap.PAppToPdex {
+	if task.PathType == interswap.PAppToPdex {
 		taskType = interswap.InterswapPappPdexTask
 	}
 
 	ctx := context.Background()
 	msg := &pubsub.Message{
 		Attributes: map[string]string{
-			"txhash": txhash,
+			"txhash": task.TxID,
 			"task":   taskType,
 		},
 		Data: taskBytes,

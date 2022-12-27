@@ -154,15 +154,26 @@ type DexSwapTrackData struct {
 type InterSwapTxData struct {
 	mgm.DefaultModel `bson:",inline"`
 	// txID of the first tx, index for one interswap request
-	TxID  string `json:"txid" bson:"txid"`
-	TxRaw string `json:"txraw" bson:"txraw"`
-
-	// marshal QuoteData struct
-	AddOnSwapInfo string `json:"addon_swapinfo" bson:"addon_swapinfo"`
+	TxID                string `json:"txid" bson:"txid"`
+	TxRaw               string `json:"txraw" bson:"txraw"`
+	FromToken           string `json:"fromtoken" bson:"fromtoken"`
+	ToToken             string `json:"totoken" bson:"totoken"`
+	MidToken            string `json:"midtoken" bson:"midtoken"`
+	PathType            int    `json:"pathtype" bson:"pathtype"`
+	FinalMinExpectedAmt uint64 `json:"final_minacceptedamount" bson:"final_minacceptedamount"`
+	Slippage            string `json:"slippage" bson:"slippage"`
 
 	OTARefundFee string `json:"ota_refundfee" bson:"ota_refundfee"`
+	OTARefund    string `json:"ota_refund" bson:"ota_refund"`
 	OTAFromToken string `json:"ota_fromtoken" bson:"ota_fromtoken"`
 	OTAToToken   string `json:"ota_totoken" bson:"ota_totoken"`
+
+	AddOnTxID    string `json:"addon_txid" bson:"addon_txid"`
+	PAppName     string `json:"papp_name" bson:"papp_name"`
+	PAppNetwork  string `json:"papp_network" bson:"papp_network"`
+	PAppContract string `json:"papp_contract" bson:"papp_contract"`
+
+	TxIDRefund string `json:"txidrefund" bson:"txidrefund"`
 
 	Status    int    `json:"status" bson:"status"`
 	StatusStr string `json:"statusstr" bson:"statusstr"`

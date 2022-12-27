@@ -126,7 +126,7 @@ func APIEstimateBuyFee(c *gin.Context) {
 	}{
 		Fee:          feeAmount,
 		Calldata:     callData,
-		CallContract: contract,
+		CallContract: contract[2:],
 		ReceiveToken: "0x1",
 	}
 	c.JSON(200, gin.H{"Result": result})

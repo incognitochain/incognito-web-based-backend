@@ -111,3 +111,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+
+replace github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221221035741-c16407cf7bfc => /Users/autonomous/go/src/github.com/incognitochain/go-incognito-sdk-v2

@@ -15,22 +15,27 @@ const DefaultDecimal = 9
 
 var InterSwapStatus = map[string]int{}
 
+//TODO
 const (
-	FirstPending    int = 1
-	FirstSuccess        = 2
-	FirstRefunding      = 3
-	FirstRefunded       = 4
-	SecondPending       = 5
-	SecondSuccess       = 6
+	SubmitFailed    int = 0
+	FirstPending        = 1
+	FirstRefunding      = 2
+	FirstRefunded       = 3
+	MidRefunding        = 4
+	MidRefunded         = 5
+	SecondPending       = 6
 	SecondRefunding     = 7
 	SecondRefunded      = 8
+	SecondSuccess       = 9
 )
 
 var StatusStr = map[int]string{
+	SubmitFailed:    "Submit failed",
 	FirstPending:    "Pending",
-	FirstSuccess:    "Pending",
 	FirstRefunding:  "Refunding",
 	FirstRefunded:   "Refunded",
+	MidRefunding:    "Refunding",
+	MidRefunded:     "Refunded",
 	SecondPending:   "Pending",
 	SecondSuccess:   "Success",
 	SecondRefunding: "Refunding",

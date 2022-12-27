@@ -2,7 +2,6 @@ package interswap
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"strings"
 
@@ -38,11 +37,6 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-
-	// err = InitSupportedMidTokens(network)
-	// if err != nil {
-	// 	return err
-	// }
 
 	// submit OTA key to fullnode
 	if cfg.ISIncPrivKey != "" {
@@ -105,83 +99,101 @@ func ProcessInterswapTxRequest(ctx context.Context, m *pubsub.Message) {
 }
 
 type InterswapSubmitTxTask struct {
-	TxID          string
-	TxRawBytes    []byte
-	AddOnSwapInfo AddOnSwapInfo
+	TxID                string `json:"txid" bson:"txid"`
+	TxRawBytes          []byte `json:"txraw" bson:"txraw"`
+	FromToken           string `json:"fromtoken" bson:"fromtoken"`
+	ToToken             string `json:"totoken" bson:"totoken"`
+	MidToken            string `json:"midtoken" bson:"midtoken"`
+	PathType            int    `json:"pathtype" bson:"pathtype"`
+	FinalMinExpectedAmt uint64 `json:"final_minacceptedamount" bson:"final_minacceptedamount"`
 
-	OTARefundFee string
-	OTAFromToken string
-	OTAToToken   string
+	OTARefundFee string `json:"ota_refundfee" bson:"ota_refundfee"`
+	OTARefund    string `json:"ota_refund" bson:"ota_refund"`
+	OTAFromToken string `json:"ota_fromtoken" bson:"ota_fromtoken"`
+	OTAToToken   string `json:"ota_totoken" bson:"ota_totoken"`
 
-	Status    int
-	StatusStr string
-	Error     string
+	AddOnTxID    string `json:"addon_txid" bson:"addon_txid"`
+	PAppName     string `json:"papp_name" bson:"papp_name"`
+	PAppNetwork  string `json:"papp_network" bson:"papp_network"`
+	PAppContract string `json:"papp_contract" bson:"papp_contract"`
+
+	Status    int    `json:"status" bson:"status"`
+	StatusStr string `json:"statusstr" bson:"statusstr"`
+	UserAgent string `json:"useragent" bson:"useragent"`
+	Error     string `json:"error" bson:"error"`
 }
 
 func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
-	task := InterswapSubmitTxTask{}
-	err := json.Unmarshal(m.Data, &task)
-	if err != nil {
-		log.Println("processInterswapPathType1Task error decoding message", err)
-		m.Ack()
-		return
-	}
-
-	// get tx by hash
-	// txDetail, err := CallGetTxDetails(task.TxID)
-
-	// txDetail, err := incClient.GetTxDetail(task.TxID)
+	// task := InterswapSubmitTxTask{}
+	// err := json.Unmarshal(m.Data, &task)
 	// if err != nil {
-	// 	log.Println("GetTxDetail err", err)
-	// } else {
-	// 	if txDetail.IsInMempool {
-	// 		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusPending, "")
-	// 		if err != nil {
-	// 			log.Println(err)
-	// 			m.Nack()
-	// 			return
-	// 		}
-	// 	}
-	// 	if txDetail.IsInBlock {
-	// 		err = database.DBUpdatePappTxStatus(task.TxHash, wcommon.StatusExecuting, "")
-	// 		if err != nil {
-	// 			log.Println(err)
-	// 			m.Nack()
-	// 			return
-	// 		}
-	// 	}
+	// 	log.Println("processInterswapPathType1Task error decoding message", err)
 	// 	m.Ack()
 	// 	return
 	// }
 
-	// get swap tx status by calling api
-	_, pdexStatus, err := CallGetPdexSwapTxStatus(task.TxID, "")
-	if err != nil {
-		log.Println(err)
-		m.Nack()
-		return
-	}
-	if len(pdexStatus.RespondTxs) > 1 {
-		if pdexStatus.Status == "accepted" {
-			// // update addon swap info: amountFrom
-			// updatedAddonSwapInfo := task.AddOnSwapInfo
+	// // get tx by hash
+	// txDetail, err := incClient.GetTxDetail(task.TxID)
+	// if err != nil {
+	// 	log.Println("GetTxDetail err", err)
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		m.Nack() // TODO:
+	// 		return
+	// 	}
+	// } else {
+	// 	if txDetail.IsInBlock {
+	// 		err = database.DBUpdateInterswapTxStatus(task.TxID, FirstInBlock, StatusStr[FirstInBlock], "")
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			m.Nack()
+	// 			return
+	// 		}
+	// 	}
+	// }
 
-			// // re-calculate AmountIn for AddOn tx
-			// midTokenAmt := pdexStatus.RespondAmounts[0]
-			// amountStrMidToken := convertToWithoutDecStr(pdexStatus.RespondAmounts[0], pdexStatus.RespondTokens[0])
+	// // get swap tx status by calling api
+	// _, pdexStatus, err := CallGetPdexSwapTxStatus(task.TxID, task.MidToken)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	m.Nack()
+	// 	return
+	// }
+	// if len(pdexStatus.RespondTxs) > 1 {
+	// 	if pdexStatus.Status == "accepted" {
+	// 		// parse tx response to get received UTXO
+	// 		if len(pdexStatus.RespondTxs) != 1 {
 
-			// updatedAddonSwapInfo.AmountIn = amountStrMidToken
-			// updatedAddonSwapInfo.AmountInRaw = pdexStatus.RespondAmounts[0]
+	// 		}
+	// 		amtMidToken := pdexStatus.RespondAmounts[0]
 
-			// // check minAcceptedAmount of AddOn tx is still valid or not
+	// 		// validate
 
-		} else if pdexStatus.Status == "refund" {
+	// 		// re-estimate with addon tx
 
-		} else {
+	// 		// create addon tx
+	// 		data := metadataBridge.BurnForCallRequestData{}
+	// 		incClient.CreateAndSendBurnForCallRequestTransaction(config.ISIncPrivKey, task.MidToken)
 
-		}
+	// 		// // update addon swap info: amountFrom
+	// 		// updatedAddonSwapInfo := task.AddOnSwapInfo
 
-	}
+	// 		// // re-calculate AmountIn for AddOn tx
+	// 		// midTokenAmt := pdexStatus.RespondAmounts[0]
+	// 		// amountStrMidToken := convertToWithoutDecStr(pdexStatus.RespondAmounts[0], pdexStatus.RespondTokens[0])
+
+	// 		// updatedAddonSwapInfo.AmountIn = amountStrMidToken
+	// 		// updatedAddonSwapInfo.AmountInRaw = pdexStatus.RespondAmounts[0]
+
+	// 		// // check minAcceptedAmount of AddOn tx is still valid or not
+
+	// 	} else if pdexStatus.Status == "refund" {
+
+	// 	} else {
+
+	// 	}
+
+	// }
 
 	// get swap tx status by calling api
 	// database.DBGetPappTxStatus()
@@ -312,4 +324,5 @@ func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
 	// }()
 
 	m.Ack()
+	return
 }

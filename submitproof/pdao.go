@@ -257,19 +257,19 @@ func watchSuccessProposal() {
 
 		time.Sleep(10 * time.Second)
 
-		log.Println("checking proposal auto vote....")
+		go slacknoti.SendSlackNoti("checking proposal auto vote....")
 
 		proposals, err := database.DBGetSuccessProposalNoVoted()
 		if err != nil {
-			log.Println("watchSuccessProposal DBGetSuccessProposalNoVoted err:", err)
+			go slacknoti.SendSlackNoti("watchSuccessProposal DBGetSuccessProposalNoVoted err:" + err.Error())
 		}
 		log.Println("there are ", len(proposals), "records!")
 
 		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
 
-		evmClient, err := ethclient.Dial(networkInfo.Endpoints[0])
+		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
 		if err != nil {
-			log.Println(err)
+			go slacknoti.SendSlackNoti("watchSuccessProposal DBGetSuccessProposalNoVoted err:" + err.Error())
 			continue
 		}
 
@@ -283,13 +283,13 @@ func watchSuccessProposal() {
 			proposalID, ok := big.NewInt(0).SetString(p.ProposalID, 10)
 
 			if !ok {
-				log.Println("watchSuccessProposal parse  ProposalID ok:", ok)
+				go slacknoti.SendSlackNoti("watchSuccessProposal parse  ProposalID no ok")
 				continue
 			}
 
 			prop, err := gv.Proposals(nil, proposalID)
 			if err != nil {
-				log.Println("watchSuccessProposal Proposals err:", err)
+				go slacknoti.SendSlackNoti("watchSuccessProposal Proposals err:" + err.Error() + ", proposalID: " + p.ProposalID + networkInfo.Endpoints[1])
 				continue
 			}
 
@@ -323,14 +323,14 @@ func watchSuccessProposal() {
 
 				_, err = SubmitPdaoOutchainTx(inTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
 				if err != nil {
-					log.Println("watchSuccessProposal SubmitPdaoOutchainTx err:", err)
+					go slacknoti.SendSlackNoti("watchSuccessProposal SubmitPdaoOutchainTx err:" + err.Error())
 					continue
 				}
 
 				err = database.DBInsertVoteTable(vote)
 
 				if err != nil {
-					log.Println("watchSuccessProposal DBInsertVoteTable err:", err)
+					go slacknoti.SendSlackNoti("watchSuccessProposal DBInsertVoteTable err:" + err.Error())
 					continue
 				}
 				// update proposal:

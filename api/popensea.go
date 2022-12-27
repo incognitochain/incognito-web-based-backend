@@ -106,18 +106,18 @@ func APIEstimateBuyFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-
+	contract, exist := pappList.AppContracts["opensea"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea contract not found"})
+		return
+	}
 	callData, err := papps.BuildOpenSeaCalldata(nftDetail, recipient)
 	if err != nil {
 		fmt.Println("estimateOpenSeaFee", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	contract, exist := pappList.AppContracts["opensea"]
-	if !exist {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea contract not found"})
-		return
-	}
+
 	result := struct {
 		Fee          *OpenSeaFee
 		Calldata     string
@@ -127,7 +127,7 @@ func APIEstimateBuyFee(c *gin.Context) {
 		Fee:          feeAmount,
 		Calldata:     callData,
 		CallContract: contract[2:],
-		ReceiveToken: "0x1",
+		ReceiveToken: "0000000000000000000000000000000000000001",
 	}
 	c.JSON(200, gin.H{"Result": result})
 }

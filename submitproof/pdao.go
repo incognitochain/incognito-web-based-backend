@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -87,8 +88,8 @@ func processSubmitPdaoRequest(ctx context.Context, m *pubsub.Message) {
 			return
 		}
 	}
-
-	proposal, err := database.DBGetProposalByIncTx(task.IncTxhash)
+	inctx := strings.Split(task.IncTxhash, "_")
+	proposal, err := database.DBGetProposalByIncTx(inctx[0])
 	if err != nil {
 		log.Println("DBGetProposalByIncTx error", err)
 		m.Ack()
@@ -222,13 +223,20 @@ func watchPendingProposal() {
 				}
 			}
 			if unshieldStatus.OutchainStatus == wcommon.StatusAccepted {
+
+				proposalJson, err := json.Marshal(p)
+				if err != nil {
+					log.Println("marshal proposal err:", err)
+					continue
+				}
 				p.Status = wcommon.StatusPdaOutchainTxSubmitting
 				err = database.DBUpdateProposalTable(&p)
 				if err != nil {
 					log.Println("DBUpdateProposalTable err:", err)
 					continue
 				}
-				_, err := SubmitPdaoOutchainTx(p.SubmitBurnTx, unshieldStatus.Networks[0], false, pdao.CREATE_PROP, wcommon.ExternalTxTypePdaoProposal)
+
+				_, err = SubmitPdaoOutchainTx(p.SubmitBurnTx, unshieldStatus.Networks[0], proposalJson, false, pdao.CREATE_PROP, wcommon.ExternalTxTypePdaoProposal)
 				if err != nil {
 					log.Println("SubmitPdaoOutchainTx err:", err)
 					continue

@@ -285,7 +285,8 @@ func SubmitUnshieldTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken st
 	return "submitting", nil
 }
 
-func SubmitPdaoOutchainTx(incTxHash string, network string, retry bool, reqType, txType int) (interface{}, error) {
+func SubmitPdaoOutchainTx(incTxHash string, network string, payload []byte, retry bool, reqType, txType int) (interface{}, error) {
+	incTxHash = incTxHash + "_" + strconv.Itoa(reqType)
 	currentStatus, err := database.DBGetExternalTxStatusByIncTx(incTxHash, network)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -304,6 +305,7 @@ func SubmitPdaoOutchainTx(incTxHash string, network string, retry bool, reqType,
 		ReqType:   reqType,
 		IsRetry:   retry,
 		Type:      txType,
+		Payload:   payload,
 		Time:      time.Now(),
 	}
 	taskBytes, _ := json.Marshal(task)

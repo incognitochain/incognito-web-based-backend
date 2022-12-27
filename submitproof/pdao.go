@@ -5,13 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/google/uuid"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/pdao"
+	"github.com/incognitochain/incognito-web-based-backend/pdao/governance"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -206,12 +211,12 @@ func watchPendingProposal() {
 		time.Sleep(10 * time.Second)
 		proposals, err := database.DBGetPendingProposal()
 		if err != nil {
-			log.Println("DBRetrievePendingShieldTxs err:", err)
+			log.Println("DBGetPendingProposal err:", err)
 		}
 		for _, p := range proposals {
 			unshieldStatus, err := database.DBGetUnshieldTxByIncTx(p.SubmitBurnTx)
 			if err != nil {
-				log.Println("DBGetUnshieldTxStatusByIncTx err:", err)
+				log.Println("DBGetUnshieldTxByIncTx err:", err)
 				continue
 			}
 			if unshieldStatus.Status == wcommon.StatusSubmitFailed {
@@ -242,6 +247,98 @@ func watchPendingProposal() {
 					continue
 				}
 			}
+		}
+	}
+}
+
+// this watcher for checking proposal success and check vote date to auto vote:
+func watchSuccessProposal() {
+	for {
+
+		time.Sleep(10 * time.Second)
+
+		log.Println("checking proposal auto vote....")
+
+		proposals, err := database.DBGetSuccessProposalNoVoted()
+		if err != nil {
+			log.Println("watchSuccessProposal DBGetSuccessProposalNoVoted err:", err)
+		}
+		log.Println("there are ", len(proposals), "records!")
+
+		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
+
+		evmClient, err := ethclient.Dial(networkInfo.Endpoints[0])
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+		if err != nil {
+			continue
+		}
+
+		for _, p := range proposals {
+
+			proposalID, ok := big.NewInt(0).SetString(p.ProposalID, 10)
+
+			if !ok {
+				log.Println("watchSuccessProposal parse  ProposalID ok:", ok)
+				continue
+			}
+
+			prop, err := gv.Proposals(nil, proposalID)
+			if err != nil {
+				log.Println("watchSuccessProposal Proposals err:", err)
+				continue
+			}
+
+			header, err := evmClient.HeaderByNumber(context.Background(), nil)
+			if err != nil {
+				log.Println("watchSuccessProposal HeaderByNumber err:", err)
+				continue
+			}
+
+			log.Println("watchSuccessProposal prop.StartBlock:", prop.StartBlock, "header.Number: ", header.Number)
+
+			if prop.StartBlock.Cmp(header.Number) == 1 {
+
+				// auto vote now (insert to vote):
+				vote := &wcommon.Vote{
+					ProposalID:        p.ProposalID,
+					Status:            wcommon.StatusPdaOutchainTxSubmitting,
+					Vote:              1,
+					PropVoteSignature: p.PropVoteSignature,
+					ReShieldSignature: p.ReShieldSignature,
+					AutoVoted:         true, // auto vote for owner of proposal.
+				}
+
+				voteJson, err := json.Marshal(vote)
+				if err != nil {
+					log.Println("marshal proposal err:", err)
+					continue
+				}
+
+				inTx := uuid.New().String()
+
+				_, err = SubmitPdaoOutchainTx(inTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
+				if err != nil {
+					log.Println("watchSuccessProposal SubmitPdaoOutchainTx err:", err)
+					continue
+				}
+
+				err = database.DBInsertVoteTable(vote)
+
+				if err != nil {
+					log.Println("watchSuccessProposal DBInsertVoteTable err:", err)
+					continue
+				}
+				// update proposal:
+				p.Voted = true
+				database.DBUpdateProposalTable(&p)
+
+			}
+
 		}
 	}
 }

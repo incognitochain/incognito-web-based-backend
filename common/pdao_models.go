@@ -18,6 +18,7 @@ type Proposal struct {
 	Description         string `bson:"description"`
 	Title               string `bson:"title"`
 	ReShieldSignature   string
+	Voted               bool
 }
 
 type Vote struct {
@@ -29,6 +30,7 @@ type Vote struct {
 	ReShieldSignature string
 	SubmitBurnTx      string `bson:"submit_burn_tx"`
 	SubmitVoteTx      string `bson:"submit_vote_tx"`
+	AutoVoted         bool
 }
 
 type Cancel struct {

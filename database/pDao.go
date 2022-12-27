@@ -69,6 +69,18 @@ func DBGetPendingProposal() ([]common.Proposal, error) {
 	return result, nil
 }
 
+func DBGetSuccessProposalNoVoted() ([]common.Proposal, error) {
+	result := []common.Proposal{}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}}, "voted": false}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.Proposal{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func DBUpdatePdaoProposalStatus(incTx string, status string) error {
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status}}

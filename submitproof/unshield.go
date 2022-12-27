@@ -263,8 +263,11 @@ retryProof:
 		case wcommon.NETWORK_ETH:
 			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getburnproof")
 			if len(proof.Instruction) == 0 || err != nil {
-				proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprverc20burnproof")
 				isPRV = true
+				proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprverc20burnproof")
+				if len(proof.Instruction) == 0 || err != nil {
+					proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getprvburnproof")
+				}
 			}
 		case wcommon.NETWORK_BSC:
 			proof, err = evmproof.GetAndDecodeBurnProofV2(config.FullnodeURL, incTxHash, "getbscburnproof")

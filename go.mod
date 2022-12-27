@@ -16,7 +16,7 @@ require (
 	github.com/adjust/rmq/v4 v4.0.5
 	github.com/gin-contrib/cache v1.2.0
 	github.com/gin-contrib/cors v1.4.0
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/incognitochain/bridge-eth v0.0.0-20220923060843-965bd65e8622
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/pkg/errors v0.9.1

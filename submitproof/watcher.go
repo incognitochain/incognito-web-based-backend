@@ -54,7 +54,9 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go forwardCollectedFee()
 	go watchVaultState()
 	go trackDexSwap()
+
 	go watchPendingProposal()
+	go watchSuccessProposal() // to auto vote
 
 	return nil
 }

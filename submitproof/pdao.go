@@ -12,7 +12,6 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/google/uuid"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/pdao"
@@ -113,7 +112,7 @@ func processSubmitPdaoRequest(ctx context.Context, m *pubsub.Message) {
 	m.Ack()
 }
 
-func processSubmitPrvRequest(ctx context.Context, m *pubsub.Message) {
+func processSubmitVoteRequest(ctx context.Context, m *pubsub.Message) {
 	task := SubmitPDaoTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
@@ -158,19 +157,19 @@ func processSubmitPrvRequest(ctx context.Context, m *pubsub.Message) {
 				return
 			}
 		}
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` submitProofTx timeout 😵 inctx `%v` network `%v`\n", task.IncTxhash, task.Network))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[pdao-vote]` submitProofTx timeout 😵 inctx `%v` network `%v`\n", task.IncTxhash, task.Network))
 		return
 	}
 
-	status, err := pdao.CreatePRVOutChainTx(task.Network, task.IncTxhash, task.Payload, uint8(task.ReqType), config, task.Type)
+	status, err := pdao.CreateGovernanceOutChainTx(task.Network, task.IncTxhash, task.Payload, uint8(task.ReqType), config, task.Type)
 	if err != nil {
-		log.Println("CreatePRVOutChainTx error", err)
+		log.Println("CreateGovernanceOutChainTx error", err)
 		time.Sleep(15 * time.Second)
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` submitProofTx `%v` for network `%v` failed 😵 err: %v", task.IncTxhash, task.Network, err))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[pdao-vote]` submitProofTx `%v` for network `%v` failed 😵 err: %v", task.IncTxhash, task.Network, err))
 		m.Ack()
 		return
 	}
-	go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
+	go slacknoti.SendSlackNoti(fmt.Sprintf("`[pdao-vote]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
 
 	err = database.DBSaveExternalTxStatus(status)
 	if err != nil {
@@ -186,8 +185,9 @@ func processSubmitPrvRequest(ctx context.Context, m *pubsub.Message) {
 			return
 		}
 	}
+	inctx := strings.Split(task.IncTxhash, "_")
 
-	vote, err := database.DBGetVoteByIncTx(task.IncTxhash)
+	vote, err := database.DBGetVoteByIncTx(inctx[0])
 	if err != nil {
 		log.Println("DBGetVoteByIncTx error", err)
 		m.Ack()
@@ -310,7 +310,8 @@ func watchSuccessProposal() {
 					Vote:              1,
 					PropVoteSignature: p.PropVoteSignature,
 					ReShieldSignature: p.ReShieldSignature,
-					AutoVoted:         true, // auto vote for owner of proposal.
+					AutoVoted:         true,           // auto vote for owner of proposal.
+					SubmitBurnTx:      p.SubmitBurnTx, // use proposal burn prv tx for tracking
 				}
 
 				voteJson, err := json.Marshal(vote)
@@ -319,9 +320,7 @@ func watchSuccessProposal() {
 					continue
 				}
 
-				inTx := uuid.New().String()
-
-				_, err = SubmitPdaoOutchainTx(inTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
+				_, err = SubmitPdaoOutchainTx(p.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
 				if err != nil {
 					go slacknoti.SendSlackNoti("watchSuccessProposal SubmitPdaoOutchainTx err:" + err.Error())
 					continue

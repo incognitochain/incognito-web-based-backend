@@ -12,7 +12,6 @@ func RetrieveCollectionList(OSEndpoint string, apiKey string, limit int, offset 
 	var respond struct {
 		Collections []CollectionDetail `json:"collections"`
 	}
-	// https://testnets-api.opensea.io/api/v1/collections?offset=0&limit=1
 	url := fmt.Sprintf("%v/api/v1/collections?offset=%v&limit=%v", OSEndpoint, offset, limit)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -84,8 +83,7 @@ func RetrieveCollectionAssets(OSEndpoint string, apiKey string, collectionContra
 	var respond struct {
 		Assets []NFTDetail `json:"assets"`
 	}
-	// url := "https://testnets-api.opensea.io/api/v1/assets?asset_contract_address=0x362f0d993d0743ff5948507b49cda94d7d593593&order_direction=desc&offset=0&limit=1&include_orders=false"
-	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&order_direction=desc&include_orders=true&offset=%v&limit=%v", OSEndpoint, collectionContract, offset, limit)
+	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&order_direction=asc&include_orders=true&offset=%v&limit=%v", OSEndpoint, collectionContract, offset, limit)
 
 	req, _ := http.NewRequest("GET", url, nil)
 
@@ -113,8 +111,7 @@ func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID st
 	var respond struct {
 		Assets []NFTDetail `json:"assets"`
 	}
-	// url := "https://testnets-api.opensea.io/api/v1/asset/0x362f0d993d0743ff5948507b49cda94d7d593593/0/"
-	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&token_ids=%v&order_direction=desc&include_orders=true&offset=0&limit=1", OSEndpoint, collectionContract, tokenID)
+	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&token_ids=%v&order_direction=asc&include_orders=true&offset=0&limit=1", OSEndpoint, collectionContract, tokenID)
 
 	req, _ := http.NewRequest("GET", url, nil)
 

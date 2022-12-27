@@ -20,18 +20,20 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/papps"
 	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func APIEstimateBuyFee(c *gin.Context) {
 	contract := c.Query("contract")
 	nftid := c.Query("nftid")
 	burnToken := c.Query("burntoken")
+	burnAmount := c.Query("burnamount")
 	recipient := c.Query("recipient")
 
 	_ = contract
 	// currently only supports eth
 	network := "eth"
-
+	networkID := wcommon.GetNetworkID(network)
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
 		fmt.Println("DBRetrieveFeeTable", err.Error())
@@ -45,6 +47,33 @@ func APIEstimateBuyFee(c *gin.Context) {
 		return
 	}
 	spTkList := getSupportedTokenList()
+	burnAmountInc := uint64(0)
+	amount := new(big.Int)
+	_, errBool := amount.SetString(burnAmount, 10)
+	if !errBool {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
+		return
+	}
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, v := range burnTokenInfo.ListUnifiedToken {
+			if networkID == v.NetworkID {
+				amountUint64 := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(burnAmount, v.Decimals, int64(v.PDecimals))
+				burnAmountInc = amountUint64
+				isEnoughVault, err := checkEnoughVault(burnToken, v.TokenID, amountUint64)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+					return
+				}
+				if !isEnoughVault {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": "not enough token in vault"})
+					return
+				}
+			}
+		}
+	} else {
+		amountUint64 := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(burnAmount, burnTokenInfo.Decimals, int64(burnTokenInfo.PDecimals))
+		burnAmountInc = amountUint64
+	}
 
 	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
 	if err != nil {
@@ -57,7 +86,7 @@ func APIEstimateBuyFee(c *gin.Context) {
 		return
 	}
 
-	feeAmount, err := estimateOpenSeaFee(1000, burnTokenInfo, network, networkFees, spTkList)
+	feeAmount, err := estimateOpenSeaFee(burnAmountInc, burnTokenInfo, network, networkFees, spTkList)
 	if err != nil {
 		fmt.Println("estimateOpenSeaFee", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -68,18 +97,37 @@ func APIEstimateBuyFee(c *gin.Context) {
 	// return
 	//TODO: opensea
 
+	pappList, err := database.DBRetrievePAppsByNetwork(network)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("no supported papps found").Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
 	callData, err := papps.BuildOpenSeaCalldata(nftDetail, recipient)
 	if err != nil {
 		fmt.Println("estimateOpenSeaFee", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	contract, exist := pappList.AppContracts["opensea"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea contract not found"})
+		return
+	}
 	result := struct {
-		Fee      *UnshieldNetworkFee
-		Calldata string
+		Fee          *OpenSeaFee
+		Calldata     string
+		CallContract string
+		ReceiveToken string
 	}{
-		Fee:      feeAmount,
-		Calldata: callData,
+		Fee:          feeAmount,
+		Calldata:     callData,
+		CallContract: contract,
+		ReceiveToken: "0x1",
 	}
 	c.JSON(200, gin.H{"Result": result})
 }
@@ -228,9 +276,17 @@ func APICollectionAssets(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"Result": result})
 }
-func APICollectionDetail(c *gin.Context) {}
+func APICollectionDetail(c *gin.Context) {
+	contract := c.Query("contract")
+	data, err := database.DBGetCollectionsInfo(contract)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"Result": data})
+}
 
-func estimateOpenSeaFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network string, networkFees *wcommon.ExternalNetworksFeeData, spTkList []PappSupportedTokenData) (*UnshieldNetworkFee, error) {
+func estimateOpenSeaFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network string, networkFees *wcommon.ExternalNetworksFeeData, spTkList []PappSupportedTokenData) (*OpenSeaFee, error) {
 
 	networkID := wcommon.GetNetworkID(network)
 	isSupportedOutNetwork := false
@@ -304,28 +360,28 @@ func estimateOpenSeaFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network
 	if len(fees) == 0 {
 		return nil, errors.New("can't get fee")
 	}
-	burntAmount := uint64(0)
-	protocolFee := uint64(0)
-	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-		var tokenID string
+	// burntAmount := uint64(0)
+	// protocolFee := uint64(0)
+	// if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+	// 	var tokenID string
 
-		for _, childToken := range burnTokenInfo.ListUnifiedToken {
-			childNetID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
-			if err != nil {
-				return nil, err
-			}
-			if childNetID == networkID {
-				tokenID = childToken.TokenID
-				break
-			}
-		}
-		burntAmount, protocolFee, err = getUnifiedUnshieldFee(tokenID, burnTokenInfo.TokenID, amount)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		burntAmount = amount
-	}
+	// 	for _, childToken := range burnTokenInfo.ListUnifiedToken {
+	// 		childNetID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		if childNetID == networkID {
+	// 			tokenID = childToken.TokenID
+	// 			break
+	// 		}
+	// 	}
+	// 	burntAmount, protocolFee, err = getUnifiedUnshieldFee(tokenID, burnTokenInfo.TokenID, amount)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// } else {
+	// 	burntAmount = amount
+	// }
 
 	feeAddress := ""
 	feeAddressShardID := byte(0)
@@ -336,16 +392,14 @@ func estimateOpenSeaFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network
 		}
 		_, feeAddressShardID = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
 	}
-	result := UnshieldNetworkFee{
+	result := OpenSeaFee{
 		FeeAddress:        feeAddress,
 		FeeAddressShardID: int(feeAddressShardID),
-		ExpectedReceive:   amount,
-		BurntAmount:       burntAmount,
 		TokenID:           fees[0].TokenID,
 		Amount:            fees[0].Amount,
 		PrivacyFee:        fees[0].PrivacyFee,
-		ProtocolFee:       protocolFee,
-		FeeInUSD:          fees[0].FeeInUSD,
+		// ProtocolFee:       protocolFee,
+		FeeInUSD: fees[0].FeeInUSD,
 	}
 
 	return &result, nil

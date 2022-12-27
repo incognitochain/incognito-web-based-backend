@@ -301,7 +301,7 @@ func watchSuccessProposal() {
 
 			log.Println("watchSuccessProposal prop.StartBlock:", prop.StartBlock, "header.Number: ", header.Number)
 
-			if prop.StartBlock.Cmp(header.Number) == 1 {
+			if prop.StartBlock.Cmp(header.Number) == -1 {
 
 				// auto vote now (insert to vote):
 				vote := &wcommon.Vote{

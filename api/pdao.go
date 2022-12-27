@@ -203,8 +203,6 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		burntAmount = md.BurningAmount
 
 		externalAddr = md.RemoteAddress
-
-		isUnifiedToken = true
 		// todo: update sdk to get returnOTA
 	}
 
@@ -375,8 +373,6 @@ func APIPDaoVoting(c *gin.Context) {
 		uTokenID = burnTokenInfo.TokenID
 		burntAmount = md.BurningAmount
 		externalAddr = md.RemoteAddress
-
-		isUnifiedToken = true
 
 		// todo: update sdk to get returnOTA
 	}

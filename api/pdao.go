@@ -185,7 +185,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	var burnTokenInfo *wcommon.TokenInfo
 
 	isUnifiedToken := false
-	networkList := []string{}
+	networkList := []string{wcommon.NETWORK_ETH}
 
 	tokenID := ""
 	uTokenID := ""
@@ -358,7 +358,7 @@ func APIPDaoVoting(c *gin.Context) {
 	var burnTokenInfo *wcommon.TokenInfo
 	var burntAmount uint64
 	isUnifiedToken := false
-	networkList := []string{}
+	networkList := []string{wcommon.NETWORK_ETH}
 	tokenID := ""
 	uTokenID := ""
 	externalAddr := ""

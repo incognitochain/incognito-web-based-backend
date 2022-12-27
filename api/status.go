@@ -156,7 +156,6 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 		}
 		return getPdexSwapTxStatus(txhash)
 	}
-
 	result["inc_request_tx_status"] = data.Status
 	// result["inc_swap_detail"] = data.
 	if data.Status != common.StatusAccepted {
@@ -240,7 +239,7 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 					redepositTxStr = redepositTx.IncTx
 				}
 				if networkResult["swap_outcome"] == "success" {
-					if outchainTxResult.TokenContract != "" {
+					if outchainTxResult.TokenContract != "" && data.Type == wcommon.ExternalTxTypeSwap {
 						outTokenID, isNative, err := getTokenIDByContractID(outchainTxResult.TokenContract, common.GetNetworkID(network), spTkList, true)
 						if err != nil {
 							result["error"] = err.Error()
@@ -249,7 +248,6 @@ func checkPappTxSwapStatus(txhash string, spTkList []PappSupportedTokenData) map
 						swapDetail := buildSwapDetail(data.BurntToken, outTokenID, common.GetNetworkID(network), data.BurntAmount, outchainTxResult.Amount.Uint64(), false, redepositTxStr, outchainTxResult.IsRedeposit, isNative)
 						result["swap_detail"] = swapDetail
 					}
-
 				}
 			}
 			networkList = append(networkList, networkResult)

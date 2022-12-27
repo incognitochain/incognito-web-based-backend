@@ -114,7 +114,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		var threshold *big.Int
 		threshold.SetString(PRV_THRESHOLD, 10)
 		if bal.Cmp(threshold) < 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("insufficient balance to create prop")})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "insufficient balance to create prop"})
 			return
 		}
 
@@ -147,7 +147,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Description)))
 		prop, _ := gv.Proposals(nil, propId)
 		if prop.StartBlock.Uint64() != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("prop id has created")})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
 			return
 		}
 	}
@@ -167,7 +167,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid txhash"})
 		return
 	}
 
@@ -194,7 +194,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	if md != nil {
 		burnTokenInfo, err = getTokenInfo(md.TokenID.String())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "not supported token"})
 			return
 		}
 		tokenID = burnTokenInfo.TokenID
@@ -249,7 +249,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	// check token fee:
 	if feeToken != requireFeeToken {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New(fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken))})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid fee token, fee token can't be %v must be %v ", feeToken, requireFeeToken)})
 		return
 	}
 
@@ -259,7 +259,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		feeDiffFloat := math.Abs(float64(feeDiff))
 		diffPercent := feeDiffFloat / float64(feeDao.FeeAmount) * 100
 		if diffPercent > wcommon.PercentFeeDiff {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee))})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid fee amount, fee amount must be at least: " + fmt.Sprintf("%v", requireFee)})
 			return
 		}
 	}
@@ -342,7 +342,7 @@ func APIPDaoVoting(c *gin.Context) {
 
 	rawTxBytes, _, err := base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid txhash"})
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
@@ -127,7 +128,7 @@ func APIEstimateBuyFee(c *gin.Context) {
 		Fee:          feeAmount,
 		Calldata:     callData,
 		CallContract: contract[2:],
-		ReceiveToken: "0000000000000000000000000000000000000001",
+		ReceiveToken: strings.ToLower("4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"),
 	}
 	c.JSON(200, gin.H{"Result": result})
 }

@@ -96,7 +96,7 @@ func DBUpdateInterswapTxInfo(txID string, updateInfo map[string]interface{}) err
 	return nil
 }
 
-func DBRetrieveTxsByStatus(status []int, offset, limit int64) ([]common.InterSwapTxData, error) {
+func DBRetrieveInterswapTxsByStatus(status []int, offset, limit int64) ([]common.InterSwapTxData, error) {
 	startTime := time.Now()
 	var result []common.InterSwapTxData
 	if limit == 0 {

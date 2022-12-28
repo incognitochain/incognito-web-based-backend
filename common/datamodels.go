@@ -90,17 +90,19 @@ type PappTxData struct {
 	PFeeAmount       uint64   `json:"pfeeamount" bson:"pfeeamount"`
 	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
 	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
-	PappSwapInfo     string   `json:"pappswapinfo" bson:"pappswapinfo"`
-	Status           string   `json:"status" bson:"status"`
-	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
-	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
-	RefundPrivacyFee bool     `json:"refundpfee" bson:"refundpfee"`
-	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
-	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
-	ShardID          int      `json:"shardid" bson:"shardid"`
-	OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
-	UserAgent        string   `json:"useragent" bson:"useragent"`
-	Error            string   `json:"error" bson:"error"`
+	// decode call data => bytes => encode to string
+	PappSwapInfo string `json:"pappswapinfo" bson:"pappswapinfo"`
+	//
+	Status           string `json:"status" bson:"status"`
+	IsUnifiedToken   bool   `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	RefundSubmitted  bool   `json:"refundsubmitted" bson:"refundsubmitted"`
+	RefundPrivacyFee bool   `json:"refundpfee" bson:"refundpfee"`
+	FeeRefundOTA     string `json:"fee_refundota" bson:"fee_refundota"`
+	FeeRefundAddress string `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	ShardID          int    `json:"shardid" bson:"shardid"`
+	OutchainStatus   string `json:"outchain_status" bson:"outchain_status"`
+	UserAgent        string `json:"useragent" bson:"useragent"`
+	Error            string `json:"error" bson:"error"`
 }
 
 type PappVaultData struct {

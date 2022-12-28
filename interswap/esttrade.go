@@ -38,7 +38,7 @@ type AddOnSwapInfo struct {
 }
 
 // InterSwap estimate swap
-func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]InterSwapEstRes, error) {
+func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][]InterSwapEstRes, error) {
 	// validation
 
 	// * don't estimate inter swap if:
@@ -237,8 +237,8 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 		Details: bestPath.Paths,
 	}
 
-	res := map[string]InterSwapEstRes{
-		InterSwapStr: swapInfo,
+	res := map[string][]InterSwapEstRes{
+		InterSwapStr: []InterSwapEstRes{swapInfo},
 	}
 	return res, nil
 }

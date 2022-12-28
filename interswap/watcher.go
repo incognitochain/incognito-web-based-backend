@@ -13,13 +13,13 @@ import (
 	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // func
-
 func watchInterswapPendingTx(config beCommon.Config) {
 	for {
-		firstPendingTxs, err := database.DBRetrieveTxsByStatus([]int{FirstPending}, 0, 0)
+		firstPendingTxs, err := database.DBRetrieveInterswapTxsByStatus([]int{FirstPending}, 0, 0)
 		if err != nil {
 			log.Println("DBRetrieveTxsByStatus err:", err)
 		}
@@ -30,7 +30,7 @@ func watchInterswapPendingTx(config beCommon.Config) {
 			}
 		}
 
-		secondPendingTxs, err := database.DBRetrieveTxsByStatus([]int{SecondPending}, 0, 0)
+		secondPendingTxs, err := database.DBRetrieveInterswapTxsByStatus([]int{SecondPending}, 0, 0)
 		if err != nil {
 			log.Println("DBRetrieveTxsByStatus err:", err)
 		}
@@ -125,7 +125,7 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 
 					pAppAddOn, isMidRefund, err := callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, txData.PAppNetwork, txData.PAppContract, txData.MidToken, 0, interswapTxID)
 					if isMidRefund {
-						refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, txData.MidToken, amtMidToken, []coin.PlainCoin{}, []uint{})
+						refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, txData.MidToken, amtMidToken, []coin.PlainCoin{}, []uint{}, []coin.PlainCoin{}, []uint{})
 						if err != nil {
 							log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
 							return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
@@ -158,7 +158,7 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 					// estimate with final addon amount
 					pAppAddOn, isMidRefund, err = callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, txData.PAppNetwork, txData.PAppContract, txData.MidToken, addonFeeAmt, interswapTxID)
 					if isMidRefund {
-						refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, txData.MidToken, amtMidToken, []coin.PlainCoin{}, []uint{})
+						refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, txData.MidToken, amtMidToken, []coin.PlainCoin{}, []uint{}, []coin.PlainCoin{}, []uint{})
 						if err != nil {
 							log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
 							return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
@@ -247,156 +247,7 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 		}
 	case PAppToPdex:
 		{
-			pAppStatus, err := CallGetPappSwapTxStatus(interswapTxID, config)
-			if err != nil {
-				log.Printf("CallGetPappSwapTxStatus TxID %v error %v ", interswapTxID, err)
-				return err
-			}
-
-			switch pAppStatus.BurnStatus {
-			case beCommon.StatusSubmitFailed:
-				{
-					// fullnode reject
-					// update status to Failed
-					return nil
-				}
-			case beCommon.StatusRejected:
-				{
-					// beacon rejected
-					// TODO: get tx response
-					// create refund tx
-					return nil
-
-				}
-			}
-
-			switch pAppStatus.SwapStatus {
-			case "reverted":
-				{
-					// tx swap outchain revert
-					// TODO: get tx response
-					// create refund tx
-				}
-			case "failed":
-				{
-					// TODO: review this status
-					// tx swap outchain revert
-					// TODO: get tx response
-					// create refund tx
-				}
-			case "success":
-				{
-					// update status
-
-					if pAppStatus.IsRedeposit {
-						// wait to deposit success
-						if pAppStatus.IsRedeposited {
-							// create addon tx
-							// re-estimate addon tx
-							amtMidStr, err := addStrs(pAppStatus.BuyAmount, pAppStatus.Reward)
-							if err != nil {
-								return err
-							}
-							amtMidToken, err := convertToDecAmtUint64(amtMidStr, txData.MidToken, config)
-							if err != nil {
-								return err
-							}
-
-							// re-estimate with addon tx with pdex
-							addonParamEst := &EstimateSwapParam{
-								Network:   IncNetworkStr,
-								Amount:    amtMidStr,
-								FromToken: txData.MidToken,
-								ToToken:   txData.ToToken,
-								Slippage:  txData.Slippage,
-							}
-							p2Bytes, _ := json.Marshal(addonParamEst)
-							fmt.Printf("addonParamEst 2: %s\n", string(p2Bytes))
-
-							pDexAddOn, isMidRefund, err := callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, IncNetworkStr, "", txData.MidToken, 0, interswapTxID)
-							if isMidRefund {
-								refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, txData.MidToken, amtMidToken, []coin.PlainCoin{}, []uint{})
-								if err != nil {
-									log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
-									return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
-								}
-								updateInfo := map[string]interface{}{
-									"txidrefund": refundTxID,
-									"status":     MidRefunding,
-									"statusstr":  StatusStr[MidRefunding],
-								}
-								err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
-								if err != nil {
-									log.Printf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
-									return fmt.Errorf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
-								}
-								return nil
-							}
-							if err != nil {
-								return err
-							}
-
-							addonSwapAmt := amtMidToken - pDexAddOn.Fee[0].Amount
-							addonFeeAmt := pDexAddOn.Fee[0].Amount
-							amtTmp, err := convertFloat64ToWithoutDecStr(addonSwapAmt, txData.MidToken, config)
-							if err != nil {
-								log.Printf("InterswapID %v Convert amount from to string %+v error %v\n", interswapTxID, addonSwapAmt, err)
-								return fmt.Errorf("InterswapID %v Convert amount from to string %+v error %v\n", interswapTxID, addonSwapAmt, err)
-							}
-							addonParamEst.Amount = amtTmp
-
-							// estimate with final addon amount
-							pDexAddOn, isMidRefund, err = callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, IncNetworkStr, "", txData.MidToken, addonFeeAmt, interswapTxID)
-							if isMidRefund {
-								refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, txData.MidToken, amtMidToken, []coin.PlainCoin{}, []uint{})
-								if err != nil {
-									log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
-									return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
-								}
-								updateInfo := map[string]interface{}{
-									"txidrefund": refundTxID,
-									"status":     MidRefunding,
-									"statusstr":  StatusStr[MidRefunding],
-								}
-								err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
-								if err != nil {
-									log.Printf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
-									return fmt.Errorf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
-								}
-
-								return nil
-							}
-							if err != nil {
-								return err
-							}
-
-							addOnTxID, err := incClient.CreateAndSendPdexv3TradeTransaction(
-								config.ISIncPrivKey, pDexAddOn.PoolPairs, txData.MidToken, txData.ToToken, addonSwapAmt, txData.FinalMinExpectedAmt, addonFeeAmt, false)
-							if err != nil {
-								log.Printf("InterswapID %v Create pdex tx error %v\n", interswapTxID, err)
-								return fmt.Errorf("InterswapID %v Create pdex tx error %v\n", interswapTxID, err)
-							}
-
-							// update db
-							updateInfo := map[string]interface{}{
-								"addon_txid": addOnTxID,
-								"status":     SecondPending,
-								"statusstr":  StatusStr[SecondPending],
-							}
-							err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
-							if err != nil {
-								log.Printf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
-								return fmt.Errorf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
-							}
-
-							return nil
-						}
-
-					} else {
-						return fmt.Errorf("InterswapID is not redeposit: %v", interswapTxID)
-					}
-				}
-			}
+			return CheckStatusAndHandlePappTx(&txData)
 		}
 	default:
 		{
@@ -409,10 +260,36 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 
 func createTxRefund(
 	senderPrivKey, otaReceiver, tokenID string, amount uint64,
-	utxos []coin.PlainCoin, utxoIndices []uint,
+	tokenUtxos []coin.PlainCoin, TokenUtxoIndices []uint,
+	prvUtxos []coin.PlainCoin, prvUtxoIndices []uint,
 ) (string, error) {
 	return "", nil
 
+}
+
+func createTxRefundAndUpdateStatus(txData *beCommon.InterSwapTxData,
+	amountRefund uint64, tokenRefund string,
+	tokenUtxos []coin.PlainCoin, TokenUtxoIndices []uint,
+	prvUtxos []coin.PlainCoin, prvUtxoIndices []uint,
+) error {
+	interswapTxID := txData.TxID
+	refundTxID, err := createTxRefund(config.ISIncPrivKey, txData.OTARefund, tokenRefund, amountRefund,
+		tokenUtxos, TokenUtxoIndices, prvUtxos, prvUtxoIndices)
+	if err != nil {
+		log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
+		return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
+	}
+	updateInfo := map[string]interface{}{
+		"txidrefund": refundTxID,
+		"status":     FirstRefunding,
+		"statusstr":  StatusStr[FirstRefunding],
+	}
+	err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
+	if err != nil {
+		log.Printf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
+		return fmt.Errorf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
+	}
+	return nil
 }
 
 func callEstimateSwapAndValidation(
@@ -481,5 +358,171 @@ func callEstimateSwapAndValidation(
 	}
 
 	return pAppAddOn, isMidRefund, nil
+}
 
+func CheckStatusAndHandlePappTx(txData *beCommon.InterSwapTxData) error {
+
+	interswapTxID := txData.TxID
+	data, err := database.DBGetPappTxData(interswapTxID)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			log.Printf("InterswapID %v DBGetPappTxData error %v\n", interswapTxID, err)
+			return err
+		}
+	}
+
+	// Step 1: check inchain tx
+	if data.Status == beCommon.StatusSubmitFailed {
+		// shard chain reject
+		// update status SubmitFailed
+		// do nothing
+		err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], "")
+		if err != nil {
+			log.Printf("InterswapID %v Update status %+v error %v\n", interswapTxID, SubmitFailed, err)
+			return fmt.Errorf("InterswapID %v Update status %+v error %v\n", interswapTxID, SubmitFailed, err)
+		}
+		return nil
+	}
+
+	if data.Status == beCommon.StatusRejected {
+		// get tx response and corresponding utxo
+		amtResponse := uint64(0)
+		err := createTxRefundAndUpdateStatus(txData, amtResponse, txData.FromToken, []coin.PlainCoin{}, []uint{}, []coin.PlainCoin{}, []uint{})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if data.Status == beCommon.StatusAccepted {
+		// Step 2: check outchain tx
+		externalTxStatus, err := database.DBRetrieveExternalTxByIncTxID(data.IncTx)
+		if err != nil {
+			log.Printf("InterswapID %v DBRetrieveExternalTxByIncTxID error %v\n", interswapTxID, err)
+			return fmt.Errorf("InterswapID %v DBRetrieveExternalTxByIncTxID error %v\n", interswapTxID, err)
+		}
+
+		if externalTxStatus.Status == beCommon.StatusSubmitFailed {
+			msg := fmt.Sprintf("InterswapID %v Tx out chain submit failed. Please check!\n", interswapTxID)
+			slacknoti.SendWithCustomChannel(msg, SlackEndpoint)
+			return fmt.Errorf(msg)
+		}
+
+		if externalTxStatus.Status == beCommon.StatusAccepted {
+			// unmarshal OtherInfo
+			var outchainTxResult beCommon.ExternalTxSwapResult
+			err = json.Unmarshal([]byte(externalTxStatus.OtherInfo), &outchainTxResult)
+			if err != nil {
+				log.Printf("InterswapID %v Unmarshal externalTxStatus.OtherInfo error %v\n", interswapTxID, err)
+				return fmt.Errorf("InterswapID %v Unmarshal externalTxStatus.OtherInfo error %v\n", interswapTxID, err)
+			}
+
+			if outchainTxResult.IsFailed {
+				msg := fmt.Sprintf("InterswapID %v Tx out chain status failed. Please check!\n", interswapTxID)
+				slacknoti.SendWithCustomChannel(msg, SlackEndpoint)
+				return fmt.Errorf(msg)
+			}
+
+			if outchainTxResult.IsReverted {
+				// swap failed
+				// wait to redeposited, get tx repsonse and utxo create tx refund
+				//
+				amountRefund := uint64(0)
+
+				err := createTxRefundAndUpdateStatus(txData, amountRefund, txData.MidToken, []coin.PlainCoin{}, []uint{}, []coin.PlainCoin{}, []uint{})
+				if err != nil {
+					return err
+				}
+				return nil
+
+			} else {
+				// swap sucess
+				// wait to redeposit
+				if outchainTxResult.IsRedeposit {
+					// create the add on tx
+					// re-estimate addon tx
+					buyAmount := ""
+					reward := ""
+					amtMidStr, err := addStrs(buyAmount, reward)
+					if err != nil {
+						return err
+					}
+					amtMidToken, err := convertToDecAmtUint64(amtMidStr, txData.MidToken, config)
+					if err != nil {
+						return err
+					}
+
+					// re-estimate with addon tx with pdex
+					addonParamEst := &EstimateSwapParam{
+						Network:   IncNetworkStr,
+						Amount:    amtMidStr,
+						FromToken: txData.MidToken,
+						ToToken:   txData.ToToken,
+						Slippage:  txData.Slippage,
+					}
+					p2Bytes, _ := json.Marshal(addonParamEst)
+					fmt.Printf("addonParamEst 2: %s\n", string(p2Bytes))
+
+					pDexAddOn, isMidRefund, err := callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, IncNetworkStr, "", txData.MidToken, 0, interswapTxID)
+					if isMidRefund {
+						err := createTxRefundAndUpdateStatus(txData, amtMidToken, txData.MidToken,
+							[]coin.PlainCoin{}, []uint{}, []coin.PlainCoin{}, []uint{})
+						if err != nil {
+							return err
+						}
+						return nil
+					}
+					if err != nil {
+						return err
+					}
+
+					addonSwapAmt := amtMidToken - pDexAddOn.Fee[0].Amount
+					addonFeeAmt := pDexAddOn.Fee[0].Amount
+					amtTmp, err := convertFloat64ToWithoutDecStr(addonSwapAmt, txData.MidToken, config)
+					if err != nil {
+						log.Printf("InterswapID %v Convert amount from to string %+v error %v\n", interswapTxID, addonSwapAmt, err)
+						return fmt.Errorf("InterswapID %v Convert amount from to string %+v error %v\n", interswapTxID, addonSwapAmt, err)
+					}
+					addonParamEst.Amount = amtTmp
+
+					// estimate with final addon amount
+					pDexAddOn, isMidRefund, err = callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, IncNetworkStr, "", txData.MidToken, addonFeeAmt, interswapTxID)
+					if isMidRefund {
+						err := createTxRefundAndUpdateStatus(txData, amtMidToken, txData.MidToken,
+							[]coin.PlainCoin{}, []uint{}, []coin.PlainCoin{}, []uint{})
+						if err != nil {
+							return err
+						}
+						return nil
+					}
+					if err != nil {
+						return err
+					}
+
+					// create pdex tx
+					addOnTxID, err := incClient.CreateAndSendPdexv3TradeTransaction(
+						config.ISIncPrivKey, pDexAddOn.PoolPairs, txData.MidToken, txData.ToToken, addonSwapAmt, txData.FinalMinExpectedAmt, addonFeeAmt, false)
+					if err != nil {
+						log.Printf("InterswapID %v Create pdex tx error %v\n", interswapTxID, err)
+						return fmt.Errorf("InterswapID %v Create pdex tx error %v\n", interswapTxID, err)
+					}
+
+					// update db
+					updateInfo := map[string]interface{}{
+						"addon_txid": addOnTxID,
+						"status":     SecondPending,
+						"statusstr":  StatusStr[SecondPending],
+					}
+					err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
+					if err != nil {
+						log.Printf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
+						return fmt.Errorf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
+					}
+
+					return nil
+				}
+			}
+		}
+	}
+	return nil
 }

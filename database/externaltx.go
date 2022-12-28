@@ -115,3 +115,14 @@ func DBSaveExternalTxStatus(txdata *common.ExternalTxStatus) error {
 	}
 	return nil
 }
+
+func DBRetrieveExternalTxByIncTxID(incTxID string) (*common.ExternalTxStatus, error) {
+	var result common.ExternalTxStatus
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTxID}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.ExternalTxStatus{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

@@ -201,84 +201,86 @@ type PappStatus struct {
 }
 
 // CallSubmitPappSwapTx calls request to submit tx papp
-func CallGetPappSwapTxStatus(txID string, config common.Config) (*PappStatus, error) {
-	req := struct {
-		TxList []string
-	}{
-		TxList: []string{txID},
-	}
+// func CallGetPappSwapTxStatus(txID string, config common.Config) (*PappStatus, error) {
+// 	req := struct {
+// 		TxList []string
+// 	}{
+// 		TxList: []string{txID},
+// 	}
 
-	estSwapResponse := SubmitpAppSwapTxResponse{}
+// 	estSwapResponse := SubmitpAppSwapTxResponse{}
 
-	response, err := restyClient.R().
-		EnableTrace().
-		SetHeader("Content-Type", "application/json").SetBody(req).
-		SetResult(&estSwapResponse).
-		Post("http://localhost:" + strconv.Itoa(config.Port) + "/papps/swapstatus")
-	if err != nil {
-		err := fmt.Errorf("[ERR] Call API /papps/swapstatus request error: %v", err)
-		log.Println(err)
-		return nil, err
-	}
-	if response.StatusCode() != 200 {
-		err := fmt.Errorf("[ERR] Call API /papps/swapstatus status code error: %v", response.StatusCode())
-		log.Println(err)
-		return nil, err
-	}
+// 	response, err := restyClient.R().
+// 		EnableTrace().
+// 		SetHeader("Content-Type", "application/json").SetBody(req).
+// 		SetResult(&estSwapResponse).
+// 		Post("http://localhost:" + strconv.Itoa(config.Port) + "/papps/swapstatus")
+// 	if err != nil {
+// 		err := fmt.Errorf("[ERR] Call API /papps/swapstatus request error: %v", err)
+// 		log.Println(err)
+// 		return nil, err
+// 	}
+// 	if response.StatusCode() != 200 {
+// 		err := fmt.Errorf("[ERR] Call API /papps/swapstatus status code error: %v", response.StatusCode())
+// 		log.Println(err)
+// 		return nil, err
+// 	}
 
-	m := estSwapResponse.Result[txID].(map[string]interface{})
-	if len(m) == 0 {
-		return nil, errors.New("[ERR] Call API /papps/swapstatus status not found")
-	}
-	if m["error"] != "" {
-		return nil, fmt.Errorf("[ERR] Call API /papps/swapstatus status error %v", m["error"])
-	}
-	if m["swap_err"] != "" {
-		return nil, fmt.Errorf("[ERR] Call API /papps/swapstatus swap error %v", m["swap_err"])
-	}
-	burnStatus := ""
-	swapStatus := ""
-	isRedeposit := false
-	isRedeposited := false
-	buyAmount := ""
-	reward := ""
+// 	m := estSwapResponse.Result[txID].(map[string]interface{})
+// 	if len(m) == 0 {
+// 		return nil, errors.New("[ERR] Call API /papps/swapstatus status not found")
+// 	}
+// 	if m["error"] != "" {
+// 		return nil, fmt.Errorf("[ERR] Call API /papps/swapstatus status error %v", m["error"])
+// 	}
+// 	if m["swap_err"] != "" {
+// 		return nil, fmt.Errorf("[ERR] Call API /papps/swapstatus swap error %v", m["swap_err"])
+// 	}
+// 	burnStatus := ""
+// 	swapStatus := ""
+// 	isRedeposit := false
+// 	isRedeposited := false
+// 	buyAmount := ""
+// 	reward := ""
 
-	if m["inc_request_tx_status"] != "" {
-		burnStatus = m["inc_request_tx_status"].(string)
-	}
+// 	if m["inc_request_tx_status"] != "" {
+// 		burnStatus = m["inc_request_tx_status"].(string)
+// 	}
 
-	if m["swap_outcome"] != "" {
-		swapStatus = m["swap_outcome"].(string)
-	}
+// 	if m["swap_outcome"] != "" {
+// 		swapStatus = m["swap_outcome"].(string)
+// 	}
 
-	if m["is_redeposit"] == true {
-		isRedeposit = true
-	}
+// 	if m["is_redeposit"] == true {
+// 		isRedeposit = true
+// 	}
 
-	if m["redeposit_status"] == "success" {
-		isRedeposited = true
-	}
+// 	if m["redeposit_status"] == "success" {
+// 		isRedeposited = true
+// 	}
 
-	if tmp, ok := m["swap_detail"].(map[string]interface{}); ok {
-		if buyAmtTmp, ok := tmp["out_amount"].(string); ok {
-			buyAmount = buyAmtTmp
-		}
-		if rewardTmp, ok := tmp["reward"].(string); ok {
-			reward = rewardTmp
-		}
-	}
+// 	if tmp, ok := m["swap_detail"].(map[string]interface{}); ok {
+// 		if buyAmtTmp, ok := tmp["out_amount"].(string); ok {
+// 			buyAmount = buyAmtTmp
+// 		}
+// 		if rewardTmp, ok := tmp["reward"].(string); ok {
+// 			reward = rewardTmp
+// 		}
+// 	}
 
-	pappStatus := PappStatus{
-		BurnStatus:    burnStatus,
-		SwapStatus:    swapStatus,
-		IsRedeposit:   isRedeposit,
-		IsRedeposited: isRedeposited,
-		BuyAmount:     buyAmount,
-		Reward:        reward,
-	}
+// 	pappStatus := PappStatus{
+// 		BurnStatus:    burnStatus,
+// 		SwapStatus:    swapStatus,
+// 		IsRedeposit:   isRedeposit,
+// 		IsRedeposited: isRedeposited,
+// 		BuyAmount:     buyAmount,
+// 		Reward:        reward,
+// 	}
 
-	return &pappStatus, nil
-}
+// 	// "inc_request_tx_status":
+
+// 	return &pappStatus, nil
+// }
 
 func genRPCBody(method string, params []interface{}) interface{} {
 	type RPC struct {

@@ -359,14 +359,15 @@ func watchReadyToVote() {
 	}
 }
 
-func watchVoted() {
+func watchVotedToReshield() {
+
 	for {
 
 		time.Sleep(60 * time.Second)
 
-		votedRequests, err := database.DBGetVoteSuccess()
+		votedRequests, err := database.DBGetVotingToReShield()
 		if err != nil {
-			log.Println("watchVoted DBGetVoteSuccess err:" + err.Error())
+			log.Println("watchVotedToReshield DBGetVotingToReShield err:" + err.Error())
 		}
 		log.Println("there are ", len(votedRequests), "records!")
 
@@ -374,7 +375,7 @@ func watchVoted() {
 
 		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
 		if err != nil {
-			log.Println("watchVoted DBGetVoteSuccess err:" + err.Error())
+			log.Println("watchVotedToReshield DBGetVoteSuccess err:" + err.Error())
 			continue
 		}
 
@@ -388,17 +389,17 @@ func watchVoted() {
 			proposalID, ok := big.NewInt(0).SetString(vote.ProposalID, 10)
 
 			if !ok {
-				go slacknoti.SendSlackNoti("watchVoted parse ProposalID no ok")
+				go slacknoti.SendSlackNoti("watchVotedToReshield parse ProposalID no ok")
 				continue
 			}
 
 			state, err := gv.State(nil, proposalID)
 			if err != nil {
-				log.Println("watchVoted Votes err:" + err.Error() + ", proposalID: " + vote.ProposalID + networkInfo.Endpoints[1])
+				log.Println("watchVotedToReshield Votes err:" + err.Error() + ", proposalID: " + vote.ProposalID + networkInfo.Endpoints[1])
 				continue
 			}
 
-			log.Println("watchVoted state prop:", state, "with prop id: ", proposalID)
+			log.Println("watchVotedToReshield state prop:", state, "with prop id: ", proposalID)
 
 			// if auto vote and state in Pending/Active then continue
 			if state < 2 && vote.AutoVoted {
@@ -411,20 +412,14 @@ func watchVoted() {
 				continue
 			}
 
-			// todo: Call PRV contract
-			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
+			// todo: Call PRV contract reshield
+			CreatePRVOutChainTx
+
+			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.RESHIELD_VOTE, wcommon.ExternalTxTypePdaoVote)
 			if err != nil {
-				go slacknoti.SendSlackNoti("watchVoted SubmitPdaoOutchainTx err:" + err.Error())
+				go slacknoti.SendSlackNoti("watchVotedToReshield SubmitPdaoOutchainTx err:" + err.Error())
 				continue
 			}
-			vote.Status = wcommon.StatusPdaOutchainTxSubmitting
-			err = database.DBUpdateVoteTable(&vote)
-
-			if err != nil {
-				log.Println("DBUpdateVoteTable err:", err)
-				continue
-			}
-
 		}
 	}
 }

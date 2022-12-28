@@ -183,7 +183,7 @@ func DBGetReadyToVote() ([]common.Vote, error) {
 	return result, nil
 }
 
-func DBGetVoteSuccess() ([]common.Vote, error) {
+func DBGetVotingToReShield() ([]common.Vote, error) {
 	result := []common.Vote{}
 	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}, "is_re_shield": bson.M{operator.Eq: false}}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)

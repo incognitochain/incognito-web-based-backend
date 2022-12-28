@@ -183,9 +183,10 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
-	ExternalTxTypePdaoProposal = 69
-	ExternalTxTypePdaoVote     = 70
-	ExternalTxTypePdaoCancel   = 71
+	ExternalTxTypePdaoProposal    = 69
+	ExternalTxTypePdaoVote        = 70
+	ExternalTxTypePdaoCancel      = 71
+	ExternalTxTypePdaoReShieldPRV = 72
 )
 
 // Default param mainnet

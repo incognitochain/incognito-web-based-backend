@@ -66,7 +66,8 @@ const (
 // pdao
 
 const (
-	PdaoSubmitProposalExtTask = "pdao_submit_proposal_task"
-	PdaoSubmitVoteExtTask     = "pdeo_submit_vote_task"
-	PdaoSubmitCancelExtTask   = "pdeo_submit_cancel_task"
+	PdaoSubmitProposalExtTask    = "pdao_submit_proposal_task"
+	PdaoSubmitVoteExtTask        = "pdeo_submit_vote_task"
+	PdaoSubmitCancelExtTask      = "pdeo_submit_cancel_task"
+	PdaoSubmitReShieldPRVExtTask = "pdeo_submit_reshieldprv_task"
 )

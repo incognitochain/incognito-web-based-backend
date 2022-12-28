@@ -134,6 +134,9 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 			calldatas = append(calldatas, common.Hex2Bytes(strings.Split(prop.Calldatas, ",")[i]))
 		}
 		signature := common.Hex2Bytes(prop.CreatePropSignature)
+		if len(signature) != 65 {
+			return nil, errors.New("Governance: invalid signature length")
+		}
 		tx, err = gov.ProposeBySig(
 			executor,
 			targets, values, calldatas,
@@ -150,6 +153,9 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 		}
 		propID, _ := new(big.Int).SetString(vote.ProposalID, 10)
 		signature := common.Hex2Bytes(vote.PropVoteSignature)
+		if len(signature) != 65 {
+			return nil, errors.New("Governance: invalid signature length")
+		}
 		tx, err = gov.CastVoteBySig(
 			executor,
 			propID,
@@ -166,6 +172,9 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 		}
 		propID, _ := new(big.Int).SetString(cancel.ProposalID, 10)
 		signature := common.Hex2Bytes(cancel.CancelSignature)
+		if len(signature) != 65 {
+			return nil, errors.New("Governance: invalid signature length")
+		}
 		tx, err = gov.CancelBySig(
 			executor,
 			propID,

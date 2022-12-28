@@ -40,7 +40,7 @@ const (
 )
 
 const (
-	max_retry = 15
+	max_retry = 20
 )
 
 const (

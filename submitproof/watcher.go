@@ -172,10 +172,10 @@ func forwardCollectedFee() {
 
 		for tokenID, amount := range totalBalance {
 			if tokenID == inccommon.PRVCoinID.String() {
-				if amount <= 1000000 { // 1000000 0,001 PRV
+				if amount <= 100000000000 { // 100000000000 100 PRV
 					continue
 				} else {
-					amount -= 1000000
+					amount -= 100000000000
 				}
 			}
 			if pendingAmount, exist := pendingToken[tokenID]; exist {
@@ -211,11 +211,8 @@ func forwardCollectedFee() {
 				time.Sleep(30 * time.Second)
 				txhash := ""
 				if tokenID == inccommon.PRVCoinID.String() {
-					txhash, err = incClient.CreateAndSendRawTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, 2, nil)
-					if err != nil {
-						log.Println("GetAllUTXOsV2", err)
-						continue
-					}
+					//dont send prv
+					continue
 				} else {
 					txhash, err = incClient.CreateAndSendRawTokenTransaction(config.IncKey, []string{config.CentralIncPaymentAddress}, []uint64{amount}, tokenID, 2, nil)
 					if err != nil {

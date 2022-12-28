@@ -341,10 +341,26 @@ func SubmitPdaoOutchainTx(incTxHash string, network string, payload []byte, retr
 		log.Println("publish msgID:", msgID)
 		break
 	case common.ExternalTxTypePdaoCancel:
+		//TODO: @phuong
 		msg := &pubsub.Message{
 			Attributes: map[string]string{
 				"txhash": incTxHash,
 				"task":   PdaoSubmitCancelExtTask,
+			},
+			Data: taskBytes,
+		}
+		msgID, err := pappTxTopic.Publish(ctx, msg).Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		log.Println("publish msgID:", msgID)
+		break
+
+	case common.ExternalTxTypePdaoReShieldPRV:
+		msg := &pubsub.Message{
+			Attributes: map[string]string{
+				"txhash": incTxHash,
+				"task":   PdaoSubmitReShieldPRVExtTask,
 			},
 			Data: taskBytes,
 		}

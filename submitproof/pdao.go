@@ -206,6 +206,100 @@ func processSubmitVoteRequest(ctx context.Context, m *pubsub.Message) {
 	m.Ack()
 }
 
+func processSubmitReShieldPRVRequest(ctx context.Context, m *pubsub.Message) {
+	task := SubmitPDaoTask{}
+	err := json.Unmarshal(m.Data, &task)
+	if err != nil {
+		log.Println("processSubmitPrvRequest error decoding message", err)
+		m.Ack()
+		return
+	}
+
+	if time.Since(m.PublishTime) > time.Hour {
+		status := wcommon.ExternalTxStatus{
+			IncRequestTx: task.IncTxhash,
+			Type:         task.Type,
+			Status:       wcommon.StatusSubmitFailed,
+			Network:      task.Network,
+			Error:        "timeout",
+		}
+		err = database.DBSaveExternalTxStatus(&status)
+		if err != nil {
+			writeErr, ok := err.(mongo.WriteException)
+			if !ok {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+			if !writeErr.HasErrorCode(11000) {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+		}
+		err = database.DBUpdatePappTxSubmitOutchainStatus(task.IncTxhash, wcommon.StatusSubmitFailed)
+		if err != nil {
+			writeErr, ok := err.(mongo.WriteException)
+			if !ok {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+			if !writeErr.HasErrorCode(11000) {
+				log.Println("DBSaveExternalTxStatus err", err)
+				m.Nack()
+				return
+			}
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[pdao-reshield]` submitProofTx timeout 😵 inctx `%v` network `%v`\n", task.IncTxhash, task.Network))
+		return
+	}
+
+	status, err := pdao.CreatePRVOutChainTx(task.Network, task.IncTxhash, task.Payload, uint8(task.ReqType), config, task.Type)
+	if err != nil {
+		log.Println("CreatePRVOutChainTx error", err)
+		time.Sleep(15 * time.Second)
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[pdao-reshield]` submitProofTx `%v` for network `%v` failed 😵 err: %v", task.IncTxhash, task.Network, err))
+		m.Ack()
+		return
+	}
+	go slacknoti.SendSlackNoti(fmt.Sprintf("`[pdao-reshield]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
+
+	err = database.DBSaveExternalTxStatus(status)
+	if err != nil {
+		writeErr, ok := err.(mongo.WriteException)
+		if !ok {
+			log.Println("DBSaveExternalTxStatus err", err)
+			m.Ack()
+			return
+		}
+		if !writeErr.HasErrorCode(11000) {
+			log.Println("DBSaveExternalTxStatus err", err)
+			m.Ack()
+			return
+		}
+	}
+	inctx := strings.Split(task.IncTxhash, "_")
+	//TODO:
+	vote, err := database.DBGetVoteByIncTx(inctx[0])
+	if err != nil {
+		log.Println("DBGetVoteByIncTx error", err)
+		m.Ack()
+		return
+	}
+
+	vote.SubmitVoteTx = status.Txhash
+	vote.Status = wcommon.StatusPdaOutchainTxPending
+	err = database.DBUpdateVoteTable(vote)
+	if err != nil {
+		log.Println("DBUpdateVoteTable err:", err)
+		m.Ack()
+		return
+	}
+
+	m.Ack()
+}
+
 func watchPendingProposal() {
 	for {
 		time.Sleep(10 * time.Second)
@@ -413,7 +507,6 @@ func watchVotedToReshield() {
 			}
 
 			// todo: Call PRV contract reshield
-			CreatePRVOutChainTx
 
 			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.RESHIELD_VOTE, wcommon.ExternalTxTypePdaoVote)
 			if err != nil {

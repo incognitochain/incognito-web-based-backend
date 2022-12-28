@@ -30,6 +30,7 @@ type Vote struct {
 	SubmitBurnTx      string `bson:"submit_burn_tx"`
 	SubmitVoteTx      string `bson:"submit_vote_tx"`
 	AutoVoted         bool
+	IsReShield        bool `bson:"is_re_shield"`
 }
 
 type Cancel struct {

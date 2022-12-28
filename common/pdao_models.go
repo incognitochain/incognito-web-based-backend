@@ -26,12 +26,15 @@ type Vote struct {
 	ProposalID        string
 	Vote              uint8
 	PropVoteSignature string
-	ReShieldSignature string
 	SubmitBurnTx      string `bson:"submit_burn_tx"`
 	SubmitVoteTx      string `bson:"submit_vote_tx"`
-	SubmitReShieldTx  string `bson:"submit_re_shield_tx"`
 	AutoVoted         bool
-	IsReShield        bool `bson:"is_re_shield"`
+
+	ReShieldSignature string
+	ReShieldStatus    string `bson:"reshield_status"`
+	SubmitReShieldTx  string `bson:"submit_re_shield_tx"`
+
+	SubmitReShieldMintTx int `bson:"submit_reshield_mint_tx"`
 }
 
 type Cancel struct {

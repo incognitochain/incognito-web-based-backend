@@ -434,9 +434,10 @@ func APIPDaoVoting(c *gin.Context) {
 	log.Println("Begin store db!")
 	// store request to DB
 	vote := &wcommon.Vote{
-		SubmitBurnTx: req.Txhash,
-		Status:       wcommon.StatusSubmitting,
-		ProposalID:   req.ProposalID,
+		SubmitBurnTx:   req.Txhash,
+		ReShieldStatus: wcommon.StatusPending, // for reshield
+		Status:         wcommon.StatusSubmitting,
+		ProposalID:     req.ProposalID,
 
 		PropVoteSignature: req.PropVoteSignature,
 		ReShieldSignature: req.ReShieldSignature,

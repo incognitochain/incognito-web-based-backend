@@ -51,8 +51,7 @@ const (
 	StatusPdaOutchainTxSubmitting = "pdao_outchain_submitting"
 	StatusPdaOutchainTxPending    = "pdao_outchain_pending"
 	StatusPdaOutchainTxSuccess    = "pdao_outchain_success"
-
-	StatusPdaoReadyForVote = "pdao_ready_for_vote"
+	StatusPdaoReadyForVote        = "pdao_ready_for_vote"
 )
 
 const (

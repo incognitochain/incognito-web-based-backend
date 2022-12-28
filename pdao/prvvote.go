@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/go-resty/resty/v2"
 	"log"
 	"math/big"
 	"strconv"
@@ -36,10 +38,18 @@ func CreatePRVOutChainTx(network string, incTxHash string, payload []byte, reque
 		return nil, err
 	}
 
-	// todo thachtb: update query prv contract address
-	pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
+	// erc20
+	prvInfo, err := getTokenInfo(wcommon.PRV_TOKENID, config)
 	if err != nil {
 		return nil, err
+	}
+	prvContract := ""
+	for _, cToken := range prvInfo.ListChildToken {
+		networkID := wcommon.GetNetworkID(network)
+		tokenNetwork := wcommon.NetworkCurrencyMap[cToken.CurrencyType]
+		if tokenNetwork == networkID {
+			prvContract = cToken.ContractID
+		}
 	}
 
 	networkChainId := networkInfo.ChainID
@@ -60,7 +70,7 @@ retry:
 			continue
 		}
 
-		prv, err := prvvote.NewPrvvote(common.HexToAddress(pappAddress.ContractAddress), evmClient)
+		prv, err := prvvote.NewPrvvote(common.HexToAddress(prvContract), evmClient)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -140,6 +150,9 @@ func submitTxPRVVoteOutChain(executor *bind.TransactOpts, submitType uint8, payl
 			return nil, err
 		}
 		signature := common.Hex2Bytes(rShield.Signature)
+		if len(signature) != 65 {
+			return nil, errors.New("Governance: invalid signature length")
+		}
 		amount, _ := new(big.Int).SetString(rShield.Amount, 10)
 		tx, err = prv.BurnBySign(
 			executor,
@@ -151,15 +164,20 @@ func submitTxPRVVoteOutChain(executor *bind.TransactOpts, submitType uint8, payl
 			toByte32(signature[32:64]),
 		)
 	case RESHIELD_BY_SIGN:
-		var rShield Reshield
+		var rShield wcommon.Vote
 		err = json.Unmarshal(payload, &rShield)
 		if err != nil {
 			return nil, err
 		}
-		signature := common.Hex2Bytes(rShield.Signature)
+		signature := common.Hex2Bytes(rShield.ReShieldSignature)
+		if len(signature) != 65 {
+			return nil, errors.New("Governance: invalid signature length")
+		}
+		unshieldTxBytes := common.HexToHash(rShield.SubmitBurnTx).Bytes()
+		reverseString(unshieldTxBytes)
 		tx, err = prv.BurnBySignUnShieldTx(
 			executor,
-			common.HexToHash(rShield.BurnTxId),
+			common.BytesToHash(unshieldTxBytes),
 			signature[64]+27,
 			toByte32(signature[:32]),
 			toByte32(signature[32:64]),
@@ -168,4 +186,39 @@ func submitTxPRVVoteOutChain(executor *bind.TransactOpts, submitType uint8, payl
 		return nil, errors.New("invalid submit type")
 	}
 	return tx, err
+}
+
+func getTokenInfo(pUTokenID string, config wcommon.Config) (*wcommon.TokenInfo, error) {
+	var restyClient = resty.New()
+	type APIRespond struct {
+		Result []wcommon.TokenInfo
+		Error  *string
+	}
+
+	reqBody := struct {
+		TokenIDs []string
+	}{
+		TokenIDs: []string{pUTokenID},
+	}
+
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqBody).
+		Post(config.CoinserviceURL + "/coins/tokeninfo")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(responseBodyData.Result) == 1 {
+		return &responseBodyData.Result[0], nil
+	}
+	return nil, errors.New(fmt.Sprintf("token not found"))
+}
+
+func reverseString(s []byte) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
 }

@@ -395,7 +395,6 @@ func watchRedepositExternalTx() {
 					log.Println(err)
 					continue
 				}
-
 			}
 		}
 		time.Sleep(20 * time.Second)

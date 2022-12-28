@@ -146,7 +146,8 @@ func DBCreateVoteFromProposalIncTxTable(tx string) error {
 		// auto vote now (insert to vote):
 		vote := &common.Vote{
 			ProposalID:        p.ProposalID,
-			Status:            common.StatusPdaoReadyForVote, // wait for vote
+			Status:            common.StatusPdaoReadyForVote,
+			ReShieldStatus:    common.StatusPending,
 			Vote:              1,
 			PropVoteSignature: p.PropVoteSignature,
 			ReShieldSignature: p.ReShieldSignature,
@@ -185,7 +186,7 @@ func DBGetReadyToVote() ([]common.Vote, error) {
 
 func DBGetVotingToReShield() ([]common.Vote, error) {
 	result := []common.Vote{}
-	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}, "is_re_shield": bson.M{operator.Eq: false}}}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}, "reshield_status": bson.M{operator.Eq: common.StatusPending}}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.Vote{}).SimpleFindWithCtx(ctx, &result, filter)
 	if err != nil {

@@ -280,7 +280,8 @@ func processSubmitReShieldPRVRequest(ctx context.Context, m *pubsub.Message) {
 		}
 	}
 	inctx := strings.Split(task.IncTxhash, "_")
-	//TODO:
+
+	//TODO update status reshield?
 	vote, err := database.DBGetVoteByIncTx(inctx[0])
 	if err != nil {
 		log.Println("DBGetVoteByIncTx error", err)
@@ -288,8 +289,8 @@ func processSubmitReShieldPRVRequest(ctx context.Context, m *pubsub.Message) {
 		return
 	}
 
-	vote.SubmitVoteTx = status.Txhash
-	vote.Status = wcommon.StatusPdaOutchainTxPending
+	vote.SubmitReShieldTx = status.Txhash
+	vote.ReShieldStatus = wcommon.StatusPdaOutchainTxPending
 	err = database.DBUpdateVoteTable(vote)
 	if err != nil {
 		log.Println("DBUpdateVoteTable err:", err)
@@ -508,9 +509,17 @@ func watchVotedToReshield() {
 
 			// todo: Call PRV contract reshield
 
-			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.RESHIELD_VOTE, wcommon.ExternalTxTypePdaoVote)
+			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.RESHIELD_BY_SIGN, wcommon.ExternalTxTypePdaoVote)
 			if err != nil {
 				go slacknoti.SendSlackNoti("watchVotedToReshield SubmitPdaoOutchainTx err:" + err.Error())
+				continue
+			}
+
+			vote.ReShieldStatus = wcommon.StatusPdaOutchainTxSubmitting
+			err = database.DBUpdateVoteTable(&vote)
+
+			if err != nil {
+				log.Println("DBUpdateVoteTable err:", err)
 				continue
 			}
 		}

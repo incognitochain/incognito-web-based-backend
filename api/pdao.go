@@ -94,7 +94,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 		// recover address from user's signature
 		gvAbi, _ := abi.JSON(strings.NewReader(governance.GovernanceMetaData.ABI))
-		propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Description)
+		propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
 		signData, _ := gv.GetDataSign(nil, keccak256(propEncode[4:]))
 
 		rcAddr, err := crypto.Ecrecover(signData[:], common.Hex2Bytes(req.CreatePropSignature))
@@ -139,7 +139,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 
 		// check proposal existed
-		propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Description)))
+		propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Title)))
 		prop, _ := gv.Proposals(nil, propId)
 		if prop.StartBlock.Uint64() != 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
@@ -441,7 +441,8 @@ func APIPDaoVoting(c *gin.Context) {
 		PropVoteSignature: req.PropVoteSignature,
 		ReShieldSignature: req.ReShieldSignature,
 
-		Vote: req.Vote,
+		Vote:      req.Vote,
+		AutoVoted: false,
 	}
 	// insert db
 	if err = database.DBInsertVoteTable(vote); err != nil {

@@ -69,18 +69,6 @@ func DBGetPendingProposal() ([]common.Proposal, error) {
 	return result, nil
 }
 
-func DBGetSuccessProposalNoVoted() ([]common.Proposal, error) {
-	result := []common.Proposal{}
-	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}}, "voted": false}
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	err := mgm.Coll(&common.Proposal{}).SimpleFindWithCtx(ctx, &result, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
 func DBUpdatePdaoProposalStatus(incTx string, status string) error {
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status}}
@@ -148,4 +136,49 @@ func DBGetVoteByIncTx(incReqTx string) (*common.Vote, error) {
 	}
 
 	return &result, nil
+}
+
+// create a auto vote from proposal:
+func DBCreateVoteFromProposalIncTxTable(tx string) error {
+
+	p, err := DBGetProposalByIncTx(tx)
+	if p != nil {
+		// auto vote now (insert to vote):
+		vote := &common.Vote{
+			ProposalID:        p.ProposalID,
+			Status:            common.StatusPdaoReadyForVote, // wait for vote
+			Vote:              1,
+			PropVoteSignature: p.PropVoteSignature,
+			ReShieldSignature: p.ReShieldSignature,
+			AutoVoted:         true,           // auto vote for owner of proposal.
+			SubmitBurnTx:      p.SubmitBurnTx, // use proposal burn prv tx for tracking
+		}
+		return DBInsertVoteTable(vote)
+	}
+	return err
+
+}
+
+func DBGetPendingVote() ([]common.Vote, error) {
+	result := []common.Vote{}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusSubmitting}}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.Vote{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func DBGetReadyToVote() ([]common.Vote, error) {
+	result := []common.Vote{}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaoReadyForVote}}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.Vote{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

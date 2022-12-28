@@ -107,6 +107,72 @@ func RetrieveCollectionAssets(OSEndpoint string, apiKey string, collectionContra
 	return respond.Assets, nil
 }
 
+// support mainnet only
+func RetrieveCollectionAssetByIDs(apiKey string, collectionContract string, ids []string) ([]NFTDetail, error) {
+	var respond struct {
+		Assets []NFTDetail `json:"assets"`
+	}
+
+	nftIds := ""
+	for _, v := range ids {
+		s := "&token_ids=" + v
+		nftIds += s
+	}
+
+	url := fmt.Sprintf("https://api.opensea.io/api/v1/assets?order_direction=desc&asset_contract_address=%v&limit=30&include_orders=true%v", collectionContract, nftIds)
+	log.Println("RetrieveCollectionAssetByIDs url:", url)
+	req, _ := http.NewRequest("GET", url, nil)
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("X-API-KEY", apiKey)
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(body, &respond)
+	if err != nil {
+		return nil, err
+	}
+	if len(respond.Assets) == 0 {
+		return nil, fmt.Errorf("failed to retrieve collection assets")
+	}
+	return respond.Assets, nil
+}
+
+// support mainnet only
+func RetrieveCollectionListing(apiKey string, collectionSlug string, next string) ([]NFTOrder, string, error) {
+	var respond struct {
+		Listings []NFTOrder `json:"listings"`
+		Next     string     `json:"next"`
+	}
+	url := fmt.Sprintf("https://api.opensea.io/v2/listings/collection/%v/all", collectionSlug)
+
+	req, _ := http.NewRequest("GET", url, nil)
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("X-API-KEY", apiKey)
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, "", err
+	}
+	err = json.Unmarshal(body, &respond)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(respond.Listings) == 0 {
+		return nil, "", fmt.Errorf("failed to retrieve collection assets")
+	}
+	return respond.Listings, respond.Next, nil
+}
+
 func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID string) (*NFTDetail, error) {
 	var respond struct {
 		Assets []NFTDetail `json:"assets"`

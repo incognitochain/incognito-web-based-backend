@@ -3,6 +3,7 @@ package submitproof
 import (
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -68,7 +69,7 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 	return nil
 }
 
-func updateOpenSeaCollections() {
+func updateOpenSeaCollectionDetail() {
 	for {
 		time.Sleep(8 * time.Second)
 		defaultList, err := database.DBGetDefaultCollectionList()
@@ -76,21 +77,103 @@ func updateOpenSeaCollections() {
 			log.Println(err)
 			continue
 		}
-		collections := []popensea.CollectionDetail{}
+		// collections := []popensea.CollectionDetail{}
 		for _, collection := range defaultList {
-			collectionDetail, err := popensea.RetrieveCollectionDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, collection.Slug)
+			collectionDetail, err := popensea.RetrieveCollectionDetail(config.OpenSeaAPI, "", collection.Slug)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
-			collections = append(collections, *collectionDetail)
-			time.Sleep(1500 * time.Millisecond)
+			err = database.DBSaveCollectionsInfo([]popensea.CollectionDetail{*collectionDetail})
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			time.Sleep(1000 * time.Millisecond)
 		}
+		log.Println("done update OpenSea Collections detail")
+	}
+}
 
-		err = database.DBSaveCollectionsInfo(collections)
+func updateOpenSeaCollectionAssets() {
+	for {
+		time.Sleep(10 * time.Second)
+		defaultList, err := database.DBGetDefaultCollectionList()
 		if err != nil {
 			log.Println(err)
 			continue
 		}
+		if config.NetworkID == "mainnet" {
+			for _, collection := range defaultList {
+				// collectionData, err := database.DBGetCollectionsInfo(collection.Address)
+				// if err != nil {
+				// 	log.Println(err)
+				// 	continue
+				// }
+				orderList := []popensea.NFTOrder{}
+				next := ""
+				for {
+					list, nextStr, err := popensea.RetrieveCollectionListing(config.OpenSeaAPIKey, collection.Slug, next)
+					if err != nil {
+						log.Println("RetrieveCollectionListing error: ", err)
+						continue
+					}
+					if nextStr == next {
+						break
+					}
+					next = nextStr
+					orderList = append(orderList, list...)
+				}
+
+				nftsToGetBatch := make([][]string, 0, int(math.Ceil(float64(len(orderList))/30)))
+				for idx, order := range orderList {
+					nftid := order.ProtocolData.Parameters.Offer[0].IdentifierOrCriteria
+					batch := int(math.Ceil(float64(idx) / 30))
+					nftsToGetBatch[batch] = append(nftsToGetBatch[batch], nftid)
+				}
+				for _, nftBatch := range nftsToGetBatch {
+					assets, err := popensea.RetrieveCollectionAssetByIDs(config.OpenSeaAPIKey, collection.Address, nftBatch)
+					if err != nil {
+						log.Println("RetrieveCollectionAssetByIDs error: ", err)
+						continue
+					}
+					err = database.DBSaveNFTDetail(assets)
+					if err != nil {
+						log.Println("DBSaveNFTDetail error: ", err)
+						continue
+					}
+				}
+			}
+
+		}
 	}
 }
+
+// func updateOpenSeaCollectionList() {
+// for {
+// 	offset := 0
+// 	popensea.RetrieveCollectionList(config.OpenSeaAPI, "", 300)
+// 	defaultList, err := database.DBGetDefaultCollectionList()
+// 	if err != nil {
+// 		log.Println(err)
+// 		continue
+// 	}
+// 	collections := []popensea.CollectionDetail{}
+// 	for _, collection := range defaultList {
+// 		collectionDetail, err := popensea.RetrieveCollectionDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, collection.Slug)
+// 		if err != nil {
+// 			log.Println(err)
+// 			continue
+// 		}
+// 		collections = append(collections, *collectionDetail)
+// 		time.Sleep(1500 * time.Millisecond)
+// 	}
+
+// 	err = database.DBSaveCollectionsInfo(collections)
+// 	if err != nil {
+// 		log.Println(err)
+// 		continue
+// 	}
+// 	time.Sleep(20 * time.Second)
+// }
+// }

@@ -335,3 +335,45 @@ type NFTDetail struct {
 	TransferFeePaymentToken interface{} `json:"transfer_fee_payment_token"`
 	TokenID                 string      `json:"token_id"`
 }
+
+type NFTOrder struct {
+	OrderHash string `json:"order_hash"`
+	Chain     string `json:"chain"`
+	Type      string `json:"type"`
+	Price     struct {
+		Current struct {
+			Value    string `json:"value"`
+			Currency string `json:"currency"`
+		} `json:"current"`
+	} `json:"price"`
+	ProtocolData struct {
+		Parameters struct {
+			Offerer string `json:"offerer"`
+			Offer   []struct {
+				ItemType             int    `json:"itemType"`
+				Token                string `json:"token"`
+				IdentifierOrCriteria string `json:"identifierOrCriteria"`
+				StartAmount          string `json:"startAmount"`
+				EndAmount            string `json:"endAmount"`
+			} `json:"offer"`
+			Consideration []struct {
+				ItemType             int    `json:"itemType"`
+				Token                string `json:"token"`
+				IdentifierOrCriteria string `json:"identifierOrCriteria"`
+				StartAmount          string `json:"startAmount"`
+				EndAmount            string `json:"endAmount"`
+				Recipient            string `json:"recipient"`
+			} `json:"consideration"`
+			StartTime                       string `json:"startTime"`
+			EndTime                         string `json:"endTime"`
+			OrderType                       int    `json:"orderType"`
+			Zone                            string `json:"zone"`
+			ZoneHash                        string `json:"zoneHash"`
+			Salt                            string `json:"salt"`
+			ConduitKey                      string `json:"conduitKey"`
+			TotalOriginalConsiderationItems int    `json:"totalOriginalConsiderationItems"`
+			Counter                         int    `json:"counter"`
+		} `json:"parameters"`
+		Signature string `json:"signature"`
+	} `json:"protocol_data"`
+}

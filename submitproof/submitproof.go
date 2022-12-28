@@ -157,6 +157,13 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		}
 		return result, err
 	}
+	if tokenID == wcommon.PRV_TOKENID {
+		result, err := incClient.CreateAndSendIssuingPRVPeggingRequestTransaction(key, *proof, networkID)
+		if err != nil {
+			return result, err
+		}
+		return result, err
+	}
 	if tokenID == pUTokenID {
 		result, err := incClient.CreateAndSendIssuingEVMRequestTransaction(key, tokenID, *proof, networkID-1)
 		if err != nil {
@@ -164,7 +171,6 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		}
 		return result, nil
 	}
-
 	result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *proof, networkID)
 	if err != nil {
 		return result, err

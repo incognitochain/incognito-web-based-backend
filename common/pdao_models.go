@@ -18,7 +18,6 @@ type Proposal struct {
 	Description         string `bson:"description"`
 	Title               string `bson:"title"`
 	ReShieldSignature   string
-	Voted               bool
 }
 
 type Vote struct {

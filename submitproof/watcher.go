@@ -56,7 +56,10 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go trackDexSwap()
 
 	go watchPendingProposal()
-	go watchSuccessProposal() // to auto vote
+
+	go watchPendingVoting()
+
+	go watchReadyToVote() // to vote
 
 	return nil
 }
@@ -685,6 +688,11 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					}
 				} else {
 					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
+					// create a auto vote for the proposal:
+					err = database.DBCreateVoteFromProposalIncTxTable(inctx[0])
 					if err != nil {
 						return err
 					}

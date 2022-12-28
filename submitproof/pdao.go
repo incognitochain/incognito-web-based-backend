@@ -234,6 +234,7 @@ func watchPendingProposal() {
 					log.Println("marshal proposal err:", err)
 					continue
 				}
+				// update status
 				p.Status = wcommon.StatusPdaOutchainTxSubmitting
 				err = database.DBUpdateProposalTable(&p)
 				if err != nil {
@@ -251,17 +252,48 @@ func watchPendingProposal() {
 	}
 }
 
-// this watcher for checking proposal success and check vote date to auto vote:
-func watchSuccessProposal() {
+func watchPendingVoting() {
+	for {
+		time.Sleep(10 * time.Second)
+		proposals, err := database.DBGetPendingVote()
+		if err != nil {
+			log.Println("DBGetPendingVote err:", err)
+		}
+		for _, p := range proposals {
+			unshieldStatus, err := database.DBGetUnshieldTxByIncTx(p.SubmitBurnTx)
+			if err != nil {
+				log.Println("DBGetUnshieldTxByIncTx err:", err)
+				continue
+			}
+			if unshieldStatus.Status == wcommon.StatusSubmitFailed {
+				p.Status = unshieldStatus.Status
+				err = database.DBUpdateVoteTable(&p)
+				if err != nil {
+					log.Println("DBUpdateVoteTable err:", err)
+					continue
+				}
+			}
+			if unshieldStatus.OutchainStatus == wcommon.StatusAccepted {
+				// update status ready to vote
+				p.Status = wcommon.StatusPdaoReadyForVote
+				err = database.DBUpdateVoteTable(&p)
+				if err != nil {
+					log.Println("DBUpdateVoteTable err:", err)
+					continue
+				}
+			}
+		}
+	}
+}
+
+func watchReadyToVote() {
 	for {
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(60 * time.Second)
 
-		go slacknoti.SendSlackNoti("checking proposal auto vote....")
-
-		proposals, err := database.DBGetSuccessProposalNoVoted()
+		proposals, err := database.DBGetReadyToVote()
 		if err != nil {
-			go slacknoti.SendSlackNoti("watchSuccessProposal DBGetSuccessProposalNoVoted err:" + err.Error())
+			log.Println("watchReadyToVote DBGetReadyToVote err:" + err.Error())
 		}
 		log.Println("there are ", len(proposals), "records!")
 
@@ -269,7 +301,7 @@ func watchSuccessProposal() {
 
 		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
 		if err != nil {
-			go slacknoti.SendSlackNoti("watchSuccessProposal DBGetSuccessProposalNoVoted err:" + err.Error())
+			log.Println("watchReadyToVote DBGetSuccessProposalNoVoted err:" + err.Error())
 			continue
 		}
 
@@ -278,9 +310,9 @@ func watchSuccessProposal() {
 			continue
 		}
 
-		for _, p := range proposals {
+		for _, vote := range proposals {
 
-			proposalID, ok := big.NewInt(0).SetString(p.ProposalID, 10)
+			proposalID, ok := big.NewInt(0).SetString(vote.ProposalID, 10)
 
 			if !ok {
 				go slacknoti.SendSlackNoti("watchSuccessProposal parse  ProposalID no ok")
@@ -289,30 +321,19 @@ func watchSuccessProposal() {
 
 			prop, err := gv.Proposals(nil, proposalID)
 			if err != nil {
-				go slacknoti.SendSlackNoti("watchSuccessProposal Proposals err:" + err.Error() + ", proposalID: " + p.ProposalID + networkInfo.Endpoints[1])
+				log.Println("watchSuccessProposal Proposals err:" + err.Error() + ", proposalID: " + vote.ProposalID + networkInfo.Endpoints[1])
 				continue
 			}
 
 			header, err := evmClient.HeaderByNumber(context.Background(), nil)
 			if err != nil {
-				log.Println("watchSuccessProposal HeaderByNumber err:", err)
+				log.Println("watchReadyToVote HeaderByNumber err:", err)
 				continue
 			}
 
-			log.Println("watchSuccessProposal prop.StartBlock:", prop.StartBlock, "header.Number: ", header.Number)
+			log.Println("watchReadyToVote prop.StartBlock:", prop.StartBlock, "header.Number: ", header.Number)
 
 			if prop.StartBlock.Cmp(header.Number) == -1 {
-
-				// auto vote now (insert to vote):
-				vote := &wcommon.Vote{
-					ProposalID:        p.ProposalID,
-					Status:            wcommon.StatusPdaOutchainTxSubmitting,
-					Vote:              1,
-					PropVoteSignature: p.PropVoteSignature,
-					ReShieldSignature: p.ReShieldSignature,
-					AutoVoted:         true,           // auto vote for owner of proposal.
-					SubmitBurnTx:      p.SubmitBurnTx, // use proposal burn prv tx for tracking
-				}
 
 				voteJson, err := json.Marshal(vote)
 				if err != nil {
@@ -320,22 +341,18 @@ func watchSuccessProposal() {
 					continue
 				}
 
-				_, err = SubmitPdaoOutchainTx(p.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
+				_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
 				if err != nil {
-					go slacknoti.SendSlackNoti("watchSuccessProposal SubmitPdaoOutchainTx err:" + err.Error())
+					go slacknoti.SendSlackNoti("watchReadyToVote SubmitPdaoOutchainTx err:" + err.Error())
 					continue
 				}
-
-				err = database.DBInsertVoteTable(vote)
+				vote.Status = wcommon.StatusPdaOutchainTxSubmitting
+				err = database.DBUpdateVoteTable(&vote)
 
 				if err != nil {
-					go slacknoti.SendSlackNoti("watchSuccessProposal DBInsertVoteTable err:" + err.Error())
+					log.Println("DBUpdateVoteTable err:", err)
 					continue
 				}
-				// update proposal:
-				p.Voted = true
-				database.DBUpdateProposalTable(&p)
-
 			}
 
 		}

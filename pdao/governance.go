@@ -137,7 +137,7 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 		tx, err = gov.ProposeBySig(
 			executor,
 			targets, values, calldatas,
-			prop.Description,
+			prop.Title,
 			signature[64]+27,
 			toByte32(signature[:32]),
 			toByte32(signature[32:64]),

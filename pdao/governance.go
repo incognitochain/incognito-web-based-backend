@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	CREATE_PROP  = 1
-	VOTE_PROP    = 2
-	CANCEL_PROP  = 3
-	EXECUTE_PROP = 4
+	CREATE_PROP   = 1
+	VOTE_PROP     = 2
+	CANCEL_PROP   = 3
+	RESHIELD_VOTE = 4
+	EXECUTE_PROP  = 5
 )
 
 func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte, requestType uint8, config wcommon.Config, pappType int) (*wcommon.ExternalTxStatus, error) {
@@ -182,8 +183,25 @@ func submitTxOutChain(executor *bind.TransactOpts, submitType uint8, payload []b
 			toByte32(signature[:32]),
 			toByte32(signature[32:64]),
 		)
-	case EXECUTE_PROP:
-		// todo:
+	case RESHIELD_VOTE:
+		var rShield wcommon.Vote
+		err = json.Unmarshal(payload, &rShield)
+		if err != nil {
+			return nil, err
+		}
+		signature := common.Hex2Bytes(rShield.ReShieldSignature)
+		if len(signature) != 65 {
+			return nil, errors.New("Governance: invalid signature length")
+		}
+		unshieldTxBytes := common.HexToHash(rShield.SubmitBurnTx).Bytes()
+		reverseString(unshieldTxBytes)
+		tx, err = gov.BurnBySignUnShieldTx(
+			executor,
+			common.BytesToHash(unshieldTxBytes),
+			signature[64]+27,
+			toByte32(signature[:32]),
+			toByte32(signature[32:64]),
+		)
 	default:
 		return nil, errors.New("invalid submit type")
 	}

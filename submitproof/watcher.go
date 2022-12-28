@@ -56,12 +56,9 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go trackDexSwap()
 
 	go watchPendingProposal()
-
 	go watchPendingVoting()
-
-	go watchReadyToVote() // to vote
-
-	go watchVoted()
+	go watchReadyToVote()     // for voting
+	go watchVotedToReshield() // for reshielding
 
 	return nil
 }

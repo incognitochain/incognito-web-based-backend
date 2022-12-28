@@ -119,6 +119,11 @@ func APIEstimateBuyFee(c *gin.Context) {
 		return
 	}
 
+	receiveToken := strings.ToLower("6722ec501bE09fb221bCC8a46F9660868d0a6c63")
+	if config.NetworkID == "testnet" {
+		receiveToken = strings.ToLower("4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae")
+	}
+
 	result := struct {
 		Fee          *OpenSeaFee
 		Calldata     string
@@ -128,7 +133,7 @@ func APIEstimateBuyFee(c *gin.Context) {
 		Fee:          feeAmount,
 		Calldata:     callData,
 		CallContract: contract[2:],
-		ReceiveToken: strings.ToLower("4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"),
+		ReceiveToken: receiveToken,
 	}
 	c.JSON(200, gin.H{"Result": result})
 }
@@ -250,20 +255,43 @@ func APIGetCollections(c *gin.Context) {
 func APINFTDetail(c *gin.Context) {
 	contract := c.Query("contract")
 	nftid := c.Query("nftid")
-	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
+	var nftDetail *popensea.NFTDetail
+	var err error
+	if config.NetworkID == "mainnet" {
+		nftDetailDB, err := database.DBGetNFTDetail(contract, nftid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		nftDetail = &nftDetailDB.Detail
+	} else {
+		nftDetail, err = popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"Result": nftDetail})
 }
+
 func APICollectionAssets(c *gin.Context) {
 	contract := c.Query("contract")
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	offset, _ := strconv.Atoi(c.Query("offset"))
 
 	var result []popensea.NFTDetail
-
+	if config.NetworkID == "mainnet" {
+		assetList, err := database.DBGetCollectionNFTs(contract, int64(limit), int64(offset))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		for _, asset := range assetList {
+			result = append(result, asset.Detail)
+		}
+		c.JSON(http.StatusOK, gin.H{"Result": result})
+		return
+	}
 	assetList, err := popensea.RetrieveCollectionAssets(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})

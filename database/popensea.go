@@ -55,9 +55,10 @@ func DBSaveNFTDetail(list []popensea.NFTDetail) error {
 	return nil
 }
 
-func DBGetCollectionNFTs(address string) (*common.OpenseaAssetData, error) {
+func DBGetNFTDetail(address string, nftid string) (*common.OpenseaAssetData, error) {
 	var result common.OpenseaAssetData
-	filter := bson.M{"address": bson.M{operator.Eq: address}}
+	uid := address + "-" + nftid
+	filter := bson.M{"uid": bson.M{operator.Eq: uid}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	dbresult := mgm.Coll(&common.OpenseaAssetData{}).FindOne(ctx, filter)
 	if dbresult.Err() != nil {
@@ -68,6 +69,23 @@ func DBGetCollectionNFTs(address string) (*common.OpenseaAssetData, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func DBGetCollectionNFTs(address string, limit, offset int64) ([]common.OpenseaAssetData, error) {
+	var result []common.OpenseaAssetData
+	if limit == 0 {
+		limit = int64(1000)
+	}
+	filter := bson.M{"address": bson.M{operator.Eq: address}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.OpenseaAssetData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Skip:  &offset,
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func DBGetDefaultCollectionList() ([]common.OpenseaDefaultCollectionData, error) {

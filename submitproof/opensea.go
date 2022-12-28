@@ -117,7 +117,8 @@ func updateOpenSeaCollectionAssets() {
 					list, nextStr, err := popensea.RetrieveCollectionListing(config.OpenSeaAPIKey, collection.Slug, next)
 					if err != nil {
 						log.Println("RetrieveCollectionListing error: ", err)
-						continue
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection listing", collection.Slug))
+						break
 					}
 					if nextStr == next {
 						break

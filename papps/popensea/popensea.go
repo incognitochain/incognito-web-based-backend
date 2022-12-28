@@ -47,7 +47,7 @@ func RetrieveCollectionDetail(OSEndpoint, apiKey string, slug string) (*Collecti
 		Collection CollectionDetail `json:"collection"`
 	}
 	url := fmt.Sprintf("%v/api/v1/collection/%v", OSEndpoint, slug)
-
+	log.Println("RetrieveCollectionDetail url:", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("err0")
@@ -150,6 +150,7 @@ func RetrieveCollectionListing(apiKey string, collectionSlug string, next string
 		Next     string     `json:"next"`
 	}
 	url := fmt.Sprintf("https://api.opensea.io/v2/listings/collection/%v/all", collectionSlug)
+	log.Println("RetrieveCollectionListing url:", url)
 
 	req, _ := http.NewRequest("GET", url, nil)
 

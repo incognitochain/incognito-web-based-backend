@@ -113,6 +113,7 @@ func updateOpenSeaCollectionAssets() {
 				orderList := []popensea.NFTOrder{}
 				next := ""
 				for {
+					time.Sleep(500 * time.Millisecond)
 					list, nextStr, err := popensea.RetrieveCollectionListing(config.OpenSeaAPIKey, collection.Slug, next)
 					if err != nil {
 						log.Println("RetrieveCollectionListing error: ", err)
@@ -124,14 +125,15 @@ func updateOpenSeaCollectionAssets() {
 					next = nextStr
 					orderList = append(orderList, list...)
 				}
-
-				nftsToGetBatch := make([][]string, 0, int(math.Ceil(float64(len(orderList))/30)))
+				log.Println("len(orderList)", len(orderList))
+				nftsToGetBatch := make([][]string, int(math.Ceil(float64(len(orderList))/30)))
 				for idx, order := range orderList {
 					nftid := order.ProtocolData.Parameters.Offer[0].IdentifierOrCriteria
-					batch := int(math.Ceil(float64(idx) / 30))
+					batch := int(math.Floor(float64(idx) / 30))
 					nftsToGetBatch[batch] = append(nftsToGetBatch[batch], nftid)
 				}
 				for _, nftBatch := range nftsToGetBatch {
+					time.Sleep(500 * time.Millisecond)
 					assets, err := popensea.RetrieveCollectionAssetByIDs(config.OpenSeaAPIKey, collection.Address, nftBatch)
 					if err != nil {
 						log.Println("RetrieveCollectionAssetByIDs error: ", err)

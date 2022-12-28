@@ -257,6 +257,10 @@ func DBCreateOpenSeaIndex() error {
 		{
 			Keys: bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
 		},
+		{
+			Keys:    bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetExpireAfterSeconds(1800),
+		},
 	}
 	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)
 	if err != nil {

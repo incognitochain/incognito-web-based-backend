@@ -32,15 +32,18 @@ const (
 )
 
 const (
-	StatusSubmitting   = "submitting"
-	StatusSubmitFailed = "submit_failed"
+	StatusSubmitting   = "submitting"    // broadcast inc chain
+	StatusSubmitFailed = "submit_failed" //
 	StatusPending      = "pending"
 	StatusExecuting    = "executing"
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
-	StatusSuccess      = "success"
-	StatusFailed       = "failed"
+
+
+	// for ui
+	StatusSuccess = "success"
+	StatusFailed  = "failed"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"

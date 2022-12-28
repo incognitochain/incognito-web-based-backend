@@ -152,7 +152,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 	for i := 1; i < len(paths); i++ {
 		path := paths[i]
 
-		totalFee, err := calTotalFee(path)
+		totalFee, err := calTotalFee(path, config)
 		if err != nil {
 			fmt.Printf("Error cal fee: %v\n", err)
 			continue
@@ -174,16 +174,29 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string]I
 	}
 
 	// deduct the fee of the second of tx from MinAcceptedAmt
-	amountOut, err := subStrs(bestPath.Paths[1].AmountOut, bestPath.Paths[1].Fee[0].AmountInBuyToken)
+	feeAddon := bestPath.Paths[1].Fee[0]
+	feeAmountInBuyToken := feeAddon.AmountInBuyToken
+	if feeAmountInBuyToken == "" {
+		tmp, err := convertAmountUint64(feeAddon.Amount, feeAddon.TokenID, bestPath.ToToken, config)
+		if err != nil {
+			return nil, err
+		}
+		feeAmountInBuyToken, err = convertFloat64ToWithoutDecStr(tmp, bestPath.ToToken, config)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	amountOut, err := subStrs(bestPath.Paths[1].AmountOut, feeAmountInBuyToken)
 	if err != nil {
 		return nil, err
 	}
 
-	amountOutPreSlippage, err := subStrs(bestPath.Paths[1].AmountOutPreSlippage, bestPath.Paths[1].Fee[0].AmountInBuyToken)
+	amountOutPreSlippage, err := subStrs(bestPath.Paths[1].AmountOutPreSlippage, feeAmountInBuyToken)
 	if err != nil {
 		return nil, err
 	}
-	amountOutRaw, err := convertToDecAmtStr(amountOut, bestPath.ToToken)
+	amountOutRaw, err := convertToDecAmtStr(amountOut, bestPath.ToToken, config)
 	if err != nil {
 		return nil, err
 	}

@@ -56,10 +56,11 @@ type SubmitInterSwapTxRequest struct {
 	PAppNetwork  string
 	PAppContract string
 
-	OTARefundFee string // user's OTA to receive refunded swap papp fee (sender is BE, receiver is user)
-	OTARefund    string // user's OTA to receive fund from InterswapBE only in case PappPdexType and the first tx is reverted (sender is InterswapBE, receiver is user)
-	OTAFromToken string // user's OTA to receive refunded swap amount (sell token || mid token)
-	OTAToToken   string // user's OTA to receive buy token
+	OTARefundFee    string // user's OTA to receive refunded swap papp fee (sender is BE, receiver is user)
+	OTARefund       string // user's OTA to receive fund from InterswapBE only in case PappPdexType and the first tx is reverted (sender is InterswapBE, receiver is user)
+	OTAFromToken    string // user's OTA to receive refunded swap amount (sell token || mid token)
+	OTAToToken      string // user's OTA to receive buy token
+	WithdrawAddress string // only withdraw when PathType = pDexToPapp
 }
 
 // TODO: 0xkraken
@@ -202,10 +203,11 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				TxID:  txHash,
 				TxRaw: req.TxRaw,
 
-				OTARefundFee: req.OTARefundFee,
-				OTARefund:    req.OTARefund,
-				OTAFromToken: req.OTAFromToken,
-				OTAToToken:   req.OTAToToken,
+				OTARefundFee:    req.OTARefundFee,
+				OTARefund:       req.OTARefund,
+				OTAFromToken:    req.OTAFromToken,
+				OTAToToken:      req.OTAToToken,
+				WithdrawAddress: req.WithdrawAddress,
 
 				FromToken:           md.BurnTokenID.String(),
 				ToToken:             req.ToToken,
@@ -314,10 +316,11 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				TxID:  txHash,
 				TxRaw: req.TxRaw,
 
-				OTARefundFee: req.OTARefundFee,
-				OTARefund:    req.OTARefund,
-				OTAFromToken: req.OTAFromToken,
-				OTAToToken:   req.OTAToToken,
+				OTARefundFee:    req.OTARefundFee,
+				OTARefund:       req.OTARefund,
+				OTAFromToken:    req.OTAFromToken,
+				OTAToToken:      req.OTAToToken,
+				WithdrawAddress: req.WithdrawAddress,
 
 				FromToken:           req.FromToken,
 				ToToken:             req.ToToken,

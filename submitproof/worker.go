@@ -188,8 +188,9 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 		return
 	}
 
-	t := time.Now().Unix()
-	key := keyList[t%int64(len(keyList))]
+	// t := time.Now().Unix()
+	// key := keyList[t%int64(len(keyList))]
+	key := config.IncKey
 	incTx, paymentAddr, tokenID, linkedTokenID, err := submitProof(task.TxHash, task.TokenID, task.NetworkID, key)
 	if err != nil {
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[submitProof]` create tx failed `%v`, tokenID `%v`, networkID `%v`, error: `%v`\n", task.TxHash, task.TokenID, task.NetworkID, err))

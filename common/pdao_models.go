@@ -29,6 +29,7 @@ type Vote struct {
 	ReShieldSignature string
 	SubmitBurnTx      string `bson:"submit_burn_tx"`
 	SubmitVoteTx      string `bson:"submit_vote_tx"`
+	SubmitReShieldTx  string `bson:"submit_re_shield_tx"`
 	AutoVoted         bool
 	IsReShield        bool `bson:"is_re_shield"`
 }

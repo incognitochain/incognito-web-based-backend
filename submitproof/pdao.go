@@ -358,3 +358,73 @@ func watchReadyToVote() {
 		}
 	}
 }
+
+func watchVoted() {
+	for {
+
+		time.Sleep(60 * time.Second)
+
+		votedRequests, err := database.DBGetVoteSuccess()
+		if err != nil {
+			log.Println("watchVoted DBGetVoteSuccess err:" + err.Error())
+		}
+		log.Println("there are ", len(votedRequests), "records!")
+
+		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
+
+		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
+		if err != nil {
+			log.Println("watchVoted DBGetVoteSuccess err:" + err.Error())
+			continue
+		}
+
+		gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+		if err != nil {
+			continue
+		}
+
+		for _, vote := range votedRequests {
+
+			proposalID, ok := big.NewInt(0).SetString(vote.ProposalID, 10)
+
+			if !ok {
+				go slacknoti.SendSlackNoti("watchVoted parse ProposalID no ok")
+				continue
+			}
+
+			state, err := gv.State(nil, proposalID)
+			if err != nil {
+				log.Println("watchVoted Votes err:" + err.Error() + ", proposalID: " + vote.ProposalID + networkInfo.Endpoints[1])
+				continue
+			}
+
+			log.Println("watchVoted state prop:", state, "with prop id: ", proposalID)
+
+			// if auto vote and state in Pending/Active then continue
+			if state < 2 && vote.AutoVoted {
+				continue
+			}
+
+			voteJson, err := json.Marshal(vote)
+			if err != nil {
+				log.Println("marshal proposal err:", err)
+				continue
+			}
+
+			// todo: Call PRV contract
+			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.VOTE_PROP, wcommon.ExternalTxTypePdaoVote)
+			if err != nil {
+				go slacknoti.SendSlackNoti("watchVoted SubmitPdaoOutchainTx err:" + err.Error())
+				continue
+			}
+			vote.Status = wcommon.StatusPdaOutchainTxSubmitting
+			err = database.DBUpdateVoteTable(&vote)
+
+			if err != nil {
+				log.Println("DBUpdateVoteTable err:", err)
+				continue
+			}
+
+		}
+	}
+}

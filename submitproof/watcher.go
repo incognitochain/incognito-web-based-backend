@@ -61,6 +61,8 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 
 	go watchReadyToVote() // to vote
 
+	go watchVoted()
+
 	return nil
 }
 

@@ -182,3 +182,15 @@ func DBGetReadyToVote() ([]common.Vote, error) {
 
 	return result, nil
 }
+
+func DBGetVoteSuccess() ([]common.Vote, error) {
+	result := []common.Vote{}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}, "is_re_shield": bson.M{operator.Eq: false}}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.Vote{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

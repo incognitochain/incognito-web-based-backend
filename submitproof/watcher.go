@@ -709,6 +709,20 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						return err
 					}
 				}
+			case wcommon.ExternalTxTypePdaoReShieldPRV:
+				txtype = "pdao-reshield"
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoVoteReshieldStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoVoteReshieldStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
+				}
 			case wcommon.ExternalTxTypePdaoCancel:
 				txtype = "pdao-cancel"
 				inctx := strings.Split(tx.IncRequestTx, "_")

@@ -91,6 +91,17 @@ func DBUpdatePdaoVoteStatus(incTx string, status string) error {
 	return nil
 }
 
+func DBUpdatePdaoVoteReshieldStatus(incTx string, status string) error {
+	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
+	update := bson.M{"$set": bson.M{"reshield_status": status}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func DBUpdatePdaoCancelStatus(incTx string, status string) error {
 	//TODO: @phuong => don't need yes for now.
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
@@ -186,7 +197,7 @@ func DBGetReadyToVote() ([]common.Vote, error) {
 
 func DBGetVotingToReShield() ([]common.Vote, error) {
 	result := []common.Vote{}
-	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}, "reshield_status": bson.M{operator.Eq: common.StatusPending}}}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}}, "reshield_status": bson.M{operator.Eq: common.StatusPending}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.Vote{}).SimpleFindWithCtx(ctx, &result, filter)
 	if err != nil {

@@ -311,14 +311,14 @@ func watchPendingProposal() {
 		for _, p := range proposals {
 			unshieldStatus, err := database.DBGetUnshieldTxByIncTx(p.SubmitBurnTx)
 			if err != nil {
-				log.Println("DBGetUnshieldTxByIncTx err:", err)
+				log.Println("watchPendingProposal DBGetUnshieldTxByIncTx err:", err)
 				continue
 			}
 			if unshieldStatus.Status == wcommon.StatusSubmitFailed {
 				p.Status = unshieldStatus.Status
 				err = database.DBUpdateProposalTable(&p)
 				if err != nil {
-					log.Println("DBUpdateProposalTable err:", err)
+					log.Println("watchPendingProposal DBUpdateProposalTable err:", err)
 					continue
 				}
 			}
@@ -333,13 +333,13 @@ func watchPendingProposal() {
 				p.Status = wcommon.StatusPdaOutchainTxSubmitting
 				err = database.DBUpdateProposalTable(&p)
 				if err != nil {
-					log.Println("DBUpdateProposalTable err:", err)
+					log.Println("watchPendingProposal DBUpdateProposalTable err:", err)
 					continue
 				}
 
 				_, err = SubmitPdaoOutchainTx(p.SubmitBurnTx, unshieldStatus.Networks[0], proposalJson, false, pdao.CREATE_PROP, wcommon.ExternalTxTypePdaoProposal)
 				if err != nil {
-					log.Println("SubmitPdaoOutchainTx err:", err)
+					log.Println("watchPendingProposal SubmitPdaoOutchainTx err:", err)
 					continue
 				}
 			}
@@ -352,19 +352,19 @@ func watchPendingVoting() {
 		time.Sleep(10 * time.Second)
 		proposals, err := database.DBGetPendingVote()
 		if err != nil {
-			log.Println("DBGetPendingVote err:", err)
+			log.Println("watchPendingVoting DBGetPendingVote err:", err)
 		}
 		for _, p := range proposals {
 			unshieldStatus, err := database.DBGetUnshieldTxByIncTx(p.SubmitBurnTx)
 			if err != nil {
-				log.Println("DBGetUnshieldTxByIncTx err:", err)
+				log.Println("watchPendingVoting DBGetUnshieldTxByIncTx err:", err)
 				continue
 			}
 			if unshieldStatus.Status == wcommon.StatusSubmitFailed {
 				p.Status = unshieldStatus.Status
 				err = database.DBUpdateVoteTable(&p)
 				if err != nil {
-					log.Println("DBUpdateVoteTable err:", err)
+					log.Println("watchPendingVoting DBUpdateVoteTable err:", err)
 					continue
 				}
 			}
@@ -373,7 +373,7 @@ func watchPendingVoting() {
 				p.Status = wcommon.StatusPdaoReadyForVote
 				err = database.DBUpdateVoteTable(&p)
 				if err != nil {
-					log.Println("DBUpdateVoteTable err:", err)
+					log.Println("watchPendingVoting DBUpdateVoteTable err:", err)
 					continue
 				}
 			}
@@ -390,7 +390,7 @@ func watchReadyToVote() {
 		if err != nil {
 			log.Println("watchReadyToVote DBGetReadyToVote err:" + err.Error())
 		}
-		log.Println("there are ", len(proposals), "records!")
+		log.Println("watchReadyToVote there are ", len(proposals), "records!")
 
 		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
 
@@ -410,13 +410,13 @@ func watchReadyToVote() {
 			proposalID, ok := big.NewInt(0).SetString(vote.ProposalID, 10)
 
 			if !ok {
-				go slacknoti.SendSlackNoti("watchSuccessProposal parse  ProposalID no ok")
+				go slacknoti.SendSlackNoti("watchReadyToVote parse  ProposalID no ok")
 				continue
 			}
 
 			prop, err := gv.Proposals(nil, proposalID)
 			if err != nil {
-				log.Println("watchSuccessProposal Proposals err:" + err.Error() + ", proposalID: " + vote.ProposalID + networkInfo.Endpoints[1])
+				log.Println("watchReadyToVote Proposals err:" + err.Error() + ", proposalID: " + vote.ProposalID + networkInfo.Endpoints[1])
 				continue
 			}
 
@@ -445,7 +445,7 @@ func watchReadyToVote() {
 				err = database.DBUpdateVoteTable(&vote)
 
 				if err != nil {
-					log.Println("DBUpdateVoteTable err:", err)
+					log.Println("watchReadyToVote DBUpdateVoteTable err:", err)
 					continue
 				}
 			}
@@ -458,13 +458,13 @@ func watchVotedToReshield() {
 
 	for {
 
-		time.Sleep(60 * time.Second)
+		time.Sleep(20 * time.Second)
 
 		votedRequests, err := database.DBGetVotingToReShield()
 		if err != nil {
 			log.Println("watchVotedToReshield DBGetVotingToReShield err:" + err.Error())
 		}
-		log.Println("there are ", len(votedRequests), "records!")
+		log.Println("watchVotedToReshield there are ", len(votedRequests), "records!")
 
 		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
 
@@ -476,6 +476,7 @@ func watchVotedToReshield() {
 
 		gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
 		if err != nil {
+			log.Println("watchVotedToReshield NewGovernance err:" + err.Error())
 			continue
 		}
 
@@ -509,7 +510,7 @@ func watchVotedToReshield() {
 
 			// todo: Call PRV contract reshield
 
-			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.RESHIELD_BY_SIGN, wcommon.ExternalTxTypePdaoVote)
+			_, err = SubmitPdaoOutchainTx(vote.SubmitBurnTx, wcommon.NETWORK_ETH, voteJson, false, pdao.RESHIELD_BY_SIGN, wcommon.ExternalTxTypePdaoReShieldPRV)
 			if err != nil {
 				go slacknoti.SendSlackNoti("watchVotedToReshield SubmitPdaoOutchainTx err:" + err.Error())
 				continue

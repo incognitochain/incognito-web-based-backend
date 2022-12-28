@@ -163,10 +163,11 @@ type InterSwapTxData struct {
 	FinalMinExpectedAmt uint64 `json:"final_minacceptedamount" bson:"final_minacceptedamount"`
 	Slippage            string `json:"slippage" bson:"slippage"`
 
-	OTARefundFee string `json:"ota_refundfee" bson:"ota_refundfee"`
-	OTARefund    string `json:"ota_refund" bson:"ota_refund"`
-	OTAFromToken string `json:"ota_fromtoken" bson:"ota_fromtoken"`
-	OTAToToken   string `json:"ota_totoken" bson:"ota_totoken"`
+	OTARefundFee    string `json:"ota_refundfee" bson:"ota_refundfee"`
+	OTARefund       string `json:"ota_refund" bson:"ota_refund"`
+	OTAFromToken    string `json:"ota_fromtoken" bson:"ota_fromtoken"`
+	OTAToToken      string `json:"ota_totoken" bson:"ota_totoken"`
+	WithdrawAddress string `json:"withdrawaddress" bson:"withdrawaddress"`
 
 	AddOnTxID    string `json:"addon_txid" bson:"addon_txid"`
 	PAppName     string `json:"papp_name" bson:"papp_name"`

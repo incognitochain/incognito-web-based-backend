@@ -191,6 +191,95 @@ func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config common.Conf
 	return estSwapResponse.Result, nil
 }
 
+type PappStatus struct {
+	BurnStatus    string
+	SwapStatus    string
+	IsRedeposit   bool
+	IsRedeposited bool
+	BuyAmount     string
+	Reward        string
+}
+
+// CallSubmitPappSwapTx calls request to submit tx papp
+func CallGetPappSwapTxStatus(txID string, config common.Config) (*PappStatus, error) {
+	req := struct {
+		TxList []string
+	}{
+		TxList: []string{txID},
+	}
+
+	estSwapResponse := SubmitpAppSwapTxResponse{}
+
+	response, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").SetBody(req).
+		SetResult(&estSwapResponse).
+		Post("http://localhost:" + strconv.Itoa(config.Port) + "/papps/swapstatus")
+	if err != nil {
+		err := fmt.Errorf("[ERR] Call API /papps/swapstatus request error: %v", err)
+		log.Println(err)
+		return nil, err
+	}
+	if response.StatusCode() != 200 {
+		err := fmt.Errorf("[ERR] Call API /papps/swapstatus status code error: %v", response.StatusCode())
+		log.Println(err)
+		return nil, err
+	}
+
+	m := estSwapResponse.Result[txID].(map[string]interface{})
+	if len(m) == 0 {
+		return nil, errors.New("[ERR] Call API /papps/swapstatus status not found")
+	}
+	if m["error"] != "" {
+		return nil, fmt.Errorf("[ERR] Call API /papps/swapstatus status error %v", m["error"])
+	}
+	if m["swap_err"] != "" {
+		return nil, fmt.Errorf("[ERR] Call API /papps/swapstatus swap error %v", m["swap_err"])
+	}
+	burnStatus := ""
+	swapStatus := ""
+	isRedeposit := false
+	isRedeposited := false
+	buyAmount := ""
+	reward := ""
+
+	if m["inc_request_tx_status"] != "" {
+		burnStatus = m["inc_request_tx_status"].(string)
+	}
+
+	if m["swap_outcome"] != "" {
+		swapStatus = m["swap_outcome"].(string)
+	}
+
+	if m["is_redeposit"] == true {
+		isRedeposit = true
+	}
+
+	if m["redeposit_status"] == "success" {
+		isRedeposited = true
+	}
+
+	if tmp, ok := m["swap_detail"].(map[string]interface{}); ok {
+		if buyAmtTmp, ok := tmp["out_amount"].(string); ok {
+			buyAmount = buyAmtTmp
+		}
+		if rewardTmp, ok := tmp["reward"].(string); ok {
+			reward = rewardTmp
+		}
+	}
+
+	pappStatus := PappStatus{
+		BurnStatus:    burnStatus,
+		SwapStatus:    swapStatus,
+		IsRedeposit:   isRedeposit,
+		IsRedeposited: isRedeposited,
+		BuyAmount:     buyAmount,
+		Reward:        reward,
+	}
+
+	return &pappStatus, nil
+}
+
 func genRPCBody(method string, params []interface{}) interface{} {
 	type RPC struct {
 		ID      int           `json:"id"`
@@ -208,7 +297,7 @@ func genRPCBody(method string, params []interface{}) interface{} {
 	return req
 }
 
-func CallGetTxDetails(txhash string) (*TransactionDetail, error) {
+func CallGetTxDetails(txhash string, config common.Config) (*TransactionDetail, error) {
 	reqRPC := genRPCBody("gettransactionbyhash", []interface{}{
 		txhash,
 	})
@@ -234,7 +323,7 @@ func CallGetTxDetails(txhash string) (*TransactionDetail, error) {
 	return &responseBodyData.Result, nil
 }
 
-func CallGetPdexSwapTxStatus(txhash, tokenOut string) (bool, *common.TradeDataRespond, error) {
+func CallGetPdexSwapTxStatus(txhash, tokenOut string, config common.Config) (bool, *common.TradeDataRespond, error) {
 	type APIRespond struct {
 		Result []common.TradeDataRespond
 		Error  *string
@@ -282,53 +371,6 @@ func CallGetPdexSwapTxStatus(txhash, tokenOut string) (bool, *common.TradeDataRe
 
 	// return false, "", nil
 }
-
-// // CallEstimateSwap call request to estimate swap
-// // for both pdex and papp
-// func CallGetPdexTxStatus(params *EstimateSwapParam) (*EstimateSwapResult, error) {
-// 	req := struct {
-// 		Network     string
-// 		Amount      string // without decimal
-// 		FromToken   string // IncTokenID
-// 		ToToken     string // IncTokenID
-// 		Slippage    string
-// 		IsInterswap bool
-// 	}{
-// 		Network:     params.Network,
-// 		Amount:      params.Amount,
-// 		FromToken:   params.FromToken,
-// 		ToToken:     params.ToToken,
-// 		Slippage:    params.Slippage,
-// 		IsInterswap: params.IsInterswap,
-// 	}
-
-// 	estSwapResponse := EstimateSwapResponse{}
-
-// 	fmt.Printf("APIEndpoint: %v\n", APIEndpoint)
-// 	response, err := restyClient.R().
-// 		EnableTrace().
-// 		SetHeader("Content-Type", "application/json").SetBody(req).
-// 		SetResult(&estSwapResponse).
-// 		Post(APIEndpoint + "/papps/estimateswapfee")
-// 	if err != nil {
-// 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee request error: %v", err)
-// 		log.Println(err)
-// 		return nil, err
-// 	}
-// 	if response.StatusCode() != 200 {
-// 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee status code error: %v", response.StatusCode())
-// 		log.Println(err)
-// 		return nil, err
-// 	}
-
-// 	if estSwapResponse.Error != nil {
-// 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee response error: %v", err)
-// 		log.Println(err)
-// 		return nil, err
-// 	}
-
-// 	return &estSwapResponse.Result, nil
-// }
 
 // isBetterQuoteData returns true if d1 is better than d2
 func isBetterQuoteData(d1 QuoteData, d2 QuoteData) (bool, error) {
@@ -420,7 +462,7 @@ func GetBestRoute(paths map[string][]QuoteData) map[string]*QuoteData {
 	return res
 }
 
-func calTotalFee(interswapPath InterSwapPath) (*PappNetworkFee, error) {
+func calTotalFee(interswapPath InterSwapPath, config common.Config) (*PappNetworkFee, error) {
 	path := interswapPath.Paths
 	if len(path) != 2 || len(path[0].Fee) == 0 || len(path[1].Fee) == 0 {
 		return nil, errors.New("Invalid path to calculate total fee")
@@ -431,16 +473,16 @@ func calTotalFee(interswapPath InterSwapPath) (*PappNetworkFee, error) {
 
 	// total fee paid in the token fee of the first swap info
 	feeToken := fee1.TokenID
-	feeAmt2, err := convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken)
+	feeAmt2, err := convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken, config)
 	if err != nil {
 		return nil, err
 	}
 	amount := fee1.Amount + feeAmt2
-	amountInBuyToken, err := convertAmountUint64(amount, feeToken, interswapPath.ToToken)
+	amountInBuyToken, err := convertAmountUint64(amount, feeToken, interswapPath.ToToken, config)
 	if err != nil {
 		return nil, err
 	}
-	amountInBuyTokenStr, err := convertToWithoutDecStr(amountInBuyToken, interswapPath.ToToken)
+	amountInBuyTokenStr, err := convertToWithoutDecStr(amountInBuyToken, interswapPath.ToToken, config)
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +500,7 @@ func calTotalFee(interswapPath InterSwapPath) (*PappNetworkFee, error) {
 	return res, nil
 }
 
-func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
+func getTokenInfo(pUTokenID string, config common.Config) (*common.TokenInfo, error) {
 	type APIRespond struct {
 		Result []common.TokenInfo
 		Error  *string
@@ -486,7 +528,7 @@ func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
 	return nil, errors.New(fmt.Sprintf("token not found"))
 }
 
-func getTokensInfo(pUTokenID []string) ([]common.TokenInfo, error) {
+func getTokensInfo(pUTokenID []string, config common.Config) ([]common.TokenInfo, error) {
 	type APIRespond struct {
 		Result []common.TokenInfo
 		Error  *string
@@ -512,4 +554,27 @@ func getTokensInfo(pUTokenID []string) ([]common.TokenInfo, error) {
 		return nil, errors.New(fmt.Sprintf("tokens not found"))
 	}
 	return responseBodyData.Result, nil
+}
+
+// getChildTokenUnified returns child token of unified token
+// if token is not unified, return itself
+func getChildTokenUnified(tokenID string, networkID int, config common.Config) (string, error) {
+	tokenInfo, err := getTokenInfo(tokenID, config)
+	if err != nil {
+		return "", err
+	}
+
+	listUnified := tokenInfo.ListUnifiedToken
+	if len(listUnified) == 0 {
+		fmt.Printf("%v is not unified token\n", tokenID)
+		return tokenID, nil
+	}
+
+	for _, token := range listUnified {
+		if token.NetworkID == networkID {
+			return token.TokenID, nil
+		}
+	}
+
+	return "", errors.New("Invalid networkID")
 }

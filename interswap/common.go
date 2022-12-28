@@ -13,7 +13,7 @@ import (
 
 var incClient *incclient.IncClient
 
-func InitIncClient(network string) error {
+func InitIncClient(network string, config common.Config) error {
 	var err error
 	switch network {
 	case "mainnet":
@@ -60,6 +60,9 @@ func IsMidTokens(tokenID string) bool {
 }
 
 func strToFloat64(str string) (float64, error) {
+	if str == "" {
+		return 0, nil
+	}
 	return strconv.ParseFloat(str, 64)
 }
 
@@ -110,8 +113,8 @@ func divStrs(str1, str2 string) (string, error) {
 	return float64ToStr(f1 / f2), nil
 }
 
-func convertAmountUint64(amt uint64, fromToken, toToken string) (uint64, error) {
-	tokenInfos, err := getTokensInfo([]string{fromToken, toToken})
+func convertAmountUint64(amt uint64, fromToken, toToken string, config common.Config) (uint64, error) {
+	tokenInfos, err := getTokensInfo([]string{fromToken, toToken}, config)
 	if err != nil {
 		return 0, err
 	}
@@ -141,8 +144,8 @@ func convertAmountUint64(amt uint64, fromToken, toToken string) (uint64, error) 
 // 	return amt
 // }
 
-func convertToWithoutDecStr(amt uint64, tokenID string) (string, error) {
-	tokenInfo, err := getTokenInfo(tokenID)
+func convertToWithoutDecStr(amt uint64, tokenID string, config common.Config) (string, error) {
+	tokenInfo, err := getTokenInfo(tokenID, config)
 	if err != nil {
 		return "", nil
 	}
@@ -150,8 +153,8 @@ func convertToWithoutDecStr(amt uint64, tokenID string) (string, error) {
 	return float64ToStr(tmp), nil
 }
 
-func convertToDecAmtStr(amt string, tokenID string) (string, error) {
-	tokenInfo, err := getTokenInfo(tokenID)
+func convertToDecAmtStr(amt string, tokenID string, config common.Config) (string, error) {
+	tokenInfo, err := getTokenInfo(tokenID, config)
 	if err != nil {
 		return "", nil
 	}
@@ -163,9 +166,26 @@ func convertToDecAmtStr(amt string, tokenID string) (string, error) {
 	return fmt.Sprint(tmp), nil
 }
 
-func convertFloat64ToWithoutDecStr(amt uint64, tokenID string) string {
-	tmp := float64(amt) / float64(math.Pow(10, DefaultDecimal))
-	return float64ToStr(tmp)
+func convertToDecAmtUint64(amt string, tokenID string, config common.Config) (uint64, error) {
+	tokenInfo, err := getTokenInfo(tokenID, config)
+	if err != nil {
+		return 0, nil
+	}
+	amtTmp, err := strToFloat64(amt)
+	if err != nil {
+		return 0, nil
+	}
+	tmp := uint64(float64(amtTmp) * float64(math.Pow(10, float64(tokenInfo.PDecimals))))
+	return tmp, nil
+}
+
+func convertFloat64ToWithoutDecStr(amt uint64, tokenID string, config common.Config) (string, error) {
+	tokenInfo, err := getTokenInfo(tokenID, config)
+	if err != nil {
+		return "", nil
+	}
+	tmp := float64(amt) / float64(math.Pow(10, float64(tokenInfo.PDecimals)))
+	return float64ToStr(tmp), nil
 }
 
 func getExternalNetworkID(networkIDStr string) (int, error) {

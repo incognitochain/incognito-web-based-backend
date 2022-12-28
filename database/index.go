@@ -295,6 +295,9 @@ func DBCreateInterSwapDataIndex() error {
 			Keys: bsonx.Doc{{Key: "ota_totoken", Value: bsonx.Int32(1)}},
 		},
 		{
+			Keys: bsonx.Doc{{Key: "withdrawaddress", Value: bsonx.Int32(1)}},
+		},
+		{
 			Keys: bsonx.Doc{{Key: "addon_txid", Value: bsonx.Int32(1)}},
 		},
 		{

@@ -198,6 +198,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 	// estimate with Interswap
 	if !req.IsFromInterswap {
+		fmt.Println("Starting estimate interswap")
 		interSwapParams := &interswap.EstimateSwapParam{
 			Network:   req.Network,
 			Amount:    req.Amount,
@@ -208,13 +209,15 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 		interSwapRes, err := interswap.EstimateSwap(interSwapParams, config)
 		if err != nil {
-			result.NetworksError[interswap.InterSwapStr] = err
+			result.NetworksError[interswap.InterSwapStr] = err.Error()
+			fmt.Println("Estimate interswap with err", err)
 		} else {
 			for k, v := range interSwapRes {
 				result.Networks[k] = v
 			}
 		}
 	}
+	fmt.Println("Finish estimate interswap")
 
 	tkFromInfo, err := getTokenInfo(req.FromToken)
 	if err != nil {
@@ -340,6 +343,8 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 		if req.Network == "inc" && len(pdexEstimate) != 0 {
 			result.Networks["inc"] = pdexEstimate
+		}
+		if len(result.Networks) > 0 {
 			response.Result = result
 			c.JSON(200, response)
 			return

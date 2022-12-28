@@ -33,7 +33,7 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	}
 
 	// init incognito client
-	err = InitIncClient(network)
+	err = InitIncClient(network, cfg)
 	if err != nil {
 		return err
 	}

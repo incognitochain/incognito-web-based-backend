@@ -111,11 +111,16 @@ retry:
 
 	if linkedTokenID == "" && tokenID == "" {
 		log.Println("findTokenByContractID", proofRecord.ContractID, networkID)
-		tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
-		if err != nil {
-			log.Println("findTokenByContractID error:", err)
-			finalErr = "findTokenByContractID " + err.Error()
-			goto retry
+		if proofRecord.ContractID == "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae" || proofRecord.ContractID == "0x6722ec501bE09fb221bCC8a46F9660868d0a6c63" {
+			tokenID = wcommon.PRV_TOKENID
+			linkedTokenID = tokenID
+		} else {
+			tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
+			if err != nil {
+				log.Println("findTokenByContractID error:", err)
+				finalErr = "findTokenByContractID " + err.Error()
+				goto retry
+			}
 		}
 	}
 	if tokenID == "" {

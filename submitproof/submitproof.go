@@ -163,7 +163,8 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		return result, err
 	}
 	if tokenID == wcommon.PRV_TOKENID {
-		result, err := incClient.CreateAndSendIssuingPRVPeggingRequestTransaction(key, *proof, networkID)
+		// todo: update sdk
+		result, err := incClient.CreateAndSendIssuingPRVPeggingRequestTransaction(key, *proof, networkID-1)
 		if err != nil {
 			return result, err
 		}

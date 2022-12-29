@@ -104,6 +104,7 @@ func updateOpenSeaCollectionAssets() {
 			continue
 		}
 		if config.NetworkID == "mainnet" {
+			t := time.Now()
 			for _, collection := range defaultList {
 				orderList := []popensea.NFTOrder{}
 				next := ""
@@ -146,7 +147,7 @@ func updateOpenSeaCollectionAssets() {
 					}
 				}
 			}
-			log.Println("done update OpenSea Collections Assets")
+			log.Println("done update OpenSea Collections Assets in", time.Since(t))
 
 		}
 	}

@@ -105,11 +105,6 @@ func updateOpenSeaCollectionAssets() {
 		}
 		if config.NetworkID == "mainnet" {
 			for _, collection := range defaultList {
-				// collectionData, err := database.DBGetCollectionsInfo(collection.Address)
-				// if err != nil {
-				// 	log.Println(err)
-				// 	continue
-				// }
 				orderList := []popensea.NFTOrder{}
 				next := ""
 				for {
@@ -121,12 +116,15 @@ func updateOpenSeaCollectionAssets() {
 						break
 					}
 					if nextStr == next {
+						if nextStr == "" && len(orderList) == 0 {
+							orderList = append(orderList, list...)
+						}
 						break
 					}
 					next = nextStr
 					orderList = append(orderList, list...)
 				}
-				log.Println("len(orderList)", len(orderList))
+				log.Println("len(orderList)", collection.Slug, len(orderList))
 				nftsToGetBatch := make([][]string, int(math.Ceil(float64(len(orderList))/30)))
 				for idx, order := range orderList {
 					nftid := order.ProtocolData.Parameters.Offer[0].IdentifierOrCriteria
@@ -138,6 +136,7 @@ func updateOpenSeaCollectionAssets() {
 					assets, err := popensea.RetrieveCollectionAssetByIDs(config.OpenSeaAPIKey, collection.Address, nftBatch)
 					if err != nil {
 						log.Println("RetrieveCollectionAssetByIDs error: ", err)
+						go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection assets", collection.Slug))
 						continue
 					}
 					err = database.DBSaveNFTDetail(assets)
@@ -147,6 +146,7 @@ func updateOpenSeaCollectionAssets() {
 					}
 				}
 			}
+			log.Println("done update OpenSea Collections Assets")
 
 		}
 	}

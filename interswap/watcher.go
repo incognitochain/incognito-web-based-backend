@@ -23,7 +23,9 @@ import (
 
 // watchInterswapPendingTx listen status of interswap and handle the next step
 func watchInterswapPendingTx(config beCommon.Config) {
+	log.Println("Starting Interswap Watcher")
 	for {
+
 		firstPendingTxs, err := database.DBRetrieveInterswapTxsByStatus([]int{FirstPending}, 0, 0)
 		if err != nil {
 			log.Println("DBRetrieveTxsByStatus err:", err)
@@ -61,7 +63,7 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
-			SendSlackAlert(fmt.Sprintf("`[swaptx]` submit swaptx failed 😵 `%v` \n", interswapTxID))
+			SendSlackAlert(fmt.Sprintf("`InterswapID %v submit first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
 			return nil
 		}
 		return err
@@ -91,6 +93,7 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 type ResponseInfo struct {
 	Coin      coin.PlainCoin
 	CoinIndex *big.Int
+	TxID      string
 }
 
 func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataType int, config beCommon.Config) (*ResponseInfo, error) {
@@ -165,6 +168,7 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 	return &ResponseInfo{
 		Coin:      utxos[*foundIndex],
 		CoinIndex: utxoIndices[*foundIndex],
+		TxID:      txResponses[*foundIndex].TxDetail.Hash,
 	}, nil
 
 }
@@ -281,9 +285,27 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 				return err
 			}
 
-			// TODO: 0xkraken validate
+			responseInfo, err := findResponseUTXOs(config.ISIncPrivKey, interswapTxID, txData.MidToken, metadataCommon.Pdexv3TradeResponseMeta, config)
+			if err != nil {
+				log.Printf("InterswapID %v findResponseUTXOs error %v\n", interswapTxID, err)
+				return err
+			}
+			responseAmt := responseInfo.Coin.GetValue()
 
-			amtMidToken := pdexStatus.RespondAmounts[0]
+			if responseAmt != pdexStatus.RespondAmounts[0] {
+				msg := fmt.Sprintf("InterswapID %v response amount mismatched, expected %v, got %v\n", interswapTxID, pdexStatus.RespondAmounts[0], responseAmt)
+				log.Printf(msg)
+				SendSlackAlert(msg)
+				return errors.New(msg)
+			}
+			if responseInfo.TxID != pdexStatus.RespondTxs[0] {
+				msg := fmt.Sprintf("InterswapID %v response txid mismatched, expected %v, got %v\n", interswapTxID, pdexStatus.RespondTxs[0], responseInfo.TxID)
+				log.Printf(msg)
+				SendSlackAlert(msg)
+				return errors.New(msg)
+			}
+
+			amtMidToken := responseAmt
 			amtMidStr, err := convertToWithoutDecStr(amtMidToken, txData.MidToken, config)
 			if err != nil {
 				log.Println("convert amount mid token to string error", err)
@@ -303,7 +325,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 
 			pAppAddOn, isMidRefund, err := callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, txData.PAppNetwork, txData.PAppContract, txData.MidToken, 0, interswapTxID)
 			if isMidRefund {
-				return createTxRefundAndUpdateStatus(txData, amtMidToken, txData.MidToken, []coin.PlainCoin{}, []uint64{}, MidRefunding)
+				return createTxRefundAndUpdateStatus(txData, amtMidToken, txData.MidToken, []coin.PlainCoin{responseInfo.Coin}, []uint64{responseInfo.CoinIndex.Uint64()}, MidRefunding)
 			}
 			if err != nil {
 				return err
@@ -321,11 +343,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 			// estimate with final addon amount
 			pAppAddOn, isMidRefund, err = callEstimateSwapAndValidation(addonParamEst, txData.FinalMinExpectedAmt, txData.PAppNetwork, txData.PAppContract, txData.MidToken, addonFeeAmt, interswapTxID)
 			if isMidRefund {
-				utxoResp, err := findResponseUTXOs(config.ISIncPrivKey, interswapTxID, txData.FromToken, metadataCommon.Pdexv3TradeResponseMeta, config)
-				if err != nil {
-					return err
-				}
-				return createTxRefundAndUpdateStatus(txData, amtMidToken, txData.MidToken, []coin.PlainCoin{utxoResp.Coin}, []uint64{utxoResp.CoinIndex.Uint64()}, MidRefunding)
+				return createTxRefundAndUpdateStatus(txData, amtMidToken, txData.MidToken, []coin.PlainCoin{responseInfo.Coin}, []uint64{responseInfo.CoinIndex.Uint64()}, MidRefunding)
 			}
 			if err != nil {
 				return err
@@ -358,6 +376,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 				RedepositReceiver:   *redepositAddress, // user OTA
 				WithdrawAddress:     txData.WithdrawAddress,
 			}
+			// TODO: 0xkraken
 			txBytes, addOnTxID, err := incClient.CreateBurnForCallRequestTransaction(config.ISIncPrivKey, txData.MidToken, data, []string{}, []uint64{},
 				[]coin.PlainCoin{}, []uint64{}, []coin.PlainCoin{}, []uint64{})
 			if err != nil {

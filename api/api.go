@@ -30,6 +30,7 @@ func StartAPIservice(cfg common.Config) {
 			panic(err)
 		}
 	}
+	log.Println("cfg.ISIncPrivKey", cfg.ISIncPrivKey)
 	if cfg.ISIncPrivKey != "" {
 		err := InitInterswapIncKeySet(cfg.ISIncPrivKey)
 		if err != nil {
@@ -151,6 +152,7 @@ func InitInterswapIncKeySet(key string) error {
 		return err
 	}
 	//TODO: 0xkraken
-	// interswap.InterswapIncKeySet = wl
+	interswap.InterswapIncKeySet = wl
+	log.Println("InterswapIncKeySet ", interswap.InterswapIncKeySet)
 	return nil
 }

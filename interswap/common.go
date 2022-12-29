@@ -199,6 +199,18 @@ func IsUniqueSlices(s []string) bool {
 	return true
 }
 
+func Has0xPrefix(str string) bool {
+	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
+}
+
+// Remove0xPrefix removes 0x prefix (if there) from string
+func Remove0xPrefix(str string) string {
+	if Has0xPrefix(str) {
+		return str[2:]
+	}
+	return str
+}
+
 // func getExternalNetworkID(networkIDStr string) (int, error) {
 // 	switch networkIDStr {
 // 	case common.NETWORK_ETH:

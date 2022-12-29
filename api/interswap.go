@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
@@ -23,7 +24,7 @@ import (
 const PdexSwapType = 1
 const PappSwapType = 2
 
-const EmptyExternalAddress = "0x0000000000000000000000000000000000000000"
+const EmptyExternalAddress = "0000000000000000000000000000000000000000"
 
 type AddOnSwapInfo struct {
 	ToToken        string
@@ -43,9 +44,9 @@ type SubmitInterSwapTxRequest struct {
 	FinalMinExpectedAmt uint64
 	Slippage            string
 
-	PAppName     string
-	PAppNetwork  string
-	PAppContract string
+	PAppName    string
+	PAppNetwork string
+	// PAppContract string
 
 	OTARefundFee    string // user's OTA to receive refunded swap papp fee (sender is BE, receiver is user)
 	OTARefund       string // user's OTA to receive fund from InterswapBE only in case PappPdexType and the first tx is reverted (sender is InterswapBE, receiver is user)
@@ -55,21 +56,21 @@ type SubmitInterSwapTxRequest struct {
 }
 
 // validate sanity request
-func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest, network string) (bool, error) {
+func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest, network string) (bool, string, error) {
 	if interswap.IsMidTokens(req.ToToken) || interswap.IsMidTokens(req.FromToken) {
-		return false, errors.New("FromToken and ToToken should be diff from midToken")
+		return false, "", errors.New("FromToken and ToToken should be diff from midToken")
 	}
 
 	if !interswap.IsMidTokens(req.MidToken) {
-		return false, errors.New("MidToken is invalid")
+		return false, "", errors.New("MidToken is invalid")
 	}
 
 	if req.FinalMinExpectedAmt == 0 {
-		return false, errors.New("FinalMinExpectedAmt must be greater than 0")
+		return false, "", errors.New("FinalMinExpectedAmt must be greater than 0")
 	}
 
-	if req.PAppName == "" || req.PAppNetwork == "" || req.PAppContract == "" {
-		return false, errors.New("PAppName, PAppNetwork, PAppContract must not empty")
+	if req.PAppName == "" || req.PAppNetwork == "" {
+		return false, "", errors.New("PAppName, PAppNetwork must not empty")
 	}
 
 	// validate papp info
@@ -78,29 +79,27 @@ func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest, network stri
 		pappEndpint = beCommon.TestnetPappsEndpointData
 	}
 
-	isValid := false
+	pAppContract := ""
 	for _, data := range pappEndpint {
 		if data.Network == req.PAppNetwork {
-			if data.AppContracts[req.PAppName] == req.PAppContract {
-				isValid = true
-			}
+			pAppContract = data.AppContracts[req.PAppName]
 		}
 	}
-	if isValid {
-		return false, errors.New("PAppName, PAppNetwork, PAppContract not matched")
+	if pAppContract == "" {
+		return false, "", errors.New("PAppContract not found with PAppName, PAppNetwork")
 	}
 
 	// validate OTA keys
 	if req.OTAFromToken == "" || req.OTAToToken == "" || req.OTARefund == "" || req.OTARefundFee == "" {
-		return false, errors.New("OTA keys must not empty")
+		return false, "", errors.New("OTA keys must not empty")
 	}
 
 	isValidOTA := interswap.IsUniqueSlices([]string{req.OTAFromToken, req.OTAToToken, req.OTARefund, req.OTARefundFee})
 	if !isValidOTA {
-		return false, errors.New("OTA keys must not be duplicated")
+		return false, "", errors.New("OTA keys must not be duplicated")
 	}
 
-	return true, nil
+	return true, pAppContract, nil
 }
 
 // TODO: 0xkraken
@@ -112,20 +111,25 @@ func IsValidOTA(ota coin.OTAReceiver, privKey string) (bool, error) {
 }
 
 func APISubmitInterSwapTx(c *gin.Context) {
+	log.Println("Processing APISubmitInterSwapTx")
 	var req SubmitInterSwapTxRequest
 	userAgent := c.Request.UserAgent()
+	log.Println("Processing APISubmitInterSwapTx 1")
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("Can not parse submit request %v", err.Error())})
 		return
 	}
+	log.Println("Processing APISubmitInterSwapTx 2 - Req ", req)
 
 	// validate sanity req
-	isValidSanity, err := ValidateSubmitInterSwapTxRequest(req, config.NetworkID)
+	isValidSanity, pAppContract, err := ValidateSubmitInterSwapTxRequest(req, config.NetworkID)
 	if err != nil || !isValidSanity {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid submit interswap req %v", err)})
+
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid submit interswap req %v", err)})
 		return
 	}
+	log.Println("Processing APISubmitInterSwapTx 3")
 
 	var mdRaw metadataCommon.Metadata
 	var isPRVTx bool
@@ -135,58 +139,77 @@ func APISubmitInterSwapTx(c *gin.Context) {
 	// decode raw tx 1
 	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid raw tx")})
+		log.Printf("APISubmitInterSwapTx Decode raw tx error: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("decode raw tx error: %v", err)})
 		return
 	}
+	log.Println("Processing APISubmitInterSwapTx 4")
 
 	mdRaw, isPRVTx, _, txHash, err = extractDataFromRawTx(rawTxBytes)
 	if err != nil {
+		log.Printf("APISubmitInterSwapTx Extract raw tx error: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	if txHash != req.TxHash {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash - mismatched")})
+		log.Printf("APISubmitInterSwapTx TxID Mismatched: Expected %v, Got %v\n", txHash, req.TxHash)
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("TxID Mismatched: Expected %v, Got %v\n", txHash, req.TxHash)})
 		return
 	}
 
 	mdType := mdRaw.GetType()
 	if mdType != metadataCommon.BurnForCallRequestMeta && mdType != metadataCommon.Pdexv3TradeRequestMeta {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid metadata %v", mdType)})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid metadata %v", mdType)})
 		return
 	}
 
 	// TODO: 0xkraken check database is exist or not
+	log.Println("Processing APISubmitInterSwapTx 5")
 
 	switch mdType {
 	case metadataCommon.BurnForCallRequestMeta:
 		{
 			md, ok := mdRaw.(*bridge.BurnForCallRequest)
 			if !ok {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx metadata type"})
 				return
 			}
 			if len(md.Data) != 1 {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata burn for call: md.Data")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata burn for call: md.Data"})
 				return
 			}
 
 			// validate sellToken
 			if md.BurnTokenID.String() != req.FromToken {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest BurnTokenID must be FromToken")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata BurnForCallRequest BurnTokenID must be FromToken"})
 				return
 			}
 
 			// validate buyToken must be midToken
-			if md.Data[0].ReceiveToken != req.MidToken {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest Data ReceiveToken must be MidToken")})
+			// Note: It is contractId of token
+			childMidToken, err := interswap.GetChildTokenUnified(req.MidToken, int(md.Data[0].ExternalNetworkID), config)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("cannot get child token of midToken %v - ExternalTokenID %v", req.MidToken, md.Data[0].ExternalNetworkID)})
+				return
+			}
+
+			tokenInfo, err := getTokenInfo(childMidToken)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "cannot get token info of md.Data[0].IncTokenID"})
+				return
+			}
+			log.Printf("APISubmitInterSwapTx tokenInfo of ReceiveToken: %v\n", tokenInfo)
+			if strings.ToLower(md.Data[0].ReceiveToken) != strings.ToLower(interswap.Remove0xPrefix(tokenInfo.ContractID)) {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid metadata BurnForCallRequest Data ReceiveToken must be %v", tokenInfo.ContractID)})
 				return
 			}
 
 			// the first papp tx must be reshield
 			if md.Data[0].WithdrawAddress != EmptyExternalAddress {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest Data WithdrawAddress")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata BurnForCallRequest Data WithdrawAddress"})
 				return
 			}
+			log.Println("Processing APISubmitInterSwapTx 6")
 
 			// can't verify RedepositReceiver belong to ISIncPrivKey or not
 			// only check UTXOs in response tx
@@ -218,7 +241,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 
 				PAppName:     req.PAppName,
 				PAppNetwork:  req.PAppNetwork,
-				PAppContract: req.PAppContract,
+				PAppContract: pAppContract,
 
 				Status:    status,
 				StatusStr: interswap.StatusStr[status],
@@ -230,19 +253,20 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			if err != nil {
 				writeErr, ok := err.(mongo.WriteException)
 				if !ok {
-					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("DBSaveInterSwapTxData err %v", err)})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBSaveInterSwapTxData err %v", err)})
 					return
 				}
 				if !writeErr.HasErrorCode(11000) {
-					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("DBSaveInterSwapTxData err %v", err)})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBSaveInterSwapTxData err %v", err)})
 					return
 				}
 			}
 
+			log.Println("Processing APISubmitInterSwapTx 7")
 			// call api submitswaptx to broadcast papp swap tx to BE
 			_, err = interswap.CallSubmitPappSwapTx(req.TxRaw, txHash, req.OTARefundFee, config)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("submit papp tx failed %v", err)})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("submit papp tx failed %v", err)})
 				return
 			}
 			// Note: Don't use worker
@@ -288,7 +312,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 		{
 			md, ok := mdRaw.(*pdexv3.TradeRequest)
 			if !ok {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx metadata type"})
 				return
 			}
 
@@ -306,13 +330,13 @@ func APISubmitInterSwapTx(c *gin.Context) {
 
 			// validate sellToken
 			if md.TokenToSell.String() != req.FromToken {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata TradeRequest TokenToSell must be FromToken")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata TradeRequest TokenToSell must be FromToken"})
 				return
 			}
 
 			// validate buyToken must be midToken
 			if buyTokenID.String() != req.MidToken {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata TradeRequest buyTokenID must be MidToken")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata TradeRequest buyTokenID must be MidToken"})
 				return
 			}
 			// isValid, err := IsValidOTA(md.Receiver[buyTokenID], config.ISIncPrivKey)
@@ -321,6 +345,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			// 	return
 			// }
 
+			log.Println("Processing APISubmitInterSwapTx 8")
 			// store DB to InterSwap before broadcast tx
 			status := interswap.FirstPending
 			interswapInfo := beCommon.InterSwapTxData{
@@ -342,7 +367,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 
 				PAppName:     req.PAppName,
 				PAppNetwork:  req.PAppNetwork,
-				PAppContract: req.PAppContract,
+				PAppContract: pAppContract,
 
 				Status:    interswap.FirstPending,
 				StatusStr: interswap.StatusStr[status],
@@ -355,13 +380,16 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				writeErr, ok := err.(mongo.WriteException)
 				if !ok {
 					log.Println("DBSaveInterSwapTxData err", err)
+					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBSaveInterSwapTxData err %v", err)})
 					return
 				}
 				if !writeErr.HasErrorCode(11000) {
 					log.Println("DBSaveInterSwapTxData err", err)
+					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBSaveInterSwapTxData err %v", err)})
 					return
 				}
 			}
+			log.Println("Processing APISubmitInterSwapTx 9")
 
 			// send raw tx
 			if isPRVTx {
@@ -371,9 +399,10 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			}
 			if err != nil {
 				// TODO: Update DB status failed
-				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("broadcast pdex raw tx failed %v", err)})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("broadcast pdex raw tx failed %v", err)})
 				return
 			}
+			log.Println("Processing APISubmitInterSwapTx 10")
 
 			// Note: Don't use worker
 
@@ -415,7 +444,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 		}
 	default:
 		{
-			c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid metadata %v", mdType)})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid metadata %v", mdType)})
 			return
 		}
 	}

@@ -150,6 +150,7 @@ func InitInterswapIncKeySet(key string) error {
 	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
 		return err
 	}
-	interswap.InterswapIncKeySet = wl
+	//TODO: 0xkraken
+	// interswap.InterswapIncKeySet = wl
 	return nil
 }

@@ -18,7 +18,6 @@ import (
 	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/interswap"
-	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
 
 const PdexSwapType = 1
@@ -35,14 +34,6 @@ type AddOnSwapInfo struct {
 }
 
 type SubmitInterSwapTxRequest struct {
-	//
-	// pdex => pApp: broadcast chain pdex, worker create tx pApp, call func submitproof.SubmitPappTx; refund pApp fee
-	// pApp => pDEx: call API submitswaptx (privacyFee = privacyFee + pDEXTRadingFee), worker create tx pDEX
-	//
-	// pApp: call API submitswaptx
-	// store DB InterSwap
-	// worker: get status by load from DB (Lam)
-
 	TxRaw  string
 	TxHash string
 
@@ -63,9 +54,8 @@ type SubmitInterSwapTxRequest struct {
 	WithdrawAddress string // only withdraw when PathType = pDexToPapp
 }
 
-// TODO: 0xkraken
 // validate sanity request
-func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest) (bool, error) {
+func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest, network string) (bool, error) {
 	if interswap.IsMidTokens(req.ToToken) || interswap.IsMidTokens(req.FromToken) {
 		return false, errors.New("FromToken and ToToken should be diff from midToken")
 	}
@@ -74,43 +64,43 @@ func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest) (bool, error
 		return false, errors.New("MidToken is invalid")
 	}
 
+	if req.FinalMinExpectedAmt == 0 {
+		return false, errors.New("FinalMinExpectedAmt must be greater than 0")
+	}
+
+	if req.PAppName == "" || req.PAppNetwork == "" || req.PAppContract == "" {
+		return false, errors.New("PAppName, PAppNetwork, PAppContract must not empty")
+	}
+
+	// validate papp info
+	pappEndpint := beCommon.MainnetPappsEndpointData
+	if network == "testnet" {
+		pappEndpint = beCommon.TestnetPappsEndpointData
+	}
+
+	isValid := false
+	for _, data := range pappEndpint {
+		if data.Network == req.PAppNetwork {
+			if data.AppContracts[req.PAppName] == req.PAppContract {
+				isValid = true
+			}
+		}
+	}
+	if isValid {
+		return false, errors.New("PAppName, PAppNetwork, PAppContract not matched")
+	}
+
+	// validate OTA keys
+	if req.OTAFromToken == "" || req.OTAToToken == "" || req.OTARefund == "" || req.OTARefundFee == "" {
+		return false, errors.New("OTA keys must not empty")
+	}
+
+	isValidOTA := interswap.IsUniqueSlices([]string{req.OTAFromToken, req.OTAToToken, req.OTARefund, req.OTARefundFee})
+	if !isValidOTA {
+		return false, errors.New("OTA keys must not be duplicated")
+	}
+
 	return true, nil
-
-	// if addOnSwapInfo.FromToken != expectedFromToken {
-	// 	return false, fmt.Errorf("From token in addon swap info is invalid: expected %v - got %v", expectedFromToken, addOnSwapInfo.FromToken)
-	// }
-
-	// if addOnSwapInfo.ToToken == "" {
-	// 	return false, errors.New("The add on swap info ToToken is required")
-	// }
-
-	// if addOnSwapInfo.MinExpectedAmt == 0 {
-	// 	return false, errors.New("The add on swap info MinExpectedAmt must be greater than 0")
-	// }
-
-	// switch expectSwapType {
-	// case PdexSwapType:
-	// 	{
-	// 		if addOnSwapInfo.AppName != "pdex" {
-	// 			return false, errors.New("The add on swap info must be pdex")
-	// 		}
-	// 		return true, nil
-	// 	}
-	// case PappSwapType:
-	// 	{
-	// 		if addOnSwapInfo.AppName == "pdex" {
-	// 			return false, errors.New("The add on swap info must be papp")
-	// 		}
-	// 		if addOnSwapInfo.CallContract == "" {
-	// 			return false, errors.New("The add on swap info CallContract is required")
-	// 		}
-	// 		return true, nil
-	// 	}
-	// default:
-	// 	{
-	// 		return false, errors.New("Invalid swap type")
-	// 	}
-	// }
 }
 
 // TODO: 0xkraken
@@ -130,20 +120,17 @@ func APISubmitInterSwapTx(c *gin.Context) {
 		return
 	}
 
-	// var md *bridge.BurnForCallRequest
-	var mdRaw metadataCommon.Metadata
-	var isPRVTx bool
-	// var isUnifiedToken bool
-	// var outCoins []coin.Coin
-	var txHash string
-	var rawTxBytes []byte
-
 	// validate sanity req
-	isValidSanity, err := ValidateSubmitInterSwapTxRequest(req)
+	isValidSanity, err := ValidateSubmitInterSwapTxRequest(req, config.NetworkID)
 	if err != nil || !isValidSanity {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("invalid submit interswap req %v", err)})
 		return
 	}
+
+	var mdRaw metadataCommon.Metadata
+	var isPRVTx bool
+	var txHash string
+	var rawTxBytes []byte
 
 	// decode raw tx 1
 	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
@@ -168,6 +155,8 @@ func APISubmitInterSwapTx(c *gin.Context) {
 		return
 	}
 
+	// TODO: 0xkraken check database is exist or not
+
 	switch mdType {
 	case metadataCommon.BurnForCallRequestMeta:
 		{
@@ -181,20 +170,31 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 
+			// validate sellToken
+			if md.BurnTokenID.String() != req.FromToken {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest BurnTokenID must be FromToken")})
+				return
+			}
+
+			// validate buyToken must be midToken
+			if md.Data[0].ReceiveToken != req.MidToken {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest Data ReceiveToken must be MidToken")})
+				return
+			}
+
 			// the first papp tx must be reshield
 			if md.Data[0].WithdrawAddress != EmptyExternalAddress {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest Data")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest Data WithdrawAddress")})
 				return
 			}
 
-			// redeposit address must belong to ISIncPrivKey
-			isValid, err := IsValidOTA(md.Data[0].RedepositReceiver, config.ISIncPrivKey)
-			if err != nil || !isValid {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest RedepositReceiver")})
-				return
-			}
-
-			// TODO: validate tx info with req (fromToken, midToken,...)
+			// can't verify RedepositReceiver belong to ISIncPrivKey or not
+			// only check UTXOs in response tx
+			// isValid, err := IsValidOTA(md.Data[0].RedepositReceiver, config.ISIncPrivKey)
+			// if err != nil || !isValid {
+			// 	c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest RedepositReceiver")})
+			// 	return
+			// }
 
 			// store DB to InterSwap
 			// to avoid missing db record since the storing db error occurs in while the tx swap was submitted
@@ -243,42 +243,42 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			_, err = interswap.CallSubmitPappSwapTx(req.TxRaw, txHash, req.OTARefundFee, config)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Errorf("submit papp tx failed %v", err)})
-				//
-				// TODO: update DB status failed
 				return
 			}
-			msgParam := interswap.InterswapSubmitTxTask{
-				TxID:       txHash,
-				TxRawBytes: rawTxBytes,
+			// Note: Don't use worker
 
-				OTARefundFee: req.OTARefundFee,
-				OTARefund:    req.OTARefund,
-				OTAFromToken: req.OTAFromToken,
-				OTAToToken:   req.OTAToToken,
+			// msgParam := interswap.InterswapSubmitTxTask{
+			// 	TxID:       txHash,
+			// 	TxRawBytes: rawTxBytes,
 
-				FromToken:           md.BurnTokenID.String(),
-				ToToken:             req.ToToken,
-				MidToken:            req.MidToken,
-				PathType:            interswap.PAppToPdex,
-				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
+			// 	OTARefundFee: req.OTARefundFee,
+			// 	OTARefund:    req.OTARefund,
+			// 	OTAFromToken: req.OTAFromToken,
+			// 	OTAToToken:   req.OTAToToken,
 
-				PAppName:     req.PAppName,
-				PAppNetwork:  req.PAppNetwork,
-				PAppContract: req.PAppContract,
+			// 	FromToken:           md.BurnTokenID.String(),
+			// 	ToToken:             req.ToToken,
+			// 	MidToken:            req.MidToken,
+			// 	PathType:            interswap.PAppToPdex,
+			// 	FinalMinExpectedAmt: req.FinalMinExpectedAmt,
 
-				Status:    status,
-				StatusStr: interswap.StatusStr[status],
-				UserAgent: userAgent,
-				Error:     "",
-			}
+			// 	PAppName:     req.PAppName,
+			// 	PAppNetwork:  req.PAppNetwork,
+			// 	PAppContract: req.PAppContract,
 
-			// call assigner to publish msg to Interswap Worker
-			_, err = submitproof.PublishMsgInterswapTx(msgParam)
-			if err != nil {
-				// TODO: Update DB status failed
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
+			// 	Status:    status,
+			// 	StatusStr: interswap.StatusStr[status],
+			// 	UserAgent: userAgent,
+			// 	Error:     "",
+			// }
+
+			// // call assigner to publish msg to Interswap Worker
+			// _, err = submitproof.PublishMsgInterswapTx(msgParam)
+			// if err != nil {
+			// 	// TODO: Update DB status failed
+			// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			// 	return
+			// }
 
 			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": interswap.FirstPending}})
 			return
@@ -303,14 +303,25 @@ func APISubmitInterSwapTx(c *gin.Context) {
 					buyTokenID = tokenID
 				}
 			}
-			isValid, err := IsValidOTA(md.Receiver[buyTokenID], config.ISIncPrivKey)
-			if err != nil || !isValid {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata BurnForCallRequest RedepositReceiver")})
+
+			// validate sellToken
+			if md.TokenToSell.String() != req.FromToken {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata TradeRequest TokenToSell must be FromToken")})
 				return
 			}
 
-			// store DB to InterSwap before broadcast tx
+			// validate buyToken must be midToken
+			if buyTokenID.String() != req.MidToken {
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata TradeRequest buyTokenID must be MidToken")})
+				return
+			}
+			// isValid, err := IsValidOTA(md.Receiver[buyTokenID], config.ISIncPrivKey)
+			// if err != nil || !isValid {
+			// 	c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid metadata TradeRequest RedepositReceiver")})
+			// 	return
+			// }
 
+			// store DB to InterSwap before broadcast tx
 			status := interswap.FirstPending
 			interswapInfo := beCommon.InterSwapTxData{
 				TxID:  txHash,
@@ -364,38 +375,40 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 
-			msgParam := interswap.InterswapSubmitTxTask{
-				TxID:       txHash,
-				TxRawBytes: rawTxBytes,
+			// Note: Don't use worker
 
-				OTARefundFee: req.OTARefundFee,
-				OTARefund:    req.OTARefund,
-				OTAFromToken: req.OTAFromToken,
-				OTAToToken:   req.OTAToToken,
+			// msgParam := interswap.InterswapSubmitTxTask{
+			// 	TxID:       txHash,
+			// 	TxRawBytes: rawTxBytes,
 
-				FromToken:           req.FromToken,
-				ToToken:             req.ToToken,
-				MidToken:            req.MidToken,
-				PathType:            interswap.PdexToPApp,
-				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
+			// 	OTARefundFee: req.OTARefundFee,
+			// 	OTARefund:    req.OTARefund,
+			// 	OTAFromToken: req.OTAFromToken,
+			// 	OTAToToken:   req.OTAToToken,
 
-				PAppName:     req.PAppName,
-				PAppNetwork:  req.PAppNetwork,
-				PAppContract: req.PAppContract,
+			// 	FromToken:           req.FromToken,
+			// 	ToToken:             req.ToToken,
+			// 	MidToken:            req.MidToken,
+			// 	PathType:            interswap.PdexToPApp,
+			// 	FinalMinExpectedAmt: req.FinalMinExpectedAmt,
 
-				Status:    interswap.FirstPending,
-				StatusStr: interswap.StatusStr[status],
-				UserAgent: userAgent,
-				Error:     "",
-			}
+			// 	PAppName:     req.PAppName,
+			// 	PAppNetwork:  req.PAppNetwork,
+			// 	PAppContract: req.PAppContract,
 
-			// call assigner to publish msg to Interswap Worker
-			_, err = submitproof.PublishMsgInterswapTx(msgParam)
-			if err != nil {
-				// TODO: Update DB status failed
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-				return
-			}
+			// 	Status:    interswap.FirstPending,
+			// 	StatusStr: interswap.StatusStr[status],
+			// 	UserAgent: userAgent,
+			// 	Error:     "",
+			// }
+
+			// // call assigner to publish msg to Interswap Worker
+			// _, err = submitproof.PublishMsgInterswapTx(msgParam)
+			// if err != nil {
+			// 	// TODO: Update DB status failed
+			// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			// 	return
+			// }
 
 			c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": interswap.FirstPending}})
 			return
@@ -406,58 +419,4 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			return
 		}
 	}
-
-	// spTkList := getSupportedTokenList()
-
-	// statusResult := checkPappTxSwapStatus(txHash, spTkList)
-	// if len(statusResult) > 0 {
-	// 	if er, ok := statusResult["error"]; ok {
-	// 		if er != "not found" {
-	// 			c.JSON(200, gin.H{"Result": statusResult})
-	// 			return
-	// 		}
-	// 	} else {
-	// 		c.JSON(200, gin.H{"Result": statusResult})
-	// 		return
-	// 	}
-	// }
-
-	// if mdRaw == nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-	// 	return
-	// }
-
-	// md, ok := mdRaw.(*bridge.BurnForCallRequest)
-	// if !ok {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-	// 	return
-	// }
-
-	// burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
-	// 	return
-	// }
-	// if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-	// 	isUnifiedToken = true
-	// }
-
-	// valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
-	// 	return
-	// }
-	// // valid = true
-
-	// burntAmount, _ := md.TotalBurningAmount()
-	// if valid {
-	// 	status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent)
-	// 	if err != nil {
-	// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-	// 		return
-	// 	}
-	// 	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
-	// 	return
-	// }
-
 }

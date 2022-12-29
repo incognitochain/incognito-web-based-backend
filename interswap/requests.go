@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/incognitochain/go-incognito-sdk-v2/privacy"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
@@ -372,6 +373,91 @@ func CallGetPdexSwapTxStatus(txhash, tokenOut string, config common.Config) (boo
 	// }
 
 	// return false, "", nil
+}
+
+type ReceivedTransactionV2 struct {
+	TxDetail struct {
+		BlockHash   string `json:"BlockHash"`
+		BlockHeight uint64 `json:"BlockHeight"`
+		TxSize      uint64 `json:"TxSize"`
+		Index       uint64 `json:"Index"`
+		ShardID     byte   `json:"ShardID"`
+		Hash        string `json:"Hash"`
+		Version     int8   `json:"Version"`
+		Type        string `json:"Type"` // Transaction type
+		LockTime    string `json:"LockTime"`
+		Fee         uint64 `json:"Fee"` // Fee applies: always consant
+		Image       string `json:"Image"`
+
+		IsPrivacy bool          `json:"IsPrivacy"`
+		Proof     privacy.Proof `json:"Proof"`
+		// ProofDetail      jsonresult.ProofDetail `json:"ProofDetail"`
+		InputCoinPubKey  string   `json:"InputCoinPubKey"`
+		OutputCoinPubKey []string `json:"OutputCoinPubKey"`
+		OutputCoinSND    []string `json:"OutputCoinSND"`
+
+		TokenInputCoinPubKey  string   `json:"TokenInputCoinPubKey"`
+		TokenOutputCoinPubKey []string `json:"TokenOutputCoinPubKey"`
+		TokenOutputCoinSND    []string `json:"TokenOutputCoinSND"`
+
+		SigPubKey string `json:"SigPubKey,omitempty"` // 64 bytes
+		Sig       string `json:"Sig,omitempty"`       // 64 bytes
+
+		Metatype                 int    `json:"Metatype"`
+		Metadata                 string `json:"Metadata"`
+		CustomTokenData          string `json:"CustomTokenData"`
+		PrivacyCustomTokenID     string `json:"PrivacyCustomTokenID"`
+		PrivacyCustomTokenName   string `json:"PrivacyCustomTokenName"`
+		PrivacyCustomTokenSymbol string `json:"PrivacyCustomTokenSymbol"`
+		PrivacyCustomTokenData   string `json:"PrivacyCustomTokenData"`
+		// PrivacyCustomTokenProofDetail jsonresult.ProofDetail `json:"PrivacyCustomTokenProofDetail"`
+		PrivacyCustomTokenIsPrivacy bool   `json:"PrivacyCustomTokenIsPrivacy"`
+		PrivacyCustomTokenFee       uint64 `json:"PrivacyCustomTokenFee"`
+
+		IsInMempool bool `json:"IsInMempool"`
+		IsInBlock   bool `json:"IsInBlock"`
+
+		Info string `json:"Info"`
+	}
+	FromShardID byte
+}
+
+func CallGetTxsByCoinPubKeys(coinPubKeys []string, config common.Config) ([]ReceivedTransactionV2, error) {
+	type APIRespond struct {
+		Result []ReceivedTransactionV2
+		Error  *string
+	}
+
+	var responseBodyData APIRespond
+
+	reqBody := struct {
+		Pubkeys []string
+		Base58  bool
+	}{
+		Pubkeys: coinPubKeys,
+		Base58:  true,
+	}
+
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetBody(reqBody).
+		SetResult(&responseBodyData).
+		Post(config.CoinserviceURL + "/gettxsbypubkey")
+	if err != nil {
+		log.Println("CallGetTxsByCoinPubKeys", err)
+		return nil, err
+	}
+	if responseBodyData.Error != nil {
+		log.Println("CallGetTxsByCoinPubKeys", errors.New(*responseBodyData.Error))
+		return nil, errors.New(*responseBodyData.Error)
+	}
+
+	if len(responseBodyData.Result) == 0 {
+		return nil, errors.New("CallGetTxsByCoinPubKeys result empty")
+	}
+
+	return responseBodyData.Result, nil
 }
 
 // isBetterQuoteData returns true if d1 is better than d2

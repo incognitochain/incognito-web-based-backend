@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 )
 
 func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, error) {
+	bytes, _ := json.Marshal(txdata)
+	log.Printf("DBSaveInterSwapTxData %+v", string(bytes))
 	filter := bson.M{"txid": bson.M{operator.Eq: txdata.TxID}}
 	update := bson.M{"$set": bson.M{
 		"created_at":              time.Now(),
@@ -114,3 +117,5 @@ func DBRetrieveInterswapTxsByStatus(status []int, offset, limit int64) ([]common
 	log.Printf("found %v InterSwapTxData in %v", len(result), time.Since(startTime))
 	return result, nil
 }
+
+

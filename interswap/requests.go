@@ -166,6 +166,7 @@ func CallEstimateSwap(params *EstimateSwapParam, config common.Config) (*Estimat
 
 // CallSubmitPappSwapTx calls request to submit tx papp
 func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config common.Config) (map[string]interface{}, error) {
+	log.Printf("CallSubmitPappSwapTx txHash: %v\n", txHash)
 	req := SubmitpAppSwapTxRequest{
 		TxRaw:        txRaw,
 		TxHash:       txHash,
@@ -644,9 +645,9 @@ func getTokensInfo(pUTokenID []string, config common.Config) ([]common.TokenInfo
 	return responseBodyData.Result, nil
 }
 
-// getChildTokenUnified returns child token of unified token
+// GetChildTokenUnified returns child token of unified token
 // if token is not unified, return itself
-func getChildTokenUnified(tokenID string, networkID int, config common.Config) (string, error) {
+func GetChildTokenUnified(tokenID string, networkID int, config common.Config) (string, error) {
 	tokenInfo, err := getTokenInfo(tokenID, config)
 	if err != nil {
 		return "", err

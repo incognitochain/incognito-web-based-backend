@@ -7,7 +7,7 @@ require (
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221221035741-c16407cf7bfc
+	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221229031737-3f952692d247
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 
@@ -112,5 +112,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-
-replace github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221221035741-c16407cf7bfc => /Users/autonomous/go/src/github.com/incognitochain/go-incognito-sdk-v2
+// replace github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221221035741-c16407cf7bfc => /Users/autonomous/go/src/github.com/incognitochain/go-incognito-sdk-v2

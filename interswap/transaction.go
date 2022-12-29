@@ -6,11 +6,13 @@ import (
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 )
 
 func createTxTokenWithInputCoins(
 	senderPrivKey, otaReceiver, tokenID string, amount uint64,
 	tokenUtxos []coin.PlainCoin, tokenUtxoIndices []uint64,
+	md metadata.Metadata,
 ) (string, error) {
 	prvUTXOs, _, err := UtxoManager.GetUTXOsByAmount(senderPrivKey, incclient.DefaultPRVFee)
 	if err != nil {
@@ -26,7 +28,7 @@ func createTxTokenWithInputCoins(
 	}
 
 	txTokenParams := incclient.NewTxTokenParam(tokenID, 1, []string{otaReceiver}, []uint64{amount}, false, 0, nil)
-	txParams := incclient.NewTxParam(senderPrivKey, nil, nil, incclient.DefaultPRVFee, txTokenParams, nil, nil)
+	txParams := incclient.NewTxParam(senderPrivKey, nil, nil, incclient.DefaultPRVFee, txTokenParams, md, nil)
 	rawTx, txID, err := incClient.CreateRawTokenTransactionWithInputCoins(txParams, tokenUtxos, tokenUtxoIndices, prvCoins, prvCoinIndices)
 	if err != nil {
 		log.Printf("Error create tx: %v\n", err)

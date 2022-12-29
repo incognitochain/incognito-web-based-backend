@@ -1142,3 +1142,18 @@ const nearDefault = `[{
 	"verify": true
 }]
 `
+const auroraDefault string = `[
+	{
+		"id": "0xE4B9e004389d91e4134a28F19BD833cBA1d994B6"
+	},	{
+		"id": "0xBb8831701E68B99616bF940b7DafBeb4CDb23e0b"
+	},	{
+		"id": "0x8BEc47865aDe3B172A928df8f990Bc7f2A3b9f79"
+	},	{
+		"id": "0x2BAe00C8BC1868a5F7a216E881Bae9e662630111"
+	},	{
+		"id": "0xC42C30aC6Cc15faC9bD938618BcaA1a1FaE8501d"
+	},	{
+		"id": "0x918dBe087040A41b786f0Da83190c293DAe24749"
+	}]
+	`

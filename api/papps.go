@@ -1672,13 +1672,9 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *wcommon.Toke
 		})
 	} else {
 		gasFeeUSD := float64(gasFee) * nativeToken.ExternalPriceUSD
-		prvInfo := prvToken
-		if prvInfo == nil {
-			var err error
-			prvInfo, err = getTokenInfo(common.PRVCoinID.String())
-			if err != nil {
-				return nil
-			}
+		prvInfo, err := getTokenInfo(common.PRVCoinID.String())
+		if err != nil {
+			log.Println("getTokenInfo prv err:", err)
 		}
 		gasFeePRV := float64(gasFeeUSD) / prvInfo.PriceUsd
 		gasFeeFromToken := (gasFeeUSD / fromTokenInfo.ExternalPriceUSD)

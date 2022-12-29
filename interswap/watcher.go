@@ -181,7 +181,7 @@ func createTxRefundAndUpdateStatus(
 ) error {
 	interswapTxID := txData.TxID
 	refundTxID, err := createTxTokenWithInputCoins(config.ISIncPrivKey, txData.OTARefund, tokenRefund, amountRefund,
-		tokenUtxos, TokenUtxoIndices)
+		tokenUtxos, TokenUtxoIndices, nil)
 	if err != nil {
 		log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
 		return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
@@ -365,7 +365,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 				return fmt.Errorf("InterswapID %v Invalid  OTAToToken %v\n", interswapTxID, err)
 			}
 
-			// create addon tx
+			// create addon tx (papp)
 			data := metadataBridge.BurnForCallRequestData{
 				BurningAmount:       addonSwapAmt,
 				ExternalNetworkID:   uint8(beCommon.GetNetworkID(txData.PAppNetwork)),
@@ -377,6 +377,8 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 				WithdrawAddress:     txData.WithdrawAddress,
 			}
 			// TODO: 0xkraken
+			// createTxTokenWithInputCoins(config.ISIncPrivKey, "", txData.MidToken)
+
 			txBytes, addOnTxID, err := incClient.CreateBurnForCallRequestTransaction(config.ISIncPrivKey, txData.MidToken, data, []string{}, []uint64{},
 				[]coin.PlainCoin{}, []uint64{}, []coin.PlainCoin{}, []uint64{})
 			if err != nil {

@@ -10,33 +10,37 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 
+	"github.com/incognitochain/incognito-web-based-backend/utxomanager"
+
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 var config wcommon.Config
 var InterswapIncKeySet *wallet.KeyWallet
+var UtxoManager *utxomanager.UTXOManager
 
 func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	network := cfg.NetworkID
 	config = cfg
 
-	// start client
-	err := startPubsubClient(cfg.GGCProject, cfg.GGCAuth)
-	if err != nil {
-		return err
-	}
+	// // start client
+	// err := startPubsubClient(cfg.GGCProject, cfg.GGCAuth)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// init topic instance
-	interSwapTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + INTERSWAP_TX_TOPIC)
-	if err != nil {
-		panic(err)
-	}
+	// // init topic instance
+	// interSwapTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + INTERSWAP_TX_TOPIC)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// init incognito client
-	err = InitIncClient(network, cfg)
+	err := InitIncClient(network, cfg)
 	if err != nil {
 		return err
 	}
+	UtxoManager = utxomanager.NewUTXOManager(incClient)
 
 	// submit OTA key to fullnode
 	if cfg.ISIncPrivKey != "" {
@@ -66,24 +70,24 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	incclient.Logger = incclient.NewLogger(true)
 	log.Println("Done submit keys")
 
-	// init subscription
-	var interswapSub *pubsub.Subscription
-	interswapSubID := cfg.NetworkID + "_" + serviceID.String() + "_interswap"
-	interswapSub, err = psclient.CreateSubscription(context.Background(), interswapSubID,
-		pubsub.SubscriptionConfig{Topic: interSwapTxTopic})
-	if err != nil {
-		interswapSub = psclient.Subscription(interswapSubID)
-	}
-	log.Println("interswapSub.ID()", interswapSub.ID())
+	// // init subscription
+	// var interswapSub *pubsub.Subscription
+	// interswapSubID := cfg.NetworkID + "_" + serviceID.String() + "_interswap"
+	// interswapSub, err = psclient.CreateSubscription(context.Background(), interswapSubID,
+	// 	pubsub.SubscriptionConfig{Topic: interSwapTxTopic})
+	// if err != nil {
+	// 	interswapSub = psclient.Subscription(interswapSubID)
+	// }
+	// log.Println("interswapSub.ID()", interswapSub.ID())
 
 	// start subscription to receive msg and req workers execute something
-	go func() {
-		ctx := context.Background()
-		err := interswapSub.Receive(ctx, ProcessInterswapTxRequest)
-		if err != nil {
-			panic(err)
-		}
-	}()
+	// go func() {
+	// 	ctx := context.Background()
+	// 	err := interswapSub.Receive(ctx, ProcessInterswapTxRequest)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }()
 
 	return nil
 }
@@ -93,10 +97,6 @@ func ProcessInterswapTxRequest(ctx context.Context, m *pubsub.Message) {
 	switch taskDesc {
 	case InterswapPdexPappTxTask:
 		processInterswapPdexPappPathTask(ctx, m)
-		// case PappSubmitExtTask:
-		// 	processSubmitPappExtTask(ctx, m)
-		// case PappSubmitFeeRefundTask:
-		// 	processSubmitRefundFeeTask(ctx, m)
 	}
 }
 

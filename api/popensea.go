@@ -240,8 +240,8 @@ func APIGetCollections(c *gin.Context) {
 	for _, coll := range defaultList {
 		data, err := database.DBGetCollectionsInfo(coll.Address)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-			return
+			log.Printf("DBGetCollectionsInfo err %v \n", coll.Slug)
+			continue
 		}
 		result = append(result, data.Detail)
 	}
@@ -287,7 +287,9 @@ func APICollectionAssets(c *gin.Context) {
 			return
 		}
 		for _, asset := range assetList {
-			result = append(result, asset.Detail)
+			if len(asset.Detail.SeaportSellOrders) > 0 {
+				result = append(result, asset.Detail)
+			}
 		}
 		c.JSON(http.StatusOK, gin.H{"Result": result})
 		return

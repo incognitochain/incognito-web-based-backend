@@ -47,7 +47,7 @@ func RetrieveCollectionDetail(OSEndpoint, apiKey string, slug string) (*Collecti
 		Collection CollectionDetail `json:"collection"`
 	}
 	url := fmt.Sprintf("%v/api/v1/collection/%v", OSEndpoint, slug)
-	log.Println("RetrieveCollectionDetail url:", url)
+	// log.Println("RetrieveCollectionDetail url:", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("err0")
@@ -120,7 +120,7 @@ func RetrieveCollectionAssetByIDs(apiKey string, collectionContract string, ids 
 	}
 
 	url := fmt.Sprintf("https://api.opensea.io/api/v1/assets?order_direction=desc&asset_contract_address=%v&limit=30&include_orders=true%v", collectionContract, nftIds)
-	log.Println("RetrieveCollectionAssetByIDs url:", url)
+	// log.Println("RetrieveCollectionAssetByIDs url:", url)
 	req, _ := http.NewRequest("GET", url, nil)
 
 	req.Header.Add("accept", "application/json")
@@ -150,7 +150,7 @@ func RetrieveCollectionListing(apiKey string, collectionSlug string, next string
 		Next     string     `json:"next"`
 	}
 	url := fmt.Sprintf("https://api.opensea.io/v2/listings/collection/%v/all", collectionSlug)
-	log.Println("RetrieveCollectionListing url:", url)
+	// log.Println("RetrieveCollectionListing url:", url)
 
 	req, _ := http.NewRequest("GET", url, nil)
 

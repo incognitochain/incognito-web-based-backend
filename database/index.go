@@ -98,7 +98,6 @@ func DBCreateNetworkIndex() error {
 }
 
 func DBCreatePappsIndex() error {
-	startTime := time.Now()
 	pappsModel := []mongo.IndexModel{
 		{
 			Keys:    bsonx.Doc{{Key: "network", Value: bsonx.Int32(1)}},
@@ -107,10 +106,18 @@ func DBCreatePappsIndex() error {
 	}
 	_, err := mgm.Coll(&common.PAppsEndpointData{}).Indexes().CreateMany(context.Background(), pappsModel)
 	if err != nil {
-		log.Printf("failed to index coins in %v", time.Since(startTime))
 		return err
 	}
-
+	pappsKeyModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "app", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err = mgm.Coll(&common.PAppAPIKeyData{}).Indexes().CreateMany(context.Background(), pappsKeyModel)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -259,7 +266,7 @@ func DBCreateOpenSeaIndex() error {
 		},
 		{
 			Keys:    bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
-			Options: options.Index().SetExpireAfterSeconds(300),
+			Options: options.Index().SetExpireAfterSeconds(1200),
 		},
 	}
 	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)

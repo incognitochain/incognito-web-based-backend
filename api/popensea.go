@@ -237,12 +237,17 @@ func APIGetCollections(c *gin.Context) {
 		return
 	}
 	result := []popensea.CollectionDetail{}
+	dupCollection := make(map[string]struct{})
 	for _, coll := range defaultList {
 		data, err := database.DBGetCollectionsInfo(coll.Address)
 		if err != nil {
 			log.Printf("DBGetCollectionsInfo err %v \n", coll.Slug)
 			continue
 		}
+		if _, ok := dupCollection[coll.Address]; ok {
+			continue
+		}
+		dupCollection[coll.Address] = struct{}{}
 		result = append(result, data.Detail)
 	}
 	// collections, err := popensea.RetrieveCollectionList(config.OpenSeaAPI, config.OpenSeaAPIKey, 20, 0)

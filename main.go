@@ -39,6 +39,8 @@ func main() {
 		panic(err)
 	}
 
+	loadPappAPIKey()
+
 	keylist, err := loadKeyList()
 	if err != nil {
 		log.Println(err)
@@ -67,4 +69,13 @@ func main() {
 		go api.StartAPIservice(config)
 	}
 	select {}
+}
+
+func loadPappAPIKey() {
+	openseaKey, err := database.DBGetPappAPIKey("opensea")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(opensea)", err)
+		return
+	}
+	config.OpenSeaAPIKey = openseaKey
 }

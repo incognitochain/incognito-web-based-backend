@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -44,7 +45,7 @@ type SubmitInterSwapTxRequest struct {
 
 	PAppName    string
 	PAppNetwork string
-	ShardID     byte
+	ShardID     string
 
 	OTARefundFee    string // user's OTA to receive refunded swap papp fee (sender is BE, receiver is user)
 	OTARefund       string // user's OTA to receive fund from InterswapBE only in case PappPdexType and the first tx is reverted (sender is InterswapBE, receiver is user)
@@ -87,24 +88,36 @@ func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest, network stri
 		return false, "", errors.New("PAppContract not found with PAppName, PAppNetwork")
 	}
 
-	// TODO: validate OTA keys
+	// validate OTA keys
 	if req.OTAFromToken == "" || req.OTAToToken == "" || req.OTARefund == "" || req.OTARefundFee == "" {
 		return false, "", errors.New("OTA keys must not empty")
 	}
 
-	isValidOTA := interswap.IsUniqueSlices([]string{req.OTAFromToken, req.OTAToToken, req.OTARefund, req.OTARefundFee})
+	otas := []string{req.OTAFromToken, req.OTAToToken, req.OTARefund, req.OTARefundFee}
+
+	isValidOTA := interswap.IsUniqueSlices(otas)
 	if !isValidOTA {
 		return false, "", errors.New("OTA keys must not be duplicated")
+	}
+	isValid, err := IsValidOTAs(otas)
+	if err != nil || !isValid {
+		return false, "", errors.New("OTA keys is invalid")
 	}
 
 	return true, pAppContract, nil
 }
 
-// TODO: 0xkraken
-// IsValidOTA returns true if ota belongs to privKey
-func IsValidOTA(ota coin.OTAReceiver, privKey string) (bool, error) {
-	// NOTE: only can check when receive the response tx
-
+func IsValidOTAs(otas []string) (bool, error) {
+	for _, ota := range otas {
+		coin := &coin.OTAReceiver{}
+		err := coin.FromString(ota)
+		if err != nil {
+			return false, err
+		}
+		if !coin.IsValid() {
+			return false, nil
+		}
+	}
 	return true, nil
 }
 
@@ -158,6 +171,12 @@ func APISubmitInterSwapTx(c *gin.Context) {
 	mdType := mdRaw.GetType()
 	if mdType != metadataCommon.BurnForCallRequestMeta && mdType != metadataCommon.Pdexv3TradeRequestMeta {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid metadata %v", mdType)})
+		return
+	}
+
+	shardIDByte, err := strconv.Atoi(req.ShardID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("invalid ShardID %v", err)})
 		return
 	}
 
@@ -221,6 +240,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			// store DB to InterSwap
 			// to avoid missing db record since the storing db error occurs in while the tx swap was submitted
 			status := interswap.FirstPending
+
 			interswapInfo := beCommon.InterSwapTxData{
 				TxID:  txHash,
 				TxRaw: req.TxRaw,
@@ -238,7 +258,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				PathType:            interswap.PAppToPdex,
 				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
 				Slippage:            req.Slippage,
-				ShardID:             req.ShardID,
+				ShardID:             byte(shardIDByte),
 
 				PAppName:     req.PAppName,
 				PAppNetwork:  req.PAppNetwork,
@@ -250,15 +270,15 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				Error:     "",
 			}
 
-			_, err = database.DBSaveInterSwapTxData(interswapInfo)
+			err = database.DBInsertInterswapTxData(interswapInfo)
 			if err != nil {
 				writeErr, ok := err.(mongo.WriteException)
 				if !ok {
-					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBSaveInterSwapTxData err %v", err)})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBInsertInterswapTxData err %v", err)})
 					return
 				}
 				if !writeErr.HasErrorCode(11000) {
-					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBSaveInterSwapTxData err %v", err)})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("DBInsertInterswapTxData err %v", err)})
 					return
 				}
 			}
@@ -272,7 +292,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				if err != nil {
 					log.Printf("InterswapID %v DBUpdateInterswapTxStatus err: %v", txHash, err)
 				}
-				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("submit papp tx failed %v", err)})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("submit papp tx failed %v", err.Error())})
 				return
 			}
 
@@ -287,15 +307,11 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 
-			// receiver address of buyToken must belong to ISIncPrivKey (if swap success)
-			// receiver address of sellToken must belong to user (if swap fail, don't need to refund the swap amount)
 			buyTokenID := common.Hash{}
 			for tokenID, _ := range md.Receiver {
-				// must belong users
-				if tokenID == md.TokenToSell || tokenID == common.PRVCoinID {
-					// TODO: 0xkraken
-				} else {
+				if tokenID != md.TokenToSell && tokenID != common.PRVCoinID {
 					buyTokenID = tokenID
+					break
 				}
 			}
 
@@ -331,7 +347,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				PathType:            interswap.PdexToPApp,
 				FinalMinExpectedAmt: req.FinalMinExpectedAmt,
 				Slippage:            req.Slippage,
-				ShardID:             req.ShardID,
+				ShardID:             byte(shardIDByte),
 
 				PAppName:     req.PAppName,
 				PAppNetwork:  req.PAppNetwork,
@@ -343,7 +359,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				Error:     "",
 			}
 			// if error occurs when saving DB in while tx swap was submitted
-			_, err = database.DBSaveInterSwapTxData(interswapInfo)
+			err = database.DBInsertInterswapTxData(interswapInfo)
 			if err != nil {
 				writeErr, ok := err.(mongo.WriteException)
 				if !ok {
@@ -361,17 +377,18 @@ func APISubmitInterSwapTx(c *gin.Context) {
 
 			// send raw tx
 			if isPRVTx {
-				err = incClient.SendRawTx(rawTxBytes)
+				err = incClient.SendRawTx([]byte(req.TxRaw))
 			} else {
-				err = incClient.SendRawTokenTx(rawTxBytes)
+				err = incClient.SendRawTokenTx([]byte(req.TxRaw))
 			}
+			log.Printf("InterswapID %v isPRVTx %v Send raw tx error %v", txHash, isPRVTx, err)
 			if err != nil {
 				status := interswap.SubmitFailed
 				err = database.DBUpdateInterswapTxStatus(txHash, status, interswap.StatusStr[status], err.Error())
 				if err != nil {
 					log.Printf("InterswapID %v DBUpdateInterswapTxStatus err: %v", txHash, err)
 				}
-				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("broadcast pdex raw tx failed %v", err)})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("broadcast pdex raw tx failed %v", err.Error())})
 				return
 			}
 			log.Println("Processing APISubmitInterSwapTx 10")
@@ -434,7 +451,7 @@ type InterswapStatus struct {
 func getInterswapTxStatus(txID string) (*InterswapStatus, error) {
 	data, err := database.DBRetrieveInterswapTxByTxID(txID)
 	if err != nil {
-		log.Printf("DBRetrieveInterswapTxByTxID %v", txID, err)
+		log.Printf("DBRetrieveInterswapTxByTxID %v %v", txID, err)
 		return nil, err
 	}
 	pdexTxID := ""

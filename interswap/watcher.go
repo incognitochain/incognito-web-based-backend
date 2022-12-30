@@ -32,7 +32,7 @@ func watchInterswapPendingTx(config beCommon.Config) {
 		for _, txdata := range firstPendingTxs {
 			err := processInterswapPendingFirstTx(txdata, config)
 			if err != nil {
-				log.Println("processInterswapPendingFirstTx %v err: %v", txdata.TxID, err)
+				log.Printf("processInterswapPendingFirstTx %v err: %v", txdata.TxID, err)
 			}
 		}
 
@@ -62,7 +62,7 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 				log.Println("DBUpdateInterswapTxStatus err:", err)
 				return err
 			}
-			SendSlackAlert(fmt.Sprintf("`InterswapID %v submit first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
+			// SendSlackAlert(fmt.Sprintf("`InterswapID %v submit first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
 			return nil
 		}
 		return err
@@ -103,13 +103,16 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 	}
 	coinPubKeys := []string{}
 	for _, u := range utxos {
-		coinPubKeys = append(coinPubKeys, base58.Base58Check{}.Encode(u.GetPublicKey().ToBytesS(), common.ZeroByte))
+		coinPubKey := base58.Base58Check{}.Encode(u.GetPublicKey().ToBytesS(), common.ZeroByte)
+		log.Printf("findResponseUTXOs: coinPubKey %v \n", coinPubKey)
+		coinPubKeys = append(coinPubKeys, coinPubKey)
 	}
 
 	txResponses, err := CallGetTxsByCoinPubKeys(coinPubKeys, config)
 	if err != nil {
 		return nil, fmt.Errorf("Error get txs by coin pubkeys %v", err)
 	}
+	log.Printf("findResponseUTXOs: txResponses %v %v \n", len(txResponses), txResponses)
 
 	var foundIndex *int
 	for i, tx := range txResponses {
@@ -187,11 +190,12 @@ func createTxRefundAndUpdateStatus(
 		return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
 	}
 	log.Printf("InterswapID %v Create refund txID %v\n", interswapTxID, refundTxID)
-	// TODO:
 	updateInfo := map[string]interface{}{
-		"txidrefund": refundTxID,
-		"status":     updateStatus,
-		"statusstr":  StatusStr[updateStatus],
+		"txidrefund":     refundTxID,
+		"amountresponse": amountRefund,
+		"tokenresponse":  tokenRefund,
+		"status":         updateStatus,
+		"statusstr":      StatusStr[updateStatus],
 	}
 	err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
 	if err != nil {
@@ -272,7 +276,7 @@ func callEstimateSwapAndValidation(
 // func Validate
 func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
-	shardID := string(txData.ShardID)
+	shardID := fmt.Sprint(txData.ShardID)
 
 	_, pdexStatus, err := CallGetPdexSwapTxStatus(interswapTxID, txData.MidToken, config)
 	if err != nil {
@@ -432,7 +436,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 
 func CheckStatusAndHandlePappTx(txData *beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
-	shardID := string(txData.ShardID)
+	shardID := fmt.Sprint(txData.ShardID)
 	data, err := database.DBGetPappTxData(interswapTxID)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -690,7 +694,7 @@ func processInterswapPendingSecondTx(txData beCommon.InterSwapTxData, config beC
 func CheckStatusAndHandlePdexTxSecond(txData *beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
 	addOnTxID := txData.AddOnTxID
-	shardID := string(txData.ShardID)
+	shardID := fmt.Sprint(txData.ShardID)
 
 	_, pdexStatus, err := CallGetPdexSwapTxStatus(addOnTxID, txData.ToToken, config)
 	if err != nil {
@@ -704,7 +708,7 @@ func CheckStatusAndHandlePdexTxSecond(txData *beCommon.InterSwapTxData, config b
 		if pdexStatus.Status == "accepted" {
 			// parse tx response to get received UTXO
 			if len(pdexStatus.RespondTxs) != 1 {
-				log.Println("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)
+				log.Printf("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)
 				return err
 			}
 
@@ -746,7 +750,7 @@ func CheckStatusAndHandlePdexTxSecond(txData *beCommon.InterSwapTxData, config b
 		} else if pdexStatus.Status == "refund" {
 			// parse tx response to get received UTXO
 			if len(pdexStatus.RespondTxs) != 1 {
-				log.Println("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)
+				log.Printf("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)
 				return err
 			}
 

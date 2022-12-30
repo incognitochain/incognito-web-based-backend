@@ -151,7 +151,7 @@ type DexSwapTrackData struct {
 	UserAgent        string `json:"useragent" bson:"useragent"`
 }
 
-//TODO: 0xkraken add datamodel for mongo
+
 // DATA MODELS FOR INTERSWAP
 type InterSwapTxData struct {
 	mgm.DefaultModel `bson:",inline"`

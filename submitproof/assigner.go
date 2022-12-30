@@ -318,7 +318,6 @@ func PublishMsgInterswapTx(
 	}
 	log.Println("publish msgID:", msgID)
 	go func() {
-		// TODO: 0xkraken
 		// tkInfo, _ := getTokenInfo(feeToken)
 		// amount := new(big.Float).SetUint64(feeAmount)
 		// decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))

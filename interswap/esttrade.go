@@ -206,14 +206,18 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		return nil, err
 	}
 
-	otaReceiver := &coin.OTAReceiver{}
-	keyWallet := InterswapIncKeySets[string(params.ShardID)]
-	if keyWallet == nil {
-		return nil, errors.New("Invalid shardID")
-	}
-	err = otaReceiver.FromAddress(keyWallet.KeySet.PaymentAddress)
-	if err != nil {
-		return nil, err
+	midOTA := ""
+	if params.ShardID != "" {
+		otaReceiver := &coin.OTAReceiver{}
+		keyWallet := InterswapIncKeySets[params.ShardID]
+		if keyWallet == nil {
+			return nil, errors.New("Invalid shardID")
+		}
+		err = otaReceiver.FromAddress(keyWallet.KeySet.PaymentAddress)
+		if err != nil {
+			return nil, err
+		}
+		midOTA = otaReceiver.String()
 	}
 
 	swapInfo := InterSwapEstRes{
@@ -232,7 +236,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			Paths:                "", // TODO
 			ImpactAmount:         "", // TODO
 		},
-		MidOTA:    otaReceiver.String(),
+		MidOTA:    midOTA,
 		FromToken: bestPath.FromToken,
 		ToToken:   bestPath.ToToken,
 		MidToken:  bestPath.MidToken,

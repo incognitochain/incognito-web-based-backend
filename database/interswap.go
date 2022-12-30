@@ -14,6 +14,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+func DBInsertInterswapTxData(txdata common.InterSwapTxData) error {
+	bytes, _ := json.Marshal(txdata)
+	log.Printf("DBInsertInterswapTxData %+v", string(bytes))
+	var doc interface{}
+	doc = txdata
+	_, err := mgm.Coll(&common.InterSwapTxData{}).InsertOne(context.Background(), doc)
+	if err != nil {
+		log.Printf("DBInsertInterswapTxData err %+v", err)
+		return err
+	}
+	return nil
+}
+
 func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, error) {
 	bytes, _ := json.Marshal(txdata)
 	log.Printf("DBSaveInterSwapTxData %+v", string(bytes))
@@ -127,7 +140,7 @@ func DBRetrieveInterswapTxsByStatus(status []int, offset, limit int64) ([]common
 func DBRetrieveInterswapTxByTxID(txID string) (*common.InterSwapTxData, error) {
 	result := common.InterSwapTxData{}
 
-	filter := bson.M{"txid": bson.M{operator.In: txID}}
+	filter := bson.M{"txid": bson.M{operator.Eq: txID}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	dbresult := mgm.Coll(&common.InterSwapTxData{}).FindOne(ctx, filter)
 	if dbresult.Err() != nil {

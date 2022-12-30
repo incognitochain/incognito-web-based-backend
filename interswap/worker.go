@@ -143,7 +143,7 @@ func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
 	// 	log.Println("GetTxDetail err", err)
 	// 	if err != nil {
 	// 		log.Println(err)
-	// 		m.Nack() // TODO:
+	// 		m.Nack() 
 	// 		return
 	// 	}
 	// } else {

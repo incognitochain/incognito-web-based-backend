@@ -1729,7 +1729,7 @@ func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *wcommon.Toke
 		} else {
 
 			feeInUSD := float64(gasFeeFromTokenToPrv) / math.Pow10(9)
-			feeInUSD = (feeInUSD / fromTokenInfo.PricePrv) * fromTokenInfo.ExternalPriceUSD
+			feeInUSD = feeInUSD * prvInfo.PriceUsd
 
 			fees = append(fees, PappNetworkFee{
 				Amount:           gasFeeFromTokenToPrv,

@@ -77,6 +77,7 @@ func updateOpenSeaCollectionDetail() {
 			log.Println(err)
 			continue
 		}
+		loadOpenseaAPIKey()
 		// collections := []popensea.CollectionDetail{}
 		for _, collection := range defaultList {
 			collectionDetail, err := popensea.RetrieveCollectionDetail(config.OpenSeaAPI, "", collection.Slug)
@@ -103,6 +104,7 @@ func updateOpenSeaCollectionAssets() {
 			log.Println(err)
 			continue
 		}
+		loadOpenseaAPIKey()
 		if config.NetworkID == "mainnet" {
 			t := time.Now()
 			for _, collection := range defaultList {
@@ -181,3 +183,18 @@ func updateOpenSeaCollectionAssets() {
 // 	time.Sleep(20 * time.Second)
 // }
 // }
+
+func loadOpenseaAPIKey() {
+	openseaKey, err := database.DBGetPappAPIKey("opensea")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(opensea)", err)
+		return
+	}
+	config.OpenSeaAPIKey = openseaKey
+	openseaAPI, err := database.DBGetPappAPIKey("openseaAPI")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(opensea)", err)
+		return
+	}
+	config.OpenSeaAPI = openseaAPI
+}

@@ -149,13 +149,14 @@ func InitInterswapIncKeySet(keys map[string]string) error {
 	if len(keys) != 8 {
 		return errors.New("Invalid Interswap keys config")
 	}
+	interswap.InterswapIncKeySets = make(map[string]*wallet.KeyWallet)
 	for shardID, key := range keys {
 		wl, err := wallet.Base58CheckDeserialize(key)
 		if err != nil {
 			return err
 		}
 		if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
-			return err
+			return errors.New("Invalid Interswap OTA keys config")
 		}
 
 		interswap.InterswapIncKeySets[shardID] = wl

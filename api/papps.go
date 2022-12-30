@@ -205,6 +205,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 			Slippage:  req.Slippage,
 			FromToken: req.FromToken,
 			ToToken:   req.ToToken,
+			ShardID:   req.ShardID,
 		}
 
 		interSwapRes, err := interswap.EstimateSwap(interSwapParams, config)

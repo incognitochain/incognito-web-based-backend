@@ -253,7 +253,6 @@ func DBCreatePappSupportTokenIndex() error {
 	return nil
 }
 
-//TODO: 0xkraken create mongo index
 func DBCreateInterSwapDataIndex() error {
 	startTime := time.Now()
 	interswapModel := []mongo.IndexModel{

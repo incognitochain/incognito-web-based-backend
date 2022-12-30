@@ -225,7 +225,7 @@ func ProcessShieldRequest(ctx context.Context, m *pubsub.Message) {
 	}
 }
 
-// // TODO: 0xkraken implement worker for IS (createSwapTx, )
+// implement worker for IS (createSwapTx, )
 // func ProcessPappTxRequest(ctx context.Context, m *pubsub.Message) {
 // 	taskDesc := m.Attributes["task"]
 // 	switch taskDesc {

@@ -54,8 +54,7 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 	if err != nil {
 		return err
 	}
-
-	//TODO: 0xkraken call mongo index function
+	
 	err = DBCreateInterSwapDataIndex()
 	if err != nil {
 		return err

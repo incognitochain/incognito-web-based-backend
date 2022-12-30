@@ -140,11 +140,6 @@ func convertAmountUint64(amt uint64, fromToken, toToken string, config common.Co
 	return uint64(amtTo), nil
 }
 
-// TODO:
-// func convertAmountStr(amt string, fromToken, toToken string) string {
-// 	return amt
-// }
-
 func convertToWithoutDecStr(amt uint64, tokenID string, config common.Config) (string, error) {
 	tokenInfo, err := getTokenInfo(tokenID, config)
 	if err != nil {

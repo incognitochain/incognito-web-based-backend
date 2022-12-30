@@ -20,7 +20,7 @@ type EstimateSwapParam struct {
 	Slippage  string
 	FromToken string // IncTokenID
 	ToToken   string // IncTokenID
-	ShardID   byte
+	ShardID   string
 }
 
 type PappNetworkFee struct {
@@ -51,8 +51,6 @@ type QuoteData struct {
 	Calldata             string
 	ImpactAmount         string
 	RouteDebug           interface{}
-
-	// TODO: add fromToken
 }
 
 type EstimateSwapResult struct {
@@ -186,9 +184,11 @@ func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config common.Conf
 		log.Println(err)
 		return nil, err
 	}
+
 	if response.StatusCode() != 200 {
 		err := fmt.Errorf("[ERR] Call API /papps/submitswaptx status code error: %v", response.StatusCode())
 		log.Println(err)
+		log.Printf("response: %+v\n", response)
 		return nil, err
 	}
 	return estSwapResponse.Result, nil

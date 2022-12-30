@@ -1,6 +1,8 @@
 package interswap
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -25,16 +27,13 @@ func TestEstimateSwap(t *testing.T) {
 }
 
 func TestMashalListKeys(t *testing.T) {
-	// keys :=   map[string]string{
-	// 	"0": "112t8rnXx96t6xpmmtsBRcNDwCghwD6ecHQGhgdwfTEekhv4uNiz9vMRSfxVhaqCpCBVSJ47rg4wjX1sarkLFKQDCw4RdzUsUXoK3hL83vK3",
-	// 	"1": "112uR37SKRNC8hkvhNrxbW8PfhCeFpgVzVitB8gCxxkY46aP8SFax1voG8SGNyMW7LmW87xbFqH9saTNVMYBsJQCVyy4qCbLZSCUEqafWH2Z",
-	// 	"2": "112vhDSLdK7xW3uzpGwyQzE4wKe1B2mTPtH1yjK4JZBp7yEJDUWt75M1H4ZJ7KM3b81gM4zpfcn7cA6mc2dwMspnP1UVgHYxiAo5m8g3q8ZD",
-	// 	"3": "112xQ7sWKoRG63gTifhHhNxPLTE1GGuyYxuYfXqgfa7dCWo8kxVMAcAz4szgEV7er8Act5hnoXC3gvQTrdzb54Amf3ABPj6Din3wbrAwMQCN",
-	// 	"4": "112w7wYfUUhkHaoJqBbfsnqNNcz6s3xKJ3EoMosHAFbFayQp7rgh43RcqshrayXc3QNzG3gp8ntX3A2P5CVya2Y52T4r9PGgNUMEmd3pitez",
-	// 	"5": "112zxUXHB5HcgD9xzvKLgYWybLLJfz2kSF2aEisWQAusZnvyNfDdRknNacH99fjfyoq4D7cHVNDt7WnDPwvcg4JhhvZPXkzonSDoSjacs8gD",
-	// 	"6": "112wYff49WgpPaSuhGFF92FutXqStF7zSzQWeffaZnDEzquD8uuhRv2WByt5o32MtjA1XMeE1JV35UVCQ9kQ8MxFcL5LSqzT1XYtuZrQvsMu",
-	// 	"7": "11394Gatcuf5TPJSzm93Qk7e5GLVa7cvfQ1LGBVyCqLTmsXYnawurm9gLaQFwgP9SbvwfWU3iV4S8kV7dkpE3uHWgenQeMG1zXe5EbmcvC35",
-	// }
-	// key
+	keys := map[string]string{
+	}
+	keyBytes, err := json.Marshal(keys)
+	if err != nil {
+		fmt.Printf("Err: $%v\n", err)
+	}
+
+	fmt.Printf(string(keyBytes))
 
 }

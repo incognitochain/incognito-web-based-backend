@@ -22,6 +22,7 @@ const (
 	EVMGasLimit        = 1500000
 	EVMGasLimitETH     = 800000
 	EVMGasLimitPancake = 600000
+	EVMGasLimitOpensea = 600000
 	MinEVMTxs          = uint64(10)
 	PRV_TOKENID        = "0000000000000000000000000000000000000000000000000000000000000004"
 )
@@ -174,6 +175,7 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
+	ExternalTxTypeOpensea = 96
 )
 
 // Default param mainnet

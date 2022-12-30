@@ -121,12 +121,20 @@ func updateOpenSeaCollectionAssets() {
 					log.Println("next", next, nextStr)
 					if nextStr == next || nextStr == "" {
 						if nextStr == "" && len(orderList) == 0 {
-							orderList = append(orderList, list...)
+							for _, v := range list {
+								if v.Price.Current.Currency == "eth" {
+									orderList = append(orderList, v)
+								}
+							}
 						}
 						break
 					}
 					next = nextStr
-					orderList = append(orderList, list...)
+					for _, v := range list {
+						if v.Price.Current.Currency == "eth" {
+							orderList = append(orderList, v)
+						}
+					}
 					if len(orderList) >= 1000 {
 						break
 					}

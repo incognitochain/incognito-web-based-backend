@@ -20,6 +20,7 @@ type EstimateSwapParam struct {
 	Slippage  string
 	FromToken string // IncTokenID
 	ToToken   string // IncTokenID
+	ShardID   byte
 }
 
 type PappNetworkFee struct {

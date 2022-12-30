@@ -158,6 +158,7 @@ type InterSwapTxData struct {
 	// txID of the first tx, index for one interswap request
 	TxID                string `json:"txid" bson:"txid"`
 	TxRaw               string `json:"txraw" bson:"txraw"`
+	FromAmount          uint64 `json:"fromamount" bson:"fromamount"`
 	FromToken           string `json:"fromtoken" bson:"fromtoken"`
 	ToToken             string `json:"totoken" bson:"totoken"`
 	MidToken            string `json:"midtoken" bson:"midtoken"`
@@ -176,7 +177,15 @@ type InterSwapTxData struct {
 	PAppNetwork  string `json:"papp_network" bson:"papp_network"`
 	PAppContract string `json:"papp_contract" bson:"papp_contract"`
 
+	// for Interswap service refund
 	TxIDRefund string `json:"txidrefund" bson:"txidrefund"`
+	// for chain response (sucess / refund)
+	TxIDResponse   string `json:"txidresponse" bson:"txidresponse"`
+	AmountResponse uint64 `json:"amountresponse" bson:"amountresponse"`
+	TokenResponse  string `json:"tokenresponse" bson:"tokenresponse"`
+	ShardID        byte   `json:"shardid" bson:"shardid"`
+
+	TxIDOutchain string `json:"txidoutchain" bson:"txidoutchain"`
 
 	Status    int    `json:"status" bson:"status"`
 	StatusStr string `json:"statusstr" bson:"statusstr"`

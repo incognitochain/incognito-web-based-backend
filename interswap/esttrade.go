@@ -207,7 +207,11 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	}
 
 	otaReceiver := &coin.OTAReceiver{}
-	err = otaReceiver.FromAddress(InterswapIncKeySet.KeySet.PaymentAddress)
+	keyWallet := InterswapIncKeySets[string(params.ShardID)]
+	if keyWallet == nil {
+		return nil, errors.New("Invalid shardID")
+	}
+	err = otaReceiver.FromAddress(keyWallet.KeySet.PaymentAddress)
 	if err != nil {
 		return nil, err
 	}

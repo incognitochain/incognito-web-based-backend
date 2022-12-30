@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -30,9 +31,9 @@ func StartAPIservice(cfg common.Config) {
 			panic(err)
 		}
 	}
-	log.Println("cfg.ISIncPrivKey", cfg.ISIncPrivKey)
-	if cfg.ISIncPrivKey != "" {
-		err := InitInterswapIncKeySet(cfg.ISIncPrivKey)
+	log.Println("cfg.ISIncPrivKey", cfg.ISIncPrivKeys)
+	if len(cfg.ISIncPrivKeys) > 0 {
+		err := InitInterswapIncKeySet(cfg.ISIncPrivKeys)
 		if err != nil {
 			panic(err)
 		}
@@ -106,6 +107,7 @@ func StartAPIservice(cfg common.Config) {
 
 	// InterSwap
 	pAppsGroup.POST("/submitinterswaptx", APISubmitInterSwapTx)
+	pAppsGroup.POST("/interswapstatus", APIGetInterswapTxStatus)
 
 	unshieldGroup := r.Group("/unshield")
 	unshieldGroup.POST("/status", APIGetUnshieldTxStatus)
@@ -143,16 +145,23 @@ func loadOTAKey(key string) error {
 	return nil
 }
 
-func InitInterswapIncKeySet(key string) error {
-	wl, err := wallet.Base58CheckDeserialize(key)
-	if err != nil {
-		return err
+func InitInterswapIncKeySet(keys map[string]string) error {
+	if len(keys) != 8 {
+		return errors.New("Invalid Interswap keys config")
 	}
-	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
-		return err
+	for shardID, key := range keys {
+		wl, err := wallet.Base58CheckDeserialize(key)
+		if err != nil {
+			return err
+		}
+		if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
+			return err
+		}
+
+		interswap.InterswapIncKeySets[shardID] = wl
+		log.Println("InterswapIncKeySet ", interswap.InterswapIncKeySets)
+
 	}
-	//TODO: 0xkraken
-	interswap.InterswapIncKeySet = wl
-	log.Println("InterswapIncKeySet ", interswap.InterswapIncKeySet)
 	return nil
+
 }

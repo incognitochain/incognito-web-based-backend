@@ -16,7 +16,7 @@ import (
 )
 
 var config wcommon.Config
-var InterswapIncKeySet *wallet.KeyWallet
+var InterswapIncKeySets map[string]*wallet.KeyWallet
 var UtxoManager *utxomanager.UTXOManager
 
 func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
@@ -43,26 +43,29 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	UtxoManager = utxomanager.NewUTXOManager(incClient)
 
 	// submit OTA key to fullnode
-	if cfg.ISIncPrivKey != "" {
-		wl, err := wallet.Base58CheckDeserialize(cfg.ISIncPrivKey)
-		if err != nil {
-			panic(err)
-		}
-		if cfg.FullnodeAuthKey != "" {
-			err = incClient.AuthorizedSubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType), cfg.FullnodeAuthKey, 0, false)
+	if len(cfg.ISIncPrivKeys) > 0 {
+		for _, key := range cfg.ISIncPrivKeys {
+			wl, err := wallet.Base58CheckDeserialize(key)
 			if err != nil {
-				if !strings.Contains(err.Error(), "has been submitted") {
-					return err
+				panic(err)
+			}
+			if cfg.FullnodeAuthKey != "" {
+				err = incClient.AuthorizedSubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType), cfg.FullnodeAuthKey, 0, false)
+				if err != nil {
+					if !strings.Contains(err.Error(), "has been submitted") {
+						return err
+					}
+				}
+			} else {
+				err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
+				if err != nil {
+					if !strings.Contains(err.Error(), "has been submitted") {
+						return err
+					}
 				}
 			}
-		} else {
-			err = incClient.SubmitKey(wl.Base58CheckSerialize(wallet.OTAKeyType))
-			if err != nil {
-				if !strings.Contains(err.Error(), "has been submitted") {
-					return err
-				}
-			}
 		}
+
 	}
 
 	go watchInterswapPendingTx(config)

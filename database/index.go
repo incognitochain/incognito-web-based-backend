@@ -265,6 +265,9 @@ func DBCreateInterSwapDataIndex() error {
 			Keys: bsonx.Doc{{Key: "txraw", Value: bsonx.Int32(1)}},
 		},
 		{
+			Keys: bsonx.Doc{{Key: "fromamount", Value: bsonx.Int32(1)}},
+		},
+		{
 			Keys: bsonx.Doc{{Key: "fromtoken", Value: bsonx.Int32(1)}},
 		},
 		{
@@ -302,6 +305,21 @@ func DBCreateInterSwapDataIndex() error {
 		},
 		{
 			Keys: bsonx.Doc{{Key: "txidrefund", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "txidresponse", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "amountresponse", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "tokenresponse", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "shardid", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "txidoutchain", Value: bsonx.Int32(1)}},
 		},
 		{
 			Keys: bsonx.Doc{{Key: "papp_name", Value: bsonx.Int32(1)}},

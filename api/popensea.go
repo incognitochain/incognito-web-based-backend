@@ -293,7 +293,11 @@ func APICollectionAssets(c *gin.Context) {
 		}
 		for _, asset := range assetList {
 			if len(asset.Detail.SeaportSellOrders) > 0 {
-				result = append(result, asset.Detail)
+				if len(asset.Detail.SeaportSellOrders[0].ProtocolData.Parameters.Consideration) > 0 {
+					if asset.Detail.SeaportSellOrders[0].ProtocolData.Parameters.Consideration[0].ItemType == 0 {
+						result = append(result, asset.Detail)
+					}
+				}
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{"Result": result})

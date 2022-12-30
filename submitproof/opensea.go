@@ -150,7 +150,7 @@ func updateOpenSeaCollectionAssets() {
 				}
 			}
 			log.Println("done update OpenSea Collections Assets in", time.Since(t))
-
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]`done update OpenSea Collections Assets in %v", time.Since(t)))
 		}
 	}
 }

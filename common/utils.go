@@ -1,8 +1,11 @@
 package common
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func GetNativeNetworkCurrencyType(network string) int {
@@ -101,4 +104,17 @@ func CheckIsWrappedNativeToken(contractAddress string, network int) bool {
 		}
 	}
 	return false
+}
+
+func GetEVMAddress(privateKey string) (string, error) {
+	privKey, _ := crypto.HexToECDSA(privateKey)
+
+	publicKey := privKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return "", errors.New("error casting public key to ECDSA")
+	}
+
+	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+	return address, nil
 }

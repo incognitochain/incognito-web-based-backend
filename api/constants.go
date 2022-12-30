@@ -1142,12 +1142,7 @@ const nearDefault = `[{
 	"verify": true
 }]
 `
-const auroraDefault string = `[
-	{
-		"id": "0xE4B9e004389d91e4134a28F19BD833cBA1d994B6"
-	},	{
-		"id": "0xBb8831701E68B99616bF940b7DafBeb4CDb23e0b"
-	},	{
+const auroraDefault string = `[{
 		"id": "0x8BEc47865aDe3B172A928df8f990Bc7f2A3b9f79"
 	},	{
 		"id": "0x2BAe00C8BC1868a5F7a216E881Bae9e662630111"
@@ -1155,5 +1150,13 @@ const auroraDefault string = `[
 		"id": "0xC42C30aC6Cc15faC9bD938618BcaA1a1FaE8501d"
 	},	{
 		"id": "0x918dBe087040A41b786f0Da83190c293DAe24749"
+	},	{
+		"id": "0x4988a896b1227218e4A686fdE5EabdcAbd91571f"
+	},	{
+		"id": "0xB12BFcA5A55806AaF64E99521918A4bf0fC40802"
+	},	{
+		"id": "0xe3520349F477A5F6EB06107066048508498A291b"
+	},	{
+		"id": "0x80A16016cC4A2E6a2CACA8a4a498b1699fF0f844"
 	}]
 	`

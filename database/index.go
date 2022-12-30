@@ -98,7 +98,6 @@ func DBCreateNetworkIndex() error {
 }
 
 func DBCreatePappsIndex() error {
-	startTime := time.Now()
 	pappsModel := []mongo.IndexModel{
 		{
 			Keys:    bsonx.Doc{{Key: "network", Value: bsonx.Int32(1)}},
@@ -107,10 +106,18 @@ func DBCreatePappsIndex() error {
 	}
 	_, err := mgm.Coll(&common.PAppsEndpointData{}).Indexes().CreateMany(context.Background(), pappsModel)
 	if err != nil {
-		log.Printf("failed to index coins in %v", time.Since(startTime))
 		return err
 	}
-
+	pappsKeyModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "app", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err = mgm.Coll(&common.PAppAPIKeyData{}).Indexes().CreateMany(context.Background(), pappsKeyModel)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -145,7 +152,6 @@ func DBCreateIndex() error {
 			Keys:    bsonx.Doc{{Key: "inctx", Value: bsonx.Int32(1)}},
 			Options: options.Index().SetUnique(true),
 		},
-
 		{
 			Keys: bsonx.Doc{{Key: "externaltx", Value: bsonx.Int32(1)}},
 			// Options: options.Index().SetUnique(true),
@@ -233,5 +239,56 @@ func DBCreatePappSupportTokenIndex() error {
 		log.Println("failed to index tokens")
 		return err
 	}
+	return nil
+}
+
+func DBCreateOpenSeaIndex() error {
+	startTime := time.Now()
+	collectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.OpenseaCollectionData{}).Indexes().CreateMany(context.Background(), collectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
+	assetModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "uid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetExpireAfterSeconds(1200),
+		},
+	}
+	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)
+	if err != nil {
+		log.Printf("failed to index op-asset in %v", time.Since(startTime))
+		return err
+	}
+
+	defaultCollectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "verify", Value: bsonx.Int32(1)}, {Key: "address", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err = mgm.Coll(&common.OpenseaDefaultCollectionData{}).Indexes().CreateMany(context.Background(), defaultCollectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
 	return nil
 }

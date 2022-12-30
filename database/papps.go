@@ -333,3 +333,16 @@ func DBDeleteDexSwap(txList []string) error {
 	}
 	return nil
 }
+
+func DBGetPappAPIKey(papp string) (string, error) {
+	var result common.PAppAPIKeyData
+	filter := bson.M{"app": bson.M{operator.Eq: papp}}
+	dbresult := mgm.Coll(&common.PAppAPIKeyData{}).FindOne(context.Background(), filter)
+	if dbresult.Err() != nil {
+		return "", dbresult.Err()
+	}
+	if err := dbresult.Decode(&result); err != nil {
+		return "", err
+	}
+	return result.Key, nil
+}

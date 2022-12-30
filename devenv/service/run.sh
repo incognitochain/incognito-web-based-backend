@@ -22,7 +22,9 @@ CONFIG_JSON=$(cat <<EOF
   "EVMKey": "$EVM_KEY",
   "CentralIncPaymentAddress": "$CINC_PA",
   "GGCProject": "$GOOGLE_CLOUD_PROJECT",
-  "GGCAuth":"$GOOGLE_CLOUD_ACC"
+  "GGCAuth":"$GOOGLE_CLOUD_ACC",
+  "OpenSeaAPI":"$OPENSEA_API",
+  "OpenSeaAPIKey":"$OPENSEA_API_KEY"
 }
 EOF
 )

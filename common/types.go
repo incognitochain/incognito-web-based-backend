@@ -24,6 +24,9 @@ type Config struct {
 
 	GGCProject string
 	GGCAuth    string
+
+	OpenSeaAPI    string
+	OpenSeaAPIKey string
 }
 
 type TokenInfo struct {

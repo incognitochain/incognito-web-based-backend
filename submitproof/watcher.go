@@ -54,6 +54,8 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go forwardCollectedFee()
 	go watchVaultState()
 	go trackDexSwap()
+	go updateOpenSeaCollectionAssets()
+	go updateOpenSeaCollectionDetail()
 
 	return nil
 }
@@ -148,6 +150,16 @@ func forwardCollectedFee() {
 		if err != nil {
 			log.Println("getPendingPappsFee", err)
 			continue
+		}
+
+		pendingTokenUnshield, err := getPendingUnshieldsFee(-1)
+		if err != nil {
+			log.Println("getPendingUnshieldsFee", err)
+			continue
+		}
+
+		for token, amount := range pendingTokenUnshield {
+			pendingToken[token] += amount
 		}
 
 		coins, _, err := incClient.GetAllUTXOsV2(config.IncKey)
@@ -430,12 +442,23 @@ func watchPendingPappTx() {
 	for {
 		txList, err := database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeSwap, 0, 0)
 		if err != nil {
-			log.Println("DBRetrievePendingPappTxs err:", err)
+			log.Println("DBRetrievePendingPappTxs Swap err:", err)
 		}
 		for _, txdata := range txList {
 			err := processPendingSwapTx(txdata)
 			if err != nil {
-				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+				log.Println("processPendingShieldTxs Swap err:", txdata.IncTx)
+			}
+		}
+
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpensea, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingOpenseaTx(txdata)
+			if err != nil {
+				log.Println("processPendingOpenseaTx OpenSea err:", txdata.IncTx)
 			}
 		}
 
@@ -967,7 +990,6 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 }
 
 func getPendingUnshieldsFee(shardID int) (map[string]uint64, error) {
-	//TODO
 	result := make(map[string]uint64)
 	var txList []wcommon.UnshieldTxData
 	var err error

@@ -78,4 +78,10 @@ func loadPappAPIKey() {
 		return
 	}
 	config.OpenSeaAPIKey = openseaKey
+	openseaAPI, err := database.DBGetPappAPIKey("openseaAPI")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(opensea)", err)
+		return
+	}
+	config.OpenSeaAPI = openseaAPI
 }

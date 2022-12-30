@@ -149,7 +149,7 @@ func RetrieveCollectionListing(apiKey string, collectionSlug string, next string
 		Listings []NFTOrder `json:"listings"`
 		Next     string     `json:"next"`
 	}
-	url := fmt.Sprintf("https://api.opensea.io/v2/listings/collection/%v/all", collectionSlug)
+	url := fmt.Sprintf("https://api.opensea.io/v2/listings/collection/%v/all?next=%v", collectionSlug, next)
 	// log.Println("RetrieveCollectionListing url:", url)
 
 	req, _ := http.NewRequest("GET", url, nil)

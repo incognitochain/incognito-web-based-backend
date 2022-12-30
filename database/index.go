@@ -266,7 +266,7 @@ func DBCreateOpenSeaIndex() error {
 		},
 		{
 			Keys:    bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
-			Options: options.Index().SetExpireAfterSeconds(1200),
+			Options: options.Index().SetExpireAfterSeconds(1800),
 		},
 	}
 	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)

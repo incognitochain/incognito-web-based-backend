@@ -278,7 +278,7 @@ func APICollectionAssets(c *gin.Context) {
 	contract := c.Query("contract")
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	offset, _ := strconv.Atoi(c.Query("offset"))
-
+	limit = 9999
 	var result []popensea.NFTDetail
 	if config.NetworkID == "mainnet" {
 		assetList, err := database.DBGetCollectionNFTs(contract, int64(limit), int64(offset))

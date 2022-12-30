@@ -118,7 +118,8 @@ func updateOpenSeaCollectionAssets() {
 						go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection listing", collection.Slug))
 						break
 					}
-					if nextStr == next {
+					log.Println("next", next, nextStr)
+					if nextStr == next || nextStr == "" {
 						if nextStr == "" && len(orderList) == 0 {
 							orderList = append(orderList, list...)
 						}
@@ -126,6 +127,9 @@ func updateOpenSeaCollectionAssets() {
 					}
 					next = nextStr
 					orderList = append(orderList, list...)
+					if len(orderList) >= 1000 {
+						break
+					}
 				}
 				log.Println("len(orderList)", collection.Slug, len(orderList))
 				nftsToGetBatch := make([][]string, int(math.Ceil(float64(len(orderList))/30)))

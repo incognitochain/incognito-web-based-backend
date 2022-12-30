@@ -21,6 +21,7 @@ func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, 
 	update := bson.M{"$set": bson.M{
 		"created_at":              time.Now(),
 		"txraw":                   txdata.TxRaw,
+		"fromamount":              txdata.FromAmount,
 		"fromtoken":               txdata.FromToken,
 		"totoken":                 txdata.ToToken,
 		"midtoken":                txdata.MidToken,
@@ -34,6 +35,11 @@ func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, 
 		"withdrawaddress":         txdata.WithdrawAddress,
 		"addon_txid":              txdata.AddOnTxID,
 		"txidrefund":              txdata.TxIDRefund,
+		"txidresponse":            txdata.TxIDResponse,
+		"amountresponse":          txdata.AmountResponse,
+		"tokenresponse":           txdata.TokenResponse,
+		"shardid":                 txdata.ShardID,
+		"txidoutchain":            txdata.TxIDOutchain,
 		"papp_name":               txdata.PAppName,
 		"papp_network":            txdata.PAppNetwork,
 		"papp_contract":           txdata.PAppContract,
@@ -118,4 +124,18 @@ func DBRetrieveInterswapTxsByStatus(status []int, offset, limit int64) ([]common
 	return result, nil
 }
 
+func DBRetrieveInterswapTxByTxID(txID string) (*common.InterSwapTxData, error) {
+	result := common.InterSwapTxData{}
 
+	filter := bson.M{"txid": bson.M{operator.In: txID}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.InterSwapTxData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

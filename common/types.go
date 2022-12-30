@@ -26,7 +26,7 @@ type Config struct {
 	GGCAuth    string
 
 	// Interswap
-	ISIncPrivKey string
+	ISIncPrivKeys map[string]string
 }
 
 type TokenInfo struct {

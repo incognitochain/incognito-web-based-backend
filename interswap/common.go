@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 
 	"github.com/go-resty/resty/v2"
@@ -186,6 +187,17 @@ func convertFloat64ToWithoutDecStr(amt uint64, tokenID string, config common.Con
 	}
 	tmp := float64(amt) / float64(math.Pow(10, float64(tokenInfo.PDecimals)))
 	return float64ToStr(tmp), nil
+}
+
+func convertAmtExtDecToAmtPDec(amt *big.Int, tokenID string, config common.Config) (uint64, error) {
+	tokenInfo, err := getTokenInfo(tokenID, config)
+	if err != nil {
+		return 0, nil
+	}
+	tmp := new(big.Int).Mul(amt, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tokenInfo.PDecimals)), nil))
+	tmp = new(big.Int).Div(tmp, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tokenInfo.Decimals)), nil))
+
+	return tmp.Uint64(), nil
 }
 
 func IsUniqueSlices(s []string) bool {

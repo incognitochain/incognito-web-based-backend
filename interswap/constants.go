@@ -13,9 +13,6 @@ const PAppToPdex = 2
 
 const DefaultDecimal = 9
 
-var InterSwapStatus = map[string]int{}
-
-//TODO
 const (
 	SubmitFailed    int = 0
 	FirstPending        = 1
@@ -29,17 +26,23 @@ const (
 	SecondSuccess       = 9
 )
 
+const InterswapRefundedStr = "Refunded"
+const InterswapRefundingStr = "Refunding"
+const InterswapPendingStr = "Pending"
+const InterswapSuccessStr = "Success"
+const InterswapSubmitFailedStr = "Submit failed"
+
 var StatusStr = map[int]string{
-	SubmitFailed:    "Submit failed",
-	FirstPending:    "Pending",
-	FirstRefunding:  "Refunding",
-	FirstRefunded:   "Refunded",
-	MidRefunding:    "Refunding",
-	MidRefunded:     "Refunded",
-	SecondPending:   "Pending",
-	SecondSuccess:   "Success",
-	SecondRefunding: "Refunding",
-	SecondRefunded:  "Refunded",
+	SubmitFailed:    InterswapSubmitFailedStr,
+	FirstPending:    InterswapPendingStr,
+	FirstRefunding:  InterswapRefundingStr,
+	FirstRefunded:   InterswapRefundedStr,
+	MidRefunding:    InterswapRefundingStr,
+	MidRefunded:     InterswapRefundedStr,
+	SecondPending:   InterswapPendingStr,
+	SecondSuccess:   InterswapSuccessStr,
+	SecondRefunding: InterswapRefundingStr,
+	SecondRefunded:  InterswapRefundedStr,
 }
 
 const INTERSWAP_TX_TOPIC = "interswaptx_topic"

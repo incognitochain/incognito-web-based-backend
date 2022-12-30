@@ -266,8 +266,13 @@ func DBCreateOpenSeaIndex() error {
 		},
 		{
 			Keys:    bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
-			Options: options.Index().SetExpireAfterSeconds(1800),
+			Options: options.Index().SetExpireAfterSeconds(7200),
 		},
+	}
+	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().DropAll(context.Background())
+	if err != nil {
+		log.Printf("failed to index op-asset in %v", time.Since(startTime))
+		return err
 	}
 	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)
 	if err != nil {

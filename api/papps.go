@@ -1634,14 +1634,14 @@ func extractDataFromRawTx(txraw []byte) (metadataCommon.Metadata, bool, []coin.C
 func getFee(isFeeWhitelist, isUnifiedNativeToken bool, nativeToken *wcommon.TokenInfo, rate *big.Float, gasFee uint64, fromToken string, fromTokenInfo *wcommon.TokenInfo, pTokenContract1 *PappSupportedTokenData, toTokenDecimal *big.Float, additionalTokenInFee *big.Float, isUnshield bool) []PappNetworkFee {
 	var fees []PappNetworkFee
 
-	additionalTokenInFeeInUSD, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(fromTokenInfo.ExternalPriceUSD)).Uint64()
-	max_pfee := MAX_PFEE_PAPP
-	if isUnshield {
-		max_pfee = MAX_PFEE_UNSHIELD
-	}
-	if additionalTokenInFeeInUSD > max_pfee {
-		additionalTokenInFee = new(big.Float).SetFloat64(float64(max_pfee) / fromTokenInfo.ExternalPriceUSD)
-	}
+	// additionalTokenInFeeInUSD, _ := new(big.Float).Mul(additionalTokenInFee, new(big.Float).SetFloat64(fromTokenInfo.ExternalPriceUSD)).Uint64()
+	// max_pfee := MAX_PFEE_PAPP
+	// if isUnshield {
+	// 	max_pfee = MAX_PFEE_UNSHIELD
+	// }
+	// if additionalTokenInFeeInUSD > max_pfee {
+	// 	additionalTokenInFee = new(big.Float).SetFloat64(float64(max_pfee) / fromTokenInfo.ExternalPriceUSD)
+	// }
 
 	if isUnifiedNativeToken {
 		// additionalTokenInFeeUint, _ := additionalTokenInFee.Uint64()

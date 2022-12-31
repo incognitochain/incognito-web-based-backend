@@ -64,7 +64,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		p1Bytes, _ := json.Marshal(p1)
 		fmt.Printf("Param 1: %s\n", string(p1Bytes))
 
-		est1, err := CallEstimateSwap(p1, config)
+		est1, err := CallEstimateSwap(p1, config, "")
 		if err != nil {
 			continue
 		}
@@ -93,7 +93,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			p2Bytes, _ := json.Marshal(p2)
 			fmt.Printf("Param 2: %s\n", string(p2Bytes))
 
-			est2, err := CallEstimateSwap(p2, config)
+			est2, err := CallEstimateSwap(p2, config, "")
 			if err != nil {
 				continue
 			}

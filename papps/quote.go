@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	pancakeproxy "github.com/incognitochain/incognito-web-based-backend/papps/pancake"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pcurve"
+	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	puniswap "github.com/incognitochain/incognito-web-based-backend/papps/puniswapproxy"
 )
 
@@ -336,4 +337,96 @@ func DecodeCurveCalldata(inputHex string) (*CurveDecodeData, error) {
 		return &result, nil
 	}
 	return nil, errors.New("invalid abi")
+}
+
+func BuildOpenSeaCalldata(nftDetal *popensea.NFTDetail, recipient string) (string, error) {
+	sellorder := nftDetal.SeaportSellOrders[0]
+	offerer := common.HexToAddress(sellorder.ProtocolData.Parameters.Offerer)
+	zone := common.HexToAddress(sellorder.ProtocolData.Parameters.Zone)
+	offerItemDB := sellorder.ProtocolData.Parameters.Offer[0]
+	considerationItemsDB := sellorder.ProtocolData.Parameters.Consideration
+	startAmount, _ := new(big.Int).SetString(offerItemDB.StartAmount, 10)
+	endAmount, _ := new(big.Int).SetString(offerItemDB.EndAmount, 10)
+	offerId, _ := new(big.Int).SetString(offerItemDB.IdentifierOrCriteria, 10)
+
+	offerItem := popensea.OfferItem{
+		ItemType:             uint8(offerItemDB.ItemType),
+		Token:                common.HexToAddress(offerItemDB.Token),
+		IdentifierOrCriteria: offerId,
+		StartAmount:          startAmount,
+		EndAmount:            endAmount,
+	}
+	considerations := []popensea.ConsiderationItem{}
+
+	for _, consider := range considerationItemsDB {
+
+		considerItem := popensea.ConsiderationItem{
+			ItemType:  uint8(consider.ItemType),
+			Token:     common.HexToAddress(consider.Token),
+			Recipient: common.HexToAddress(consider.Recipient),
+		}
+		considerItem.IdentifierOrCriteria, _ = new(big.Int).SetString(consider.IdentifierOrCriteria, 10)
+		considerItem.StartAmount, _ = new(big.Int).SetString(consider.StartAmount, 10)
+		considerItem.EndAmount, _ = new(big.Int).SetString(consider.EndAmount, 10)
+
+		considerations = append(considerations, considerItem)
+	}
+
+	startTime, _ := new(big.Int).SetString(sellorder.ProtocolData.Parameters.StartTime, 10)
+	endTime, _ := new(big.Int).SetString(sellorder.ProtocolData.Parameters.EndTime, 10)
+	salt, _ := new(big.Int).SetString(sellorder.ProtocolData.Parameters.Salt[2:], 16)
+
+	signature, err := hex.DecodeString(sellorder.ProtocolData.Signature[2:])
+	if err != nil {
+		return "", err
+	}
+	advanceOrder := popensea.AdvancedOrder{
+		Parameters: popensea.OrderParameters{
+			Offerer:                         offerer,
+			Zone:                            zone,
+			Offer:                           []popensea.OfferItem{offerItem},
+			Consideration:                   considerations,
+			OrderType:                       uint8(sellorder.ProtocolData.Parameters.OrderType),
+			StartTime:                       startTime,
+			EndTime:                         endTime,
+			ZoneHash:                        [32]byte{},
+			Salt:                            salt,
+			ConduitKey:                      toByte32(common.HexToHash(sellorder.ProtocolData.Parameters.ConduitKey).Bytes()),
+			TotalOriginalConsiderationItems: big.NewInt(int64(len(considerations))),
+		},
+		Numerator:   big.NewInt(1),
+		Denominator: big.NewInt(1),
+		Signature:   signature,
+		ExtraData:   []byte{},
+	}
+	fulfillerConduitKey := toByte32(common.HexToHash(sellorder.ProtocolData.Parameters.ConduitKey).Bytes())
+	// address will receive nft
+	recipientAddr := common.HexToAddress(recipient)
+
+	iopenseaAbi, err := abi.JSON(strings.NewReader(popensea.IopenseaMetaData.ABI))
+	if err != nil {
+		return "", err
+	}
+	calldata, err := iopenseaAbi.Pack("fulfillAdvancedOrder", advanceOrder, []popensea.CriteriaResolver{}, fulfillerConduitKey, recipientAddr)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println("build opensea calldata: " + hex.EncodeToString(calldata) + "\n")
+
+	// final burncalldata
+	openseaProxyAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaMetaData.ABI))
+	calldata, err = openseaProxyAbi.Pack("forward", calldata)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println("final burn calldata: " + hex.EncodeToString(calldata) + "\n")
+	return hex.EncodeToString(calldata), nil
+}
+
+func DecodeOpenSeaCalldata() {}
+
+func toByte32(s []byte) [32]byte {
+	a := [32]byte{}
+	copy(a[:], s)
+	return a
 }

@@ -255,11 +255,18 @@ func parseDefaultToken() error {
 		return err
 	}
 
+	auroraList := []TokenStruct{}
+	err = json.Unmarshal([]byte(auroraDefault), &auroraList)
+	if err != nil {
+		return err
+	}
+
 	tokenList = append(tokenList, bscList...)
 	tokenList = append(tokenList, ethList...)
 	tokenList = append(tokenList, plgList...)
 	tokenList = append(tokenList, ftmList...)
 	tokenList = append(tokenList, avaxList...)
+	tokenList = append(tokenList, auroraList...)
 	// tokenList = append(tokenList, nearList...)
 
 	for _, token := range tokenList {

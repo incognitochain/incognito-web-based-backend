@@ -12,7 +12,6 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
-	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	metadataBridge "github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	metadataPdexv3 "github.com/incognitochain/go-incognito-sdk-v2/metadata/pdexv3"
@@ -108,69 +107,80 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 		coinPubKeys = append(coinPubKeys, coinPubKey)
 	}
 
-	txResponses, err := CallGetTxsByCoinPubKeys(coinPubKeys, config)
+	txResponses, err := CallGetTxsByCoinPubKeys2(coinPubKeys, config, incClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error get txs by coin pubkeys %v", err)
 	}
 	log.Printf("findResponseUTXOs: txResponses %v %v \n", len(txResponses), txResponses)
 
-	var foundIndex *int
-	for i, tx := range txResponses {
-		if tx.TxDetail.Metatype != metadataType {
-			continue
-		}
-
-		if tx.TxDetail.Metadata == "" {
-			continue
-		}
-
-		metadata, err := metadata.ParseMetadata([]byte(tx.TxDetail.Metadata))
-		if err != nil {
-			fmt.Printf("Error parse metadata %v\n", err)
-			continue
-		}
-
-		switch metadataType {
-		case metadataCommon.Pdexv3TradeResponseMeta:
-			{
-				md := metadata.(*metadataPdexv3.TradeResponse)
-				if md.RequestTxID.String() != txReq {
-					continue
-				}
-				foundIndex = &i
-				break
-
+	foundCoinPubKey := ""
+	foundTxID := ""
+	for pubCoin, txs := range txResponses {
+		for txID, tx := range txs {
+			if tx.GetMetadata() == nil {
+				continue
 			}
-		case metadataCommon.BurnForCallResponseMeta:
-			{
-				md := metadata.(*metadataBridge.BurnForCallResponse)
-				if md.UnshieldResponse.RequestedTxID.String() != txReq {
-					continue
-				}
-				foundIndex = &i
-				break
-
-			}
-		case metadataCommon.IssuingReshieldResponseMeta:
-			{
-				md := metadata.(*metadataBridge.IssuingReshieldResponse)
-				if md.RequestedTxID.String() != txReq {
-					continue
-				}
-				foundIndex = &i
-				break
+			if tx.GetMetadataType() != metadataType {
+				continue
 			}
 
+			metadata := tx.GetMetadata()
+
+			switch metadataType {
+			case metadataCommon.Pdexv3TradeResponseMeta:
+				{
+					md := metadata.(*metadataPdexv3.TradeResponse)
+					if md.RequestTxID.String() != txReq {
+						continue
+					}
+					foundCoinPubKey = pubCoin
+					foundTxID = txID
+					break
+
+				}
+			case metadataCommon.BurnForCallResponseMeta:
+				{
+					md := metadata.(*metadataBridge.BurnForCallResponse)
+					if md.UnshieldResponse.RequestedTxID.String() != txReq {
+						continue
+					}
+					foundCoinPubKey = pubCoin
+					foundTxID = txID
+					break
+
+				}
+			case metadataCommon.IssuingReshieldResponseMeta:
+				{
+					md := metadata.(*metadataBridge.IssuingReshieldResponse)
+					if md.RequestedTxID.String() != txReq {
+						continue
+					}
+					foundCoinPubKey = pubCoin
+					foundTxID = txID
+					break
+				}
+			}
 		}
 	}
 
-	if foundIndex == nil {
+	if foundCoinPubKey == "" || foundTxID == "" {
 		return nil, errors.New("Not found response utxos")
+	}
+
+	var foundIndex *int
+	for i, coin := range coinPubKeys {
+		if coin == foundCoinPubKey {
+			foundIndex = &i
+			break
+		}
+	}
+	if foundIndex == nil {
+		return nil, errors.New("Invalid coin pub key and index")
 	}
 	return &ResponseInfo{
 		Coin:      utxos[*foundIndex],
 		CoinIndex: utxoIndices[*foundIndex],
-		TxID:      txResponses[*foundIndex].TxDetail.Hash,
+		TxID:      foundTxID,
 	}, nil
 
 }
@@ -214,7 +224,7 @@ func callEstimateSwapAndValidation(
 	expectedFeeAmount uint64,
 	interswapTxID string,
 ) (pAppAddOn *QuoteData, isMidRefund bool, errRes error) {
-	est2, err := CallEstimateSwap(params, config)
+	est2, err := CallEstimateSwap(params, config, "http://51.161.117.193:4898")
 	if err != nil {
 		log.Printf("InterswapID %v Estimate swap for addon tx error %v", interswapTxID, err)
 		return nil, false, err
@@ -259,7 +269,7 @@ func callEstimateSwapAndValidation(
 		}
 
 		if expectedFeeAmount > 0 {
-			if pAppAddOn.Fee[0].Amount <= expectedFeeAmount {
+			if pAppAddOn.Fee[0].Amount > expectedFeeAmount {
 				log.Printf("InterswapID %v Estimate swap fee invalid, expected not greater than %v, got %v\n", interswapTxID, expectedFeeAmount, pAppAddOn.Fee[0].Amount)
 				errRes = fmt.Errorf("InterswapID %v Estimate swap fee invalid, expected not greater than %v, got %v\n", interswapTxID, expectedFeeAmount, pAppAddOn.Fee[0].Amount)
 				return
@@ -673,11 +683,11 @@ func processInterswapPendingSecondTx(txData beCommon.InterSwapTxData, config beC
 	}
 
 	switch txData.PathType {
-	case PdexToPApp:
+	case PAppToPdex:
 		{
 			return CheckStatusAndHandlePdexTxSecond(&txData, config)
 		}
-	case PAppToPdex:
+	case PdexToPApp:
 		{
 			return CheckStatusAndHandlePappTxSecond(&txData, config)
 		}

@@ -18,8 +18,10 @@ import (
 var config wcommon.Config
 var InterswapIncKeySets map[string]*wallet.KeyWallet
 var UtxoManager *utxomanager.UTXOManager
+var pappsEstimator func(ctx context.Context, req wcommon.EstimateSwapRequest) (*wcommon.EstimateSwapRespond, error)
 
-func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
+func StartWorker(cfg wcommon.Config, serviceID uuid.UUID, papps_Estimator func(ctx context.Context, req wcommon.EstimateSwapRequest) (*wcommon.EstimateSwapRespond, error)) error {
+	pappsEstimator = papps_Estimator
 	network := cfg.NetworkID
 	config = cfg
 
@@ -143,7 +145,7 @@ func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
 	// 	log.Println("GetTxDetail err", err)
 	// 	if err != nil {
 	// 		log.Println(err)
-	// 		m.Nack() 
+	// 		m.Nack()
 	// 		return
 	// 	}
 	// } else {

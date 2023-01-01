@@ -127,3 +127,22 @@ type TradeWithdrawInfo struct {
 		RespondTx string
 	}
 }
+
+type EstimateSwapRequest struct {
+	FeeAddress  string
+	Network     string
+	Amount      string
+	Slippage    string
+	MultiTrades bool
+	MinSplit    int
+	FromToken   string // IncTokenID
+	ToToken     string // IncTokenID
+	ShardID     string
+
+	IsFromInterswap bool // dafault false
+}
+
+type EstimateSwapRespond struct {
+	Networks      map[string]interface{}
+	NetworksError map[string]interface{}
+}

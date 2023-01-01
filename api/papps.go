@@ -30,6 +30,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
 	"github.com/incognitochain/incognito-web-based-backend/papps"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
@@ -125,6 +126,7 @@ func APISubmitSwapTx(c *gin.Context) {
 		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
 		return
 	}
+
 }
 
 func APIGetVaultState(c *gin.Context) {
@@ -148,6 +150,14 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+
+	amount := new(big.Float)
+	amount, errBool := amount.SetString(req.Amount)
+	if !errBool {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
+		return
+	}
+
 	switch req.Network {
 	case "inc", "eth", "bsc", "plg", "ftm", "aurora", "avax":
 	default:
@@ -187,6 +197,30 @@ func APIEstimateSwapFee(c *gin.Context) {
 	result.Networks = make(map[string]interface{})
 	result.NetworksError = make(map[string]interface{})
 
+	// estimate with Interswap
+	if !req.IsFromInterswap {
+		fmt.Println("Starting estimate interswap")
+		interSwapParams := &interswap.EstimateSwapParam{
+			Network:   req.Network,
+			Amount:    req.Amount,
+			Slippage:  req.Slippage,
+			FromToken: req.FromToken,
+			ToToken:   req.ToToken,
+			ShardID:   req.ShardID,
+		}
+
+		interSwapRes, err := interswap.EstimateSwap(interSwapParams, config)
+		if err != nil {
+			result.NetworksError[interswap.InterSwapStr] = err.Error()
+			fmt.Println("Estimate interswap with err", err)
+		} else {
+			for k, v := range interSwapRes {
+				result.Networks[k] = v
+			}
+		}
+	}
+	fmt.Println("Finish estimate interswap")
+
 	tkFromInfo, err := getTokenInfo(req.FromToken)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -213,21 +247,17 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 
-	supportedNetworks := []int{}
+	var resultLock sync.Mutex
+	var wg sync.WaitGroup
 
+	supportedNetworks := []int{}
 	outofVaultNetworks := []int{}
+	supportedOutNetworks := []int{}
 	if tkFromInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-		amount := new(big.Float)
-		amount, errBool := amount.SetString(req.Amount)
-		if !errBool {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
-			return
-		}
 		dm := new(big.Float)
 		dm.SetFloat64(math.Pow10(tkFromInfo.PDecimals))
 		amountUint64, _ := amount.Mul(amount, dm).Uint64()
 
-		supportedOutNetworks := []int{}
 		for _, v := range tkFromInfo.ListUnifiedToken {
 			if networkID == 0 {
 				//check all vaults
@@ -280,7 +310,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 			}
 		}
 	} else {
-		supportedOutNetworks := []int{}
 		tkFromNetworkID, _ := getNetworkIDFromCurrencyType(tkFromInfo.CurrencyType)
 		if tkFromNetworkID > 0 {
 			if networkID == tkFromNetworkID {
@@ -316,6 +345,8 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 		if req.Network == "inc" && len(pdexEstimate) != 0 {
 			result.Networks["inc"] = pdexEstimate
+		}
+		if len(result.Networks) > 0 {
 			response.Result = result
 			c.JSON(200, response)
 			return
@@ -348,8 +379,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	var resultLock sync.Mutex
-	var wg sync.WaitGroup
 	for _, network := range supportedNetworks {
 		wg.Add(1)
 		go func(net int) {
@@ -370,18 +399,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 		result.NetworksError[net] = v
 	}
 
-	// if req.Network != "inc" && len(networkErr) == 1 {
-	// 	response.Result = result
-	// 	response.Error = NotTradeable.Error()
-	// 	c.JSON(200, response)
-	// 	return
-	// }
-	// if req.Network == "inc" && len(networkErr) == len(supportedNetworks) && pdexEstimate == nil {
-	// 	response.Result = result
-	// 	response.Error = NotTradeable.Error()
-	// 	c.JSON(200, response)
-	// 	return
-	// }
 	if len(pdexEstimate) != 0 {
 		result.Networks["inc"] = pdexEstimate
 	}
@@ -392,7 +409,6 @@ func APIEstimateSwapFee(c *gin.Context) {
 	response.Result = result
 
 	c.PureJSON(200, response)
-
 }
 
 func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Float, tkFromInfo *wcommon.TokenInfo) *QuoteDataResp {

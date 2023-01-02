@@ -1,6 +1,8 @@
 package interswap
 
 import (
+	"fmt"
+	"math"
 	"testing"
 )
 
@@ -18,4 +20,14 @@ func TestCallEstimateSwap(t *testing.T) {
 	// res, err := CallEstimateSwap(params)
 	// fmt.Printf("Res: %+v\n", res)
 	// fmt.Printf("err: %+v\n", err)
+
+	num, err := strToFloat64("0.01123")
+	fmt.Printf("num: %v\n", num)
+	fmt.Printf("err: %v\n", err)
+
+	tmp := uint64(float64(num) * float64(math.Pow(10, float64(9))))
+	fmt.Printf("tmp: %v\n", tmp)
+
 }
+
+// func SendSlackAlert

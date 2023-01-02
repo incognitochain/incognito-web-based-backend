@@ -41,6 +41,7 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 		return err
 	}
 	UtxoManager = utxomanager.NewUTXOManager(incClient)
+	log.Printf("UtxoManager len: %v\n", UtxoManager.Caches)
 
 	// submit OTA key to fullnode
 	if len(cfg.ISIncPrivKeys) > 0 {
@@ -143,7 +144,7 @@ func processInterswapPdexPappPathTask(ctx context.Context, m *pubsub.Message) {
 	// 	log.Println("GetTxDetail err", err)
 	// 	if err != nil {
 	// 		log.Println(err)
-	// 		m.Nack() 
+	// 		m.Nack()
 	// 		return
 	// 	}
 	// } else {

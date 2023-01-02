@@ -170,7 +170,7 @@ func CallEstimateSwap(params *EstimateSwapParam, config beCommon.Config, endpoin
 }
 
 // CallSubmitPappSwapTx calls request to submit tx papp
-func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config beCommon.Config) (map[string]interface{}, error) {
+func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config beCommon.Config, endpoint string) (map[string]interface{}, error) {
 	log.Printf("CallSubmitPappSwapTx txHash: %v\n", txHash)
 	req := SubmitpAppSwapTxRequest{
 		TxRaw:        txRaw,
@@ -180,11 +180,15 @@ func CallSubmitPappSwapTx(txRaw, txHash, feeRefundOTA string, config beCommon.Co
 
 	estSwapResponse := SubmitpAppSwapTxResponse{}
 
+	if endpoint == "" {
+		endpoint = "http://localhost:" + strconv.Itoa(config.Port)
+	}
+
 	response, err := restyClient.R().
 		EnableTrace().
 		SetHeader("Content-Type", "application/json").SetBody(req).
 		SetResult(&estSwapResponse).
-		Post("http://localhost:" + strconv.Itoa(config.Port) + "/papps/submitswaptx")
+		Post(endpoint + "/papps/submitswaptx")
 	if err != nil {
 		err := fmt.Errorf("[ERR] Call API /papps/submitswaptx request error: %v", err)
 		log.Println(err)
@@ -334,7 +338,7 @@ func CallGetTxDetails(txhash string, config beCommon.Config) (*TransactionDetail
 	return &responseBodyData.Result, nil
 }
 
-func CallGetPdexSwapTxStatus(txhash, tokenOut string, config beCommon.Config) (bool, *beCommon.TradeDataRespond, error) {
+func CallGetPdexSwapTxStatus(txhash string, config beCommon.Config) (bool, *beCommon.TradeDataRespond, error) {
 	type APIRespond struct {
 		Result []beCommon.TradeDataRespond
 		Error  *string
@@ -362,25 +366,6 @@ func CallGetPdexSwapTxStatus(txhash, tokenOut string, config beCommon.Config) (b
 
 	swapResult := responseBodyData.Result[0]
 	return true, &swapResult, nil
-
-	// if len(swapResult.RespondTxs) > 0 {
-	// 	if swapResult.Status == "accepted" {
-	// 		outAmountBig := new(big.Float).SetUint64(swapResult.RespondAmounts[0])
-	// 		var outDecimal *big.Float
-	// 		tokenOutInfo, err := getTokenInfo(tokenOut)
-	// 		if err != nil {
-	// 			return false, "", errors.New("not found")
-	// 		}
-	// 		outDecimal = new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
-	// 		outAmountfl64, _ := new(big.Float).Mul(outAmountBig, outDecimal).Float64()
-	// 		outAmount := fmt.Sprintf("%f", outAmountfl64)
-	// 		return true, outAmount, nil
-	// 	} else {
-	// 		return true, "", nil
-	// 	}
-	// }
-
-	// return false, "", nil
 }
 
 type ReceivedTransactionV2 struct {

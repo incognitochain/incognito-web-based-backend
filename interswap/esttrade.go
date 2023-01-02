@@ -112,6 +112,10 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 					if swapInfo2 == nil {
 						continue
 					}
+					if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
+						continue
+					}
+
 					path := InterSwapPath{
 						Paths:     []*QuoteData{swapInfo1, swapInfo2},
 						MidToken:  midToken,
@@ -127,6 +131,9 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 					}
 					swapInfo2 := bestPath2[IncNetworkStr]
 					if swapInfo2 == nil {
+						continue
+					}
+					if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
 						continue
 					}
 
@@ -181,7 +188,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		if err != nil {
 			return nil, err
 		}
-		feeAmountInBuyToken, err = convertFloat64ToWithoutDecStr(tmp, bestPath.ToToken, config)
+		feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +240,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			Fee:                  bestPath.Paths[0].Fee, // only show the fee of the first tx
 			FeeAddress:           bestPath.Paths[0].FeeAddress,
 			FeeAddressShardID:    bestPath.Paths[0].FeeAddressShardID,
-			Paths:                "", // TODO
+			Paths:                "", // Frontend will build the path
 			ImpactAmount:         "", // TODO
 		},
 		MidOTA:    midOTA,

@@ -1,8 +1,6 @@
 package interswap
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,7 +9,6 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	"github.com/incognitochain/go-incognito-sdk-v2/privacy"
-	"github.com/incognitochain/incognito-web-based-backend/common"
 	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 
@@ -126,7 +123,14 @@ type TransactionDetail struct {
 // CallEstimateSwap call request to estimate swap
 // for both pdex and papp
 func CallEstimateSwap(params *EstimateSwapParam, config beCommon.Config, endpoint string) (*EstimateSwapResult, error) {
-	req := common.EstimateSwapRequest{
+	req := struct {
+		Network         string
+		Amount          string // without decimal
+		FromToken       string // IncTokenID
+		ToToken         string // IncTokenID
+		Slippage        string
+		IsFromInterswap bool
+	}{
 		Network:         params.Network,
 		Amount:          params.Amount,
 		FromToken:       params.FromToken,
@@ -139,47 +143,30 @@ func CallEstimateSwap(params *EstimateSwapParam, config beCommon.Config, endpoin
 		endpoint = "http://localhost:" + strconv.Itoa(config.Port)
 	}
 
-	estSwapResponse, err := pappsEstimator(context.Background(), req)
-
-	// response, err := restyClient.R().
-	// 	EnableTrace().
-	// 	SetHeader("Content-Type", "application/json").SetBody(req).
-	// 	SetResult(&estSwapResponse).
-	// 	Post(endpoint + "/papps/estimateswapfee")
-	// if err != nil {
-	// 	err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee request error: %v", err)
-	// 	log.Println(err)
-	// 	return nil, err
-	// }
-	// if response.StatusCode() != 200 {
-	// 	err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee status code error: %v", response.StatusCode())
-	// 	log.Println(err)
-	// 	return nil, err
-	// }
-
-	// if estSwapResponse.Error != nil {
-	// 	err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee response error: %v", err)
-	// 	log.Println(err)
-	// 	return nil, err
-	// }
-
+	estSwapResponse := EstimateSwapResponse{}
+	response, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").SetBody(req).
+		SetResult(&estSwapResponse).
+		Post(endpoint + "/papps/estimateswapfee")
 	if err != nil {
+		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee request error: %v", err)
+		log.Println(err)
+		return nil, err
+	}
+	if response.StatusCode() != 200 {
+		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee status code error: %v", response.StatusCode())
+		log.Println(err)
+		return nil, err
+	}
+
+	if estSwapResponse.Error != nil {
 		err := fmt.Errorf("[ERR] Call API /papps/estimateswapfee response error: %v", err)
 		log.Println(err)
 		return nil, err
 	}
 
-	resultJson, err := json.Marshal(estSwapResponse)
-	if err != nil {
-		return nil, err
-	}
-	estSwapResult := EstimateSwapResult{}
-	err = json.Unmarshal(resultJson, &estSwapResult)
-	if err != nil {
-		return nil, err
-	}
-
-	return &estSwapResult, nil
+	return &estSwapResponse.Result, nil
 }
 
 // CallSubmitPappSwapTx calls request to submit tx papp

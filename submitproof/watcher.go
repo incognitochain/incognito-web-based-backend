@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -577,10 +578,39 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		if err != nil {
 			return err
 		}
-		txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
+
+		address, err := wcommon.GetEVMAddress(config.EVMKey)
 		if err != nil {
 			return err
 		}
+		account := common.HexToAddress(address)
+		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
+
+		if pendingNonce <= tx.Nonce {
+			return nil
+		}
+
+		txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
+		if err != nil {
+			if err == ethereum.NotFound {
+				switch tx.Type {
+				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpensea:
+					err = database.DBUpdatePappTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")
+					if err != nil {
+						return err
+					}
+				case wcommon.ExternalTxTypeUnshield:
+					err = database.DBUpdateUnshieldTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")
+					if err != nil {
+						return err
+					}
+				}
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[externaltx]` retry outchain for tx %v", tx.IncRequestTx))
+				return nil
+			}
+			return err
+		}
+
 		var logResult string
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
 			valueBuf := encodeBufferPool.Get().(*bytes.Buffer)

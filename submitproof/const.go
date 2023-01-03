@@ -62,3 +62,12 @@ const Erc20ABINoIndex = "[{\"name\":\"Transfer\",\"inputs\":[{\"type\":\"address
 const (
 	EthNativeAddrStr = "0x0000000000000000000000000000000000000000"
 )
+
+// pdao
+
+const (
+	PdaoSubmitProposalExtTask    = "pdao_submit_proposal_task"
+	PdaoSubmitVoteExtTask        = "pdeo_submit_vote_task"
+	PdaoSubmitCancelExtTask      = "pdeo_submit_cancel_task"
+	PdaoSubmitReShieldPRVExtTask = "pdeo_submit_reshieldprv_task"
+)

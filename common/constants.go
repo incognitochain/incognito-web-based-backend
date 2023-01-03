@@ -48,6 +48,14 @@ const (
 )
 
 const (
+	StatusPdaOutchainTxFailed     = "pdao_outchain_failed"
+	StatusPdaOutchainTxSubmitting = "pdao_outchain_submitting"
+	StatusPdaOutchainTxPending    = "pdao_outchain_pending"
+	StatusPdaOutchainTxSuccess    = "pdao_outchain_success"
+	StatusPdaoReadyForVote        = "pdao_ready_for_vote"
+)
+
+const (
 	NETWORK_INC    = "inc"
 	NETWORK_ETH    = "eth"
 	NETWORK_BSC    = "bsc"
@@ -176,6 +184,10 @@ const (
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
 	ExternalTxTypeOpensea = 96
+	ExternalTxTypePdaoProposal    = 69
+	ExternalTxTypePdaoVote        = 70
+	ExternalTxTypePdaoCancel      = 71
+	ExternalTxTypePdaoReShieldPRV = 72
 )
 
 // Default param mainnet
@@ -308,3 +320,13 @@ var TestnetIncognitoVault = []PappVaultData{
 		ContractAddress: "0x76318093c374e39B260120EBFCe6aBF7f75c8D28",
 	},
 }
+
+const (
+	PRV_TOKEN            = "0000000000000000000000000000000000000000000000000000000000000004"
+	ETH_UT_TOKEN_MAINNET = "3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e"
+	ETH_UT_TOKEN_TESTNET = "b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d"
+
+	GOVERNANCE_CONTRACT_ADDRESS = "0x01f6549BeF494C8b0B00C2790577AcC1A3Fa0Bd0"
+	PRV_VOTE                    = "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"
+	PRV_THRESHOLD               = "10000000000"
+)

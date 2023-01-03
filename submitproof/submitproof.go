@@ -111,11 +111,16 @@ retry:
 
 	if linkedTokenID == "" && tokenID == "" {
 		log.Println("findTokenByContractID", proofRecord.ContractID, networkID)
-		tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
-		if err != nil {
-			log.Println("findTokenByContractID error:", err)
-			finalErr = "findTokenByContractID " + err.Error()
-			goto retry
+		if proofRecord.ContractID == "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae" || proofRecord.ContractID == "0x6722ec501bE09fb221bCC8a46F9660868d0a6c63" {
+			tokenID = wcommon.PRV_TOKENID
+			linkedTokenID = tokenID
+		} else {
+			tokenID, linkedTokenID, err = findTokenByContractID(proofRecord.ContractID, networkID)
+			if err != nil {
+				log.Println("findTokenByContractID error:", err)
+				finalErr = "findTokenByContractID " + err.Error()
+				goto retry
+			}
 		}
 	}
 	if tokenID == "" {
@@ -157,6 +162,14 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		}
 		return result, err
 	}
+	if tokenID == wcommon.PRV_TOKENID {
+		// todo: update sdk
+		result, err := incClient.CreateAndSendIssuingPRVPeggingRequestTransaction(key, *proof, networkID-1)
+		if err != nil {
+			return result, err
+		}
+		return result, err
+	}
 	if tokenID == pUTokenID {
 		result, err := incClient.CreateAndSendIssuingEVMRequestTransaction(key, tokenID, *proof, networkID-1)
 		if err != nil {
@@ -164,7 +177,6 @@ func submitProofTx(proof *incclient.EVMDepositProof, tokenID string, pUTokenID s
 		}
 		return result, nil
 	}
-
 	result, err := incClient.CreateAndSendIssuingpUnifiedRequestTransaction(key, tokenID, pUTokenID, *proof, networkID)
 	if err != nil {
 		return result, err

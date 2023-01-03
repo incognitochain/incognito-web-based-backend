@@ -8,6 +8,7 @@ import (
 	"github.com/kamva/mgm/v3"
 	"github.com/kamva/mgm/v3/operator"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // proposal:
@@ -28,12 +29,35 @@ func DBListProposalTable() []common.Proposal {
 	mgm.Coll(&common.Proposal{}).SimpleFind(&p, bson.M{})
 	return p
 }
+func DBListLimitProposalTable() []common.Proposal {
+	var result []common.Proposal
+	filter := bson.M{}
+	// limit := int64(100)
+	mgm.Coll(&common.Proposal{}).SimpleFind(&result, filter, &options.FindOptions{
+		Sort: bson.D{{"created_at", -1}},
+		//Limit: &limit,
+	})
+	return result
+}
 
 // get by id
 func DBgetProposalTable(id string) (*common.Proposal, error) {
 
 	p := &common.Proposal{}
 	err := mgm.Coll(p).FindByID(id, p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// get by id
+func DBgetProposalTableByPID(pid uint) (*common.Proposal, error) {
+
+	p := &common.Proposal{}
+	// filter := bson.M{"pid": pid}
+	filter := bson.M{"pid": bson.M{operator.Eq: pid}}
+	err := mgm.Coll(p).First(filter, p)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +127,7 @@ func DBUpdatePdaoVoteReshieldStatus(incTx string, status string) error {
 }
 
 func DBUpdatePdaoCancelStatus(incTx string, status string) error {
-	//TODO: @phuong => don't need yes for now.
+	//TODO: @phuong => don't need use for now.
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
@@ -205,4 +229,24 @@ func DBGetVotingToReShield() ([]common.Vote, error) {
 	}
 
 	return result, nil
+}
+
+// create proposal with increase PID:
+func DBCreateAProposalTable(data *common.Proposal) error {
+	// get last ID:
+	// try for 10 times:
+	for i := 0; i < 10; i++ {
+		var pid uint = 0
+		listProd := DBListLimitProposalTable()
+		if len(listProd) > 0 {
+			pid = listProd[0].PID
+		}
+		pid += 1
+		data.PID = pid
+		err := DBInsertProposalTable(data)
+		if err == nil {
+			return nil
+		}
+	}
+	return nil
 }

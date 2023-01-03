@@ -241,6 +241,10 @@ func DBCreateProposalIndex() error {
 	startTime := time.Now()
 	proposalTxModel := []mongo.IndexModel{
 		{
+			Keys:    bsonx.Doc{{Key: "pid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
 			Keys: bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}},
 		},
 		{

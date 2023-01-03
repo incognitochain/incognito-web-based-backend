@@ -158,7 +158,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	}
 
 	switch req.Network {
-	case "inc", "eth", "bsc", "plg", "ftm", "aurora", "avax":
+	case "inc", "pdex", "eth", "bsc", "plg", "ftm", "aurora", "avax":
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "unsupported network"})
 		return
@@ -238,6 +238,23 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 	networkErr := make(map[string]interface{})
 	var pdexEstimate []QuoteDataResp
+
+	// Only estimate with pdex
+	if req.Network == wcommon.NETWORK_PDEX {
+		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)
+		if pdexresult != nil {
+			pdexEstimate = append(pdexEstimate, *pdexresult)
+		}
+		if len(pdexEstimate) != 0 {
+			result.Networks["inc"] = pdexEstimate
+		}
+		if len(result.Networks) == 0 && len(pdexEstimate) == 0 {
+			response.Error = NotTradeable.Error()
+		}
+
+		response.Result = result
+		c.PureJSON(200, response)
+	}
 
 	if req.Network == "inc" {
 		pdexresult := estimateSwapFeeWithPdex(req.FromToken, req.ToToken, req.Amount, slippage, tkFromInfo)

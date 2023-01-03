@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -37,9 +38,42 @@ type AddOnSwapInfo struct {
 	MinExpectedAmt uint64
 }
 
+func IsOnlySwappablePDexToken(tokenInfo common.TokenInfo) bool {
+	for _, currencyType := range common.OnlyPDexTokenCurrency {
+		if tokenInfo.CurrencyType == currencyType {
+			return true
+		}
+	}
+
+	return false
+}
+
+func heuristicPathType(params *EstimateSwapParam, config common.Config) (bool, int) {
+	tokenInfos, err := getTokensInfo([]string{params.FromToken, params.ToToken}, config)
+	if err != nil || len(tokenInfos) != 2 {
+		return false, -1
+	}
+	fromTokenInfo := tokenInfos[0]
+	toTokenInfo := tokenInfos[1]
+
+	if params.Network != IncNetworkStr {
+		return true, PdexToPApp
+	}
+
+	// fromToken: PRV, centralized token,
+	if fromTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(fromTokenInfo) {
+		return true, PdexToPApp
+	}
+
+	if toTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(toTokenInfo) {
+		return true, PAppToPdex
+	}
+
+	return true, PdexToPApp
+}
+
 // InterSwap estimate swap
 func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][]InterSwapEstRes, error) {
-	// TODO: optimize
 	// validation
 
 	// * don't estimate inter swap if:
@@ -52,11 +86,27 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	// 	return nil, nil
 	// }
 
+	// optimize
+	_, estPathType := heuristicPathType(params, config)
+	log.Printf("Estimate path type: %v\n", estPathType)
+	estParamNetwork1 := IncNetworkStr
+	estParamNetwork2 := params.Network
+	switch estPathType {
+	case PdexToPApp:
+		{
+			estParamNetwork1 = common.NETWORK_PDEX
+		}
+	case PAppToPdex:
+		{
+			estParamNetwork2 = common.NETWORK_PDEX
+		}
+	}
+
 	paths := []InterSwapPath{}
 	for _, midToken := range SupportedMidTokens {
 		// estimate fromToken => midToken
 		p1 := &EstimateSwapParam{
-			Network:   IncNetworkStr,
+			Network:   estParamNetwork1,
 			Amount:    params.Amount,
 			FromToken: params.FromToken,
 			ToToken:   midToken,
@@ -85,7 +135,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 
 		for network1, swapInfo1 := range bestPath1 {
 			p2 := &EstimateSwapParam{
-				Network:   params.Network,
+				Network:   estParamNetwork2,
 				Amount:    swapInfo1.AmountOut,
 				FromToken: midToken,
 				ToToken:   params.ToToken,

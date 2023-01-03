@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/mileusna/useragent"
 )
+
+var BEEndpoint = os.Getenv("BE_ENDPOINT")
 
 var incClient *incclient.IncClient
 
@@ -39,7 +42,7 @@ func InitSupportedMidTokens(network string) error {
 	case "mainnet":
 		SupportedMidTokens = []string{
 			"076a4423fa20922526bd50b0d7b0dc1c593ce16e15ba141ede5fb5a28aa3f229", // USDT
-			"3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e", // ETH
+			// "3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e", // ETH
 		}
 	case "testnet":
 		SupportedMidTokens = []string{

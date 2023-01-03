@@ -39,6 +39,7 @@ type AddOnSwapInfo struct {
 
 // InterSwap estimate swap
 func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][]InterSwapEstRes, error) {
+	// TODO: optimize
 	// validation
 
 	// * don't estimate inter swap if:

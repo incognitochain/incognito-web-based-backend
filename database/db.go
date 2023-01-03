@@ -55,6 +55,11 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 		return err
 	}
 
+	err = DBCreateOpenSeaIndex()
+	if err != nil {
+		return err
+	}
+
 	DBCreateDefaultNetworkInfo(network)
 
 	// pdao:

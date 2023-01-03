@@ -148,3 +148,9 @@ type DexSwapTrackData struct {
 	MinAmountOut     string `json:"amount_out" bson:"amount_out"`
 	UserAgent        string `json:"useragent" bson:"useragent"`
 }
+
+type PAppAPIKeyData struct {
+	mgm.DefaultModel `bson:",inline"`
+	App              string `json:"app" bson:"app"`
+	Key              string `json:"key" bson:"key"`
+}

@@ -4,10 +4,13 @@ import "github.com/kamva/mgm/v3"
 
 type Proposal struct {
 	mgm.DefaultModel    `bson:",inline"`
+	PID                 uint   `bson:"pid"`
+	ProposalID          string `bson:"proposal_id"`
+	Title               string `bson:"title"`
+	Description         string `bson:"description"`
+	Status              string `bson:"status"`
 	SubmitBurnTx        string `bson:"submit_burn_tx"`
 	SubmitProposalTx    string `bson:"submit_proposal_tx"`
-	Status              string `bson:"status"`
-	ProposalID          string `bson:"proposal_id"`
 	Proposer            string `bson:"proposer"`
 	Targets             string `bson:"targets"`
 	Values              string `bson:"values"`
@@ -15,8 +18,6 @@ type Proposal struct {
 	Calldatas           string `bson:"calldatas"`
 	CreatePropSignature string `bson:"create_prop_signature"`
 	PropVoteSignature   string
-	Description         string `bson:"description"`
-	Title               string `bson:"title"`
 	ReShieldSignature   string
 }
 

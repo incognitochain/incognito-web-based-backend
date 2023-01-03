@@ -117,7 +117,7 @@ func StartAPIservice(cfg common.Config) {
 	pDAOGroup.GET("proposal/estimatefee", APIPDaoFeeEstimate)
 	pDAOGroup.POST("proposal/create", APIPDaoCreateNewProposal)
 	pDAOGroup.GET("proposal/list", APIPDaoListProposal)
-	pDAOGroup.GET("proposal/detail/:id", APIPDaoDetailProposal)
+	pDAOGroup.GET("proposal/detail/:pid", APIPDaoDetailProposal)
 
 	pDAOGroup.POST("proposal/vote", APIPDaoVoting)
 	// pDAOGroup.POST("proposal/cancel")

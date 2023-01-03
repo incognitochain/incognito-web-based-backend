@@ -142,6 +142,8 @@ var OnlyPDexTokenCurrency = []int{
 	DOGE,
 	ZEC,
 	DOT,
+	NEAR,
+	NEAR_TOKEN,
 }
 
 var (

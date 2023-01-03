@@ -254,6 +254,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 
 		response.Result = result
 		c.PureJSON(200, response)
+		return
 	}
 
 	if req.Network == "inc" {

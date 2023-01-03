@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"syscall"
 
 	"github.com/google/uuid"
@@ -92,4 +94,38 @@ func loadPappAPIKey() {
 		return
 	}
 	config.OpenSeaAPI = openseaAPI
+
+	itswSlackInfo, err := database.DBGetPappAPIKey("INTERSWAP_SLACK_INFO")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(INTERSWAP_SLACK_INFO)", err)
+		return
+	}
+	os.Setenv("INTERSWAP_SLACK_INFO", itswSlackInfo)
+
+	itswSlackAlert, err := database.DBGetPappAPIKey("INTERSWAP_SLACK_ALERT")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(INTERSWAP_SLACK_ALERT)", err)
+		return
+	}
+	os.Setenv("INTERSWAP_SLACK_ALERT", itswSlackAlert)
+
+	itswBE, err := database.DBGetPappAPIKey("INTERSWAP_BE_ENDPOINT")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(INTERSWAP_BE_ENDPOINT)", err)
+		return
+	}
+	os.Setenv("BE_ENDPOINT", itswBE)
+
+	itswIncKeys, err := database.DBGetPappAPIKey("INTERSWAP_INC_KEYS")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(INTERSWAP_INC_KEYS)", err)
+		return
+	}
+	itswIncKeysMap := make(map[string]string)
+	err = json.Unmarshal([]byte(itswIncKeys), &itswIncKeysMap)
+	if err != nil {
+		log.Println("json.Unmarshal (INTERSWAP_INC_KEYS)", err)
+		return
+	}
+	config.ISIncPrivKeys = itswIncKeysMap
 }

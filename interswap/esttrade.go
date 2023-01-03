@@ -156,8 +156,8 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	}
 
 	// find the best path
-	bestPath := paths[0]
-	for i := 1; i < len(paths); i++ {
+	bestPath := new(InterSwapPath)
+	for i := 0; i < len(paths); i++ {
 		path := paths[i]
 
 		totalFee, err := calTotalFee(path, config)
@@ -167,10 +167,10 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		}
 		path.TotalFee = *totalFee
 
-		if len(bestPath.Paths) == 0 {
-			bestPath = path
-		} else if isBetter, err := isBetterInterSwapPath(path, bestPath); err == nil && isBetter {
-			bestPath = path
+		if bestPath == nil || len(bestPath.Paths) == 0 {
+			bestPath = &path
+		} else if isBetter, err := isBetterInterSwapPath(path, *bestPath); err == nil && isBetter {
+			bestPath = &path
 		}
 	}
 

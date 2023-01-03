@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -87,20 +86,20 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	// }
 
 	// optimize
-	_, estPathType := heuristicPathType(params, config)
-	log.Printf("Estimate path type: %v\n", estPathType)
+	// _, estPathType := heuristicPathType(params, config)
+	// log.Printf("Estimate path type: %v\n", estPathType)
 	estParamNetwork1 := IncNetworkStr
 	estParamNetwork2 := params.Network
-	switch estPathType {
-	case PdexToPApp:
-		{
-			estParamNetwork1 = common.NETWORK_PDEX
-		}
-	case PAppToPdex:
-		{
-			estParamNetwork2 = common.NETWORK_PDEX
-		}
-	}
+	// switch estPathType {
+	// case PdexToPApp:
+	// 	{
+	// 		estParamNetwork1 = common.NETWORK_PDEX
+	// 	}
+	// case PAppToPdex:
+	// 	{
+	// 		estParamNetwork2 = common.NETWORK_PDEX
+	// 	}
+	// }
 
 	paths := []InterSwapPath{}
 	for _, midToken := range SupportedMidTokens {

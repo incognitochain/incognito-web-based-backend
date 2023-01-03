@@ -20,7 +20,7 @@ CONFIG_JSON=$(cat <<EOF
   "SlackMonitor":"$SLACK_MONITOR",
   "IncKey": "$INC_KEY",
   "EVMKey": "$EVM_KEY",
-  "ISIncPrivKeys":$ISINC_Key,
+  "ISIncPrivKeys":$ISINC_KEY,
   "CentralIncPaymentAddress": "$CINC_PA",
   "GGCProject": "$GOOGLE_CLOUD_PROJECT",
   "GGCAuth":"$GOOGLE_CLOUD_ACC"

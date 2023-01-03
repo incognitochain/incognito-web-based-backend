@@ -81,7 +81,7 @@ func ValidateSubmitInterSwapTxRequest(req SubmitInterSwapTxRequest, network stri
 	pAppContract := ""
 	for _, data := range pappEndpint {
 		if data.Network == req.PAppNetwork {
-			pAppContract = data.AppContracts[req.PAppName]
+			pAppContract = interswap.Remove0xPrefix(data.AppContracts[req.PAppName])
 		}
 	}
 	if pAppContract == "" {
@@ -180,7 +180,6 @@ func APISubmitInterSwapTx(c *gin.Context) {
 		return
 	}
 
-	// TODO: 0xkraken check database is exist or not
 	log.Println("Processing APISubmitInterSwapTx 5")
 
 	switch mdType {
@@ -285,7 +284,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 
 			log.Println("Processing APISubmitInterSwapTx 7")
 			// call api submitswaptx to broadcast papp swap tx to BE
-			_, err = interswap.CallSubmitPappSwapTx(req.TxRaw, txHash, req.OTARefundFee, config)
+			_, err = interswap.CallSubmitPappSwapTx(req.TxRaw, txHash, req.OTARefundFee, config, "")
 			if err != nil {
 				status := interswap.SubmitFailed
 				err = database.DBUpdateInterswapTxStatus(txHash, status, interswap.StatusStr[status], err.Error())
@@ -294,6 +293,10 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				}
 				c.JSON(http.StatusBadRequest, gin.H{"Error": fmt.Sprintf("submit papp tx failed %v", err.Error())})
 				return
+			}
+			err = interswap.SendSlackSwapInfo(txHash, userAgent, "submiting", fromAmount, req.FromToken, req.FinalMinExpectedAmt, req.ToToken, 0, "", config)
+			if err != nil {
+				log.Printf("InterswapID %v SendSlackSwapInfo err %v\n", txHash, err)
 			}
 
 			c.JSON(200, gin.H{"Result": "success"})
@@ -328,6 +331,12 @@ func APISubmitInterSwapTx(c *gin.Context) {
 			}
 
 			log.Println("Processing APISubmitInterSwapTx 8")
+			withdrawAddress := ""
+			if req.WithdrawAddress == "" {
+				withdrawAddress = EmptyExternalAddress
+			} else {
+				withdrawAddress = interswap.Remove0xPrefix(req.WithdrawAddress)
+			}
 			// store DB to InterSwap before broadcast tx
 			status := interswap.FirstPending
 			interswapInfo := beCommon.InterSwapTxData{
@@ -338,7 +347,7 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				OTARefund:       req.OTARefund,
 				OTAFromToken:    req.OTAFromToken,
 				OTAToToken:      req.OTAToToken,
-				WithdrawAddress: req.WithdrawAddress,
+				WithdrawAddress: withdrawAddress,
 
 				FromAmount:          md.SellAmount,
 				FromToken:           req.FromToken,
@@ -392,6 +401,11 @@ func APISubmitInterSwapTx(c *gin.Context) {
 				return
 			}
 			log.Println("Processing APISubmitInterSwapTx 10")
+
+			err = interswap.SendSlackSwapInfo(txHash, userAgent, "submiting", md.SellAmount, req.FromToken, req.FinalMinExpectedAmt, req.ToToken, 0, "", config)
+			if err != nil {
+				log.Printf("InterswapID %v SendSlackSwapInfo err %v\n", txHash, err)
+			}
 
 			c.JSON(200, gin.H{"Result": "success"})
 			return

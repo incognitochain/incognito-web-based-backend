@@ -39,6 +39,7 @@ type AddOnSwapInfo struct {
 
 // InterSwap estimate swap
 func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][]InterSwapEstRes, error) {
+	// TODO: optimize
 	// validation
 
 	// * don't estimate inter swap if:
@@ -64,7 +65,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		p1Bytes, _ := json.Marshal(p1)
 		fmt.Printf("Param 1: %s\n", string(p1Bytes))
 
-		est1, err := CallEstimateSwap(p1, config)
+		est1, err := CallEstimateSwap(p1, config, "")
 		if err != nil {
 			continue
 		}
@@ -93,7 +94,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			p2Bytes, _ := json.Marshal(p2)
 			fmt.Printf("Param 2: %s\n", string(p2Bytes))
 
-			est2, err := CallEstimateSwap(p2, config)
+			est2, err := CallEstimateSwap(p2, config, "")
 			if err != nil {
 				continue
 			}
@@ -112,6 +113,10 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 					if swapInfo2 == nil {
 						continue
 					}
+					if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
+						continue
+					}
+
 					path := InterSwapPath{
 						Paths:     []*QuoteData{swapInfo1, swapInfo2},
 						MidToken:  midToken,
@@ -127,6 +132,9 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 					}
 					swapInfo2 := bestPath2[IncNetworkStr]
 					if swapInfo2 == nil {
+						continue
+					}
+					if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
 						continue
 					}
 
@@ -181,7 +189,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		if err != nil {
 			return nil, err
 		}
-		feeAmountInBuyToken, err = convertFloat64ToWithoutDecStr(tmp, bestPath.ToToken, config)
+		feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +241,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			Fee:                  bestPath.Paths[0].Fee, // only show the fee of the first tx
 			FeeAddress:           bestPath.Paths[0].FeeAddress,
 			FeeAddressShardID:    bestPath.Paths[0].FeeAddressShardID,
-			Paths:                "", // TODO
+			Paths:                "", // Frontend will build the path
 			ImpactAmount:         "", // TODO
 		},
 		MidOTA:    midOTA,

@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/mileusna/useragent"
 )
+
+var BEEndpoint = os.Getenv("BE_ENDPOINT")
 
 var incClient *incclient.IncClient
 
@@ -37,7 +42,7 @@ func InitSupportedMidTokens(network string) error {
 	case "mainnet":
 		SupportedMidTokens = []string{
 			"076a4423fa20922526bd50b0d7b0dc1c593ce16e15ba141ede5fb5a28aa3f229", // USDT
-			"3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e", // ETH
+			// "3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e", // ETH
 		}
 	case "testnet":
 		SupportedMidTokens = []string{
@@ -54,6 +59,15 @@ func InitSupportedMidTokens(network string) error {
 func IsMidTokens(tokenID string) bool {
 	for _, item := range SupportedMidTokens {
 		if item == tokenID {
+			return true
+		}
+	}
+	return false
+}
+
+func IsExist(strArr []string, str string) bool {
+	for _, item := range strArr {
+		if item == str {
 			return true
 		}
 	}
@@ -175,12 +189,17 @@ func convertToDecAmtUint64(amt string, tokenID string, config common.Config) (ui
 	return tmp, nil
 }
 
-func convertFloat64ToWithoutDecStr(amt uint64, tokenID string, config common.Config) (string, error) {
+func ConvertUint64ToWithoutDecStr(amt uint64, tokenID string, config common.Config) (string, error) {
 	tokenInfo, err := getTokenInfo(tokenID, config)
 	if err != nil {
 		return "", nil
 	}
 	tmp := float64(amt) / float64(math.Pow(10, float64(tokenInfo.PDecimals)))
+	return float64ToStr(tmp), nil
+}
+
+func ConvertUint64ToWithoutDecStr2(amt uint64, pDecimal uint64) (string, error) {
+	tmp := float64(amt) / float64(math.Pow(10, float64(pDecimal)))
 	return float64ToStr(tmp), nil
 }
 
@@ -218,21 +237,50 @@ func Remove0xPrefix(str string) string {
 	return str
 }
 
-// func getExternalNetworkID(networkIDStr string) (int, error) {
-// 	switch networkIDStr {
-// 	case common.NETWORK_ETH:
-// 		return common.NETWORK_ETH_ID, nil
-// 	case common.NETWORK_BSC:
-// 		return common.NETWORK_BSC_ID, nil
-// 	case common.NETWORK_PLG:
-// 		return common.NETWORK_PLG_ID, nil
-// 	case common.NETWORK_FTM:
-// 		return common.NETWORK_FTM_ID, nil
-// 	case common.NETWORK_AVAX:
-// 		return common.NETWORK_AVAX_ID, nil
-// 	case common.NETWORK_AURORA:
-// 		return common.NETWORK_AURORA_ID, nil
-// 	default:
-// 		return 0, errors.New("Invalid networkIDStr")
-// 	}
-// }
+func ParseUserAgent(userAgent string) string {
+	ua := useragent.Parse(userAgent)
+	uaStr := ""
+
+	if ua.IsAndroid() {
+		uaStr = "mobile-android"
+	}
+	if ua.IsIOS() {
+		uaStr = "mobile-ios"
+	}
+	if ua.IsEdge() {
+		uaStr = "web-edge"
+	}
+	if ua.IsFirefox() {
+		uaStr = "web-firefox"
+	}
+	if ua.IsChrome() {
+		uaStr = "web-chrome"
+	}
+	if ua.IsOpera() {
+		uaStr = "web-opera"
+	}
+
+	if uaStr == "" {
+		if ua.Mobile || ua.Tablet {
+			uaStr = "mobile"
+		}
+		if ua.Bot {
+			uaStr = "bot"
+		}
+		if ua.Desktop {
+			uaStr = "web"
+		}
+	}
+	if uaStr == "" {
+		if strings.Contains(userAgent, "okhttp") {
+			uaStr = "mobile-android-ish"
+		}
+		if strings.Contains(userAgent, "CFNetwork") {
+			uaStr = "mobile-ios-ish"
+		}
+	}
+	if uaStr == "" {
+		uaStr = userAgent
+	}
+	return uaStr
+}

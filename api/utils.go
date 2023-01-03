@@ -549,7 +549,7 @@ func renderTokenFromTradePaths(paths []string, network int) string {
 			if idx == 0 {
 				result = fmt.Sprintf("%v", tokenSymbol)
 			} else {
-				result = result + fmt.Sprintf(` -> %v`, tokenSymbol)
+				result = result + fmt.Sprintf(` > %v`, tokenSymbol)
 			}
 		}
 	}

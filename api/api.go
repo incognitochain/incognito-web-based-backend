@@ -28,7 +28,8 @@ func StartAPIservice(cfg common.Config) {
 	if cfg.IncKey != "" {
 		err := loadOTAKey(cfg.IncKey)
 		if err != nil {
-			panic(err)
+			// panic(err)
+			log.Println("err loadOTAKey: ", err)
 		}
 	}
 	log.Println("cfg.ISIncPrivKey", cfg.ISIncPrivKeys)
@@ -130,6 +131,18 @@ func StartAPIservice(cfg common.Config) {
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 
+	//pdao router ================================================
+	pDAOGroup := r.Group("/pdao")
+	pDAOGroup.GET("proposal/estimatefee", APIPDaoFeeEstimate)
+	pDAOGroup.POST("proposal/create", APIPDaoCreateNewProposal)
+	pDAOGroup.GET("proposal/list", APIPDaoListProposal)
+	pDAOGroup.GET("proposal/detail/:pid", APIPDaoDetailProposal)
+
+	pDAOGroup.POST("proposal/vote", APIPDaoVoting)
+	// pDAOGroup.POST("proposal/cancel")
+
+	//end pdao router ==========================================
+
 	go prefetchSupportedTokenList()
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))
@@ -144,7 +157,6 @@ func loadOTAKey(key string) error {
 		return err
 	}
 	if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
-
 		return err
 	}
 	incFeeKeySet = wl

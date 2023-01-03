@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 type InterSwapPath struct {
@@ -47,59 +50,82 @@ func IsOnlySwappablePDexToken(tokenInfo common.TokenInfo) bool {
 	return false
 }
 
-func heuristicPathType(params *EstimateSwapParam, config common.Config) (bool, int) {
-	tokenInfos, err := getTokensInfo([]string{params.FromToken, params.ToToken}, config)
-	if err != nil || len(tokenInfos) != 2 {
-		return false, -1
+func heuristicPathType(params *EstimateSwapParam, config common.Config, tokenInfos map[string]*beCommon.TokenInfo) (bool, int, map[string]*beCommon.TokenInfo) {
+	// tokenInfos, err := getTokensInfo([]string{params.FromToken, params.ToToken}, config)
+	// if err != nil || len(tokenInfos) != 2 {
+	// 	return false, -1
+	// }
+	// fromTokenInfo := tokenInfos[0]
+	// toTokenInfo := tokenInfos[1]
+
+	fromTokenInfo, tokenInfos, err := getTokenInfoWithCache(params.FromToken, tokenInfos, config)
+	toTokenInfo, tokenInfos, err2 := getTokenInfoWithCache(params.ToToken, tokenInfos, config)
+	if err != nil || err2 != nil {
+		return false, -1, tokenInfos
 	}
-	fromTokenInfo := tokenInfos[0]
-	toTokenInfo := tokenInfos[1]
 
 	if params.Network != IncNetworkStr {
-		return true, PdexToPApp
+		return true, PdexToPApp, tokenInfos
 	}
 
 	// fromToken: PRV, centralized token,
-	if fromTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(fromTokenInfo) {
-		return true, PdexToPApp
+	if fromTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(*fromTokenInfo) {
+		return true, PdexToPApp, tokenInfos
 	}
 
-	if toTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(toTokenInfo) {
-		return true, PAppToPdex
+	if toTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(*toTokenInfo) {
+		return true, PAppToPdex, tokenInfos
 	}
 
-	return true, PdexToPApp
+	return true, PdexToPApp, tokenInfos
 }
 
 // InterSwap estimate swap
 func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][]InterSwapEstRes, error) {
 	// validation
 
+	time1 := time.Now()
 	// * don't estimate inter swap if:
 	//    there is one of tokens is mid tokens
 	//    network is different to "inc"
 	if IsMidTokens(params.FromToken) || IsMidTokens(params.ToToken) {
 		return nil, nil
 	}
+
+	// get token infos
+	tokenInfos := map[string]*beCommon.TokenInfo{}
+	tokenIDs := []string{params.FromToken, params.ToToken}
+	tokenIDs = append(tokenIDs, SupportedMidTokens...)
+	tmp, err := getTokensInfo(tokenIDs, config)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, i := range tmp {
+		tokenInfos[i.TokenID] = &i
+	}
+	log.Printf("HHH Time1: %v", time.Since(time1).Seconds())
+
 	// if params.Network != IncNetworkStr {
 	// 	return nil, nil
 	// }
 
 	// optimize
-	// _, estPathType := heuristicPathType(params, config)
-	// log.Printf("Estimate path type: %v\n", estPathType)
+	_, estPathType, tokenInfos := heuristicPathType(params, config, tokenInfos)
+	log.Printf("Estimate path type: %v\n", estPathType)
 	estParamNetwork1 := IncNetworkStr
 	estParamNetwork2 := params.Network
-	// switch estPathType {
-	// case PdexToPApp:
-	// 	{
-	// 		estParamNetwork1 = common.NETWORK_PDEX
-	// 	}
-	// case PAppToPdex:
-	// 	{
-	// 		estParamNetwork2 = common.NETWORK_PDEX
-	// 	}
-	// }
+	switch estPathType {
+	case PdexToPApp:
+		{
+			estParamNetwork1 = common.NETWORK_PDEX
+		}
+	case PAppToPdex:
+		{
+			estParamNetwork2 = common.NETWORK_PDEX
+		}
+	}
+	log.Printf("HHH Time2: %v", time.Since(time1).Seconds())
 
 	paths := []InterSwapPath{}
 	for _, midToken := range SupportedMidTokens {
@@ -121,9 +147,12 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		bytes, _ := json.Marshal(est1)
 		fmt.Printf("Est 1: %+v\n", bytes)
 
+		log.Printf("HHH Time3: %v", time.Since(time1).Seconds())
+
 		bestPath1 := GetBestRoute(est1.Networks)
 		bytes, _ = json.Marshal(bestPath1)
 		fmt.Printf("bestPath1: %+v\n", string(bytes))
+		log.Printf("HHH Time4: %v", time.Since(time1).Seconds())
 
 		if params.Network != IncNetworkStr {
 			if bestPath1[IncNetworkStr] == nil {
@@ -147,6 +176,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			if err != nil {
 				continue
 			}
+			log.Printf("HHH Time5: %v", time.Since(time1).Seconds())
 
 			bytes, _ := json.Marshal(est2)
 			fmt.Printf("Est 2: %+v\n", bytes)
@@ -154,6 +184,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			bestPath2 := GetBestRoute(est2.Networks)
 			bytes, _ = json.Marshal(bestPath2)
 			fmt.Printf("bestPath2: %+v\n", bytes)
+			log.Printf("HHH Time6: %v", time.Since(time1).Seconds())
 
 			switch network1 {
 			case IncNetworkStr:
@@ -196,6 +227,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 					paths = append(paths, path)
 				}
 			}
+			log.Printf("HHH Time7: %v", time.Since(time1).Seconds())
 		}
 	}
 	bytes, _ := json.Marshal(paths)
@@ -206,10 +238,11 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 
 	// find the best path
 	bestPath := new(InterSwapPath)
+	var totalFee *PappNetworkFee
 	for i := 0; i < len(paths); i++ {
 		path := paths[i]
 
-		totalFee, err := calTotalFee(path, config)
+		totalFee, tokenInfos, err = calTotalFee(path, config, tokenInfos)
 		if err != nil {
 			fmt.Printf("Error cal fee: %v\n", err)
 			continue
@@ -223,6 +256,8 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		}
 	}
 
+	log.Printf("HHH Time8: %v", time.Since(time1).Seconds())
+
 	bytes, _ = json.Marshal(bestPath)
 	fmt.Printf("bestPath: %v\n", string(bytes))
 
@@ -234,14 +269,22 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	feeAddon := bestPath.Paths[1].Fee[0]
 	feeAmountInBuyToken := feeAddon.AmountInBuyToken
 	if feeAmountInBuyToken == "" {
-		tmp, err := convertAmountUint64(feeAddon.Amount, feeAddon.TokenID, bestPath.ToToken, config)
+
+		feeAddonTokenInfo, tokenInfos, err := getTokenInfoWithCache(feeAddon.TokenID, tokenInfos, config)
 		if err != nil {
 			return nil, err
 		}
-		feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
+		// tmp, err := convertAmountUint64(feeAddon.Amount, feeAddon.TokenID, bestPath.ToToken, config)
+		tmp, err := convertAmountFromToTokenInfo(feeAddon.Amount, *feeAddonTokenInfo, *tokenInfos[bestPath.ToToken])
 		if err != nil {
 			return nil, err
 		}
+		// feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
+		feeAmountInBuyTokenFloat64, err := ConvertAmountToWithoutDec(tmp, uint64(tokenInfos[bestPath.ToToken].PDecimals))
+		if err != nil {
+			return nil, err
+		}
+		feeAmountInBuyToken = float64ToStr(feeAmountInBuyTokenFloat64)
 
 	}
 	amountOut, err := subStrs(bestPath.Paths[1].AmountOut, feeAmountInBuyToken)
@@ -253,10 +296,16 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	if err != nil {
 		return nil, err
 	}
-	amountOutRaw, err := convertToDecAmtStr(amountOut, bestPath.ToToken, config)
+	// amountOutRaw, err := convertToDecAmtStr(amountOut, bestPath.ToToken, config)
+	amountOutFloat64, err := strToFloat64(amountOut)
 	if err != nil {
 		return nil, err
 	}
+	amountOutRawTmp, err := convertToDecAmtWithTokenInfo(amountOutFloat64, *tokenInfos[bestPath.ToToken])
+	if err != nil {
+		return nil, err
+	}
+	amountOutRaw := float64ToStr(float64(amountOutRawTmp))
 
 	rate, err := divStrs(amountOutPreSlippage, params.Amount)
 	if err != nil {
@@ -276,6 +325,8 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		}
 		midOTA = otaReceiver.String()
 	}
+
+	log.Printf("HHH Time9: %v", time.Since(time1).Seconds())
 
 	swapInfo := InterSwapEstRes{
 		// this object to get info to show on UI

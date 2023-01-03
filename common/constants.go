@@ -41,7 +41,6 @@ const (
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
 
-
 	// for ui
 	StatusSuccess = "success"
 	StatusFailed  = "failed"
@@ -53,6 +52,7 @@ const (
 
 const (
 	NETWORK_INC    = "inc"
+	NETWORK_PDEX   = "pdex" // for Interswap
 	NETWORK_ETH    = "eth"
 	NETWORK_BSC    = "bsc"
 	NETWORK_PLG    = "plg"
@@ -129,6 +129,23 @@ const (
 	AURORA_ETH   //30
 	AURORA_ERC20 //31
 )
+
+var OnlyPDexTokenCurrency = []int{
+	BTC,
+	BNB,
+	BNB_BEP2,
+	TOMO,
+	ZIL,
+	XMR,
+	NEO,
+	DASH,
+	LTC,
+	DOGE,
+	ZEC,
+	DOT,
+	NEAR,
+	NEAR_TOKEN,
+}
 
 var (
 	NetworkCurrencyMap = map[int]int{

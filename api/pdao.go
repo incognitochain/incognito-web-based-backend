@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -23,6 +25,7 @@ import (
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/pdao"
 	"github.com/incognitochain/incognito-web-based-backend/pdao/governance"
 	"github.com/incognitochain/incognito-web-based-backend/pdao/prvvote"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
@@ -30,7 +33,9 @@ import (
 
 func APIPDaoFeeEstimate(c *gin.Context) {
 
-	feeAmount, err := estimatePDaoFee()
+	feeType, _ := strconv.Atoi(c.Query("type"))
+
+	feeAmount, err := estimatePDaoFee(feeType)
 	if err != nil {
 		fmt.Println("estimatePDaoFee", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -69,10 +74,6 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 			}
 
 			gv, err = governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-				return
-			}
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 				return
@@ -231,7 +232,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	}
 
 	// get fee info from estFee function for checking:
-	feeDao, err := estimatePDaoFee()
+	feeDao, err := estimatePDaoFee(pdao.CREATE_PROP)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -282,7 +283,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		Title:               req.Title,
 	}
 	// insert db
-	if err = database.DBInsertProposalTable(proposal); err != nil {
+	if err = database.DBCreateAProposalTable(proposal); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
@@ -294,11 +295,18 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 }
 
 func APIPDaoListProposal(c *gin.Context) {
-	c.JSON(200, gin.H{"Result": database.DBListProposalTable()})
+	c.JSON(200, gin.H{"Result": database.DBListLimitProposalTable()})
 }
 
 func APIPDaoDetailProposal(c *gin.Context) {
-	p, err := database.DBgetProposalTable(c.Param("id"))
+
+	pid, err := strconv.Atoi(c.Param("pid"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id invalid"})
+		return
+	}
+
+	p, err := database.DBgetProposalTableByPID(uint(pid))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -312,6 +320,55 @@ func APIPDaoVoting(c *gin.Context) {
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	// check proposal valid ?
+	networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	evmClient, err := ethclient.Dial(networkInfo.Endpoints[0])
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "endpoint not found"})
+		return
+	}
+
+	gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+
+	proposalID, ok := big.NewInt(0).SetString(req.ProposalID, 10)
+
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid proposal id"})
+		return
+	}
+	prop, err := gv.Proposals(nil, proposalID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid prop"})
+		return
+	}
+
+	header, err := evmClient.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "can not get block"})
+		return
+	}
+
+	log.Println("APIPDaoVoting prop.StartBlock:", prop.StartBlock, "header.Number: ", header.Number)
+
+	// check startVote block <= 150 blocks.
+	startBlock := prop.StartBlock
+	startBlock = startBlock.Sub(startBlock, big.NewInt(150))
+
+	currentBlock := header.Number
+
+	if prop.StartBlock.Cmp(currentBlock) >= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "can not vote this time"})
 		return
 	}
 
@@ -340,7 +397,7 @@ func APIPDaoVoting(c *gin.Context) {
 		return
 	}
 	var md *metadata.BurningPRVRequest
-	md, ok := mdRaw.(*metadata.BurningPRVRequest)
+	md, ok = mdRaw.(*metadata.BurningPRVRequest)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid metadata type"})
 		return
@@ -399,7 +456,7 @@ func APIPDaoVoting(c *gin.Context) {
 	}
 
 	// get fee info from estFee function for checking:
-	feeDao, err := estimatePDaoFee()
+	feeDao, err := estimatePDaoFee(pdao.VOTE_PROP)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -481,7 +538,7 @@ func keccak256(b ...[]byte) [32]byte {
 }
 
 // util function
-func estimatePDaoFee() (*PDaoNetworkFeeResp, error) {
+func estimatePDaoFee(feeType int) (*PDaoNetworkFeeResp, error) {
 
 	networkFees, err := database.DBRetrieveFeeTable()
 	if err != nil {
@@ -491,7 +548,12 @@ func estimatePDaoFee() (*PDaoNetworkFeeResp, error) {
 
 	gasPrice := networkFees.GasPrice[wcommon.NETWORK_BSC]
 
-	gasFee := (PDAO_CREATE_PROPOSAL_GAS_LIMIT * gasPrice)
+	gasLimit := PDAO_CREATE_PROPOSAL_GAS_LIMIT // 1
+	if feeType == pdao.VOTE_PROP {             // 2
+		gasLimit = PDAO_VOTE_PROPOSAL_GAS_LIMIT
+	}
+
+	gasFee := (uint64(gasLimit) * gasPrice)
 
 	feeAddress := ""
 

@@ -16,9 +16,9 @@ type ShieldTxData struct {
 
 type UnshieldTxData struct {
 	mgm.DefaultModel `bson:",inline"`
-	Status           string   `json:"status" bson:"status"`
-	OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
-	NetworkID        int      `json:"networkid" bson:"networkid"`
+	Status           string `json:"status" bson:"status"`
+	OutchainStatus   string `json:"outchain_status" bson:"outchain_status"`
+	// NetworkID        int      `json:"networkid" bson:"networkid"`
 	TokenID          string   `json:"tokenid" bson:"tokenid"`
 	UTokenID         string   `json:"utokenid" bson:"utokenid"`
 	ExternalAddress  string   `json:"externaladdress" bson:"externaladdress"`

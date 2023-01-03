@@ -47,6 +47,8 @@ func GetNetworkID(network string) int {
 	switch network {
 	case NETWORK_INC:
 		return NETWORK_INC_ID
+	case NETWORK_PDEX:
+		return NETWORK_INC_ID
 	case NETWORK_ETH:
 		return NETWORK_ETH_ID
 	case NETWORK_BSC:

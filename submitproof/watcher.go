@@ -57,6 +57,11 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go updateOpenSeaCollectionAssets()
 	go updateOpenSeaCollectionDetail()
 
+	go watchPendingProposal()
+	go watchPendingVoting()
+	go watchReadyToVote()     // for voting
+	go watchVotedToReshield() // for reshielding
+
 	return nil
 }
 
@@ -401,7 +406,6 @@ func watchRedepositExternalTx() {
 					log.Println(err)
 					continue
 				}
-
 			}
 		}
 		time.Sleep(20 * time.Second)
@@ -547,6 +551,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				return err
 			}
 		case 2:
+			//TODO: @phuong update mint tx with txdata.IncTx success
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusAccepted, "")
 			if err != nil {
 				log.Println("DBUpdateShieldTxStatus err:", err)
@@ -556,6 +561,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`, inctx `%v`\n", txdata.ExternalTx, txdata.IncTx))
 			return nil
 		case 3:
+			//TODO: @phuong update mint tx with txdata.IncTx failed
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusRejected, "rejected by chain")
 			if err != nil {
 				log.Println("DBUpdateShieldTxStatus err:", err)
@@ -691,6 +697,69 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					return err
 				}
 				break
+			case wcommon.ExternalTxTypePdaoProposal:
+				txtype = "pdao-proposal"
+
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
+					// create a auto vote for the proposal:
+					err = database.DBCreateVoteFromProposalIncTxTable(inctx[0])
+					if err != nil {
+						return err
+					}
+				}
+
+			case wcommon.ExternalTxTypePdaoVote:
+				txtype = "pdao-vote"
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
+				}
+			case wcommon.ExternalTxTypePdaoReShieldPRV:
+				txtype = "pdao-reshield"
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoVoteReshieldStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoVoteReshieldStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
+				}
+			case wcommon.ExternalTxTypePdaoCancel:
+				txtype = "pdao-cancel"
+				inctx := strings.Split(tx.IncRequestTx, "_")
+				if otherInfo.IsFailed {
+					err = database.DBUpdatePdaoCancelStatus(inctx[0], wcommon.StatusPdaOutchainTxFailed)
+					if err != nil {
+						return err
+					}
+				} else {
+					err = database.DBUpdatePdaoCancelStatus(inctx[0], wcommon.StatusPdaOutchainTxSuccess)
+					if err != nil {
+						return err
+					}
+				}
 			default:
 				txtype = "unknown"
 			}

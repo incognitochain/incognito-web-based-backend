@@ -90,3 +90,13 @@ type SubmitProofConsumer struct {
 type EVMProofResult struct {
 	Proof *incclient.EVMDepositProof
 }
+
+type SubmitPDaoTask struct {
+	IncTxhash string
+	Network   string
+	Payload   []byte
+	IsRetry   bool
+	Type      int
+	ReqType   int
+	Time      time.Time
+}

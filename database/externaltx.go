@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -43,6 +44,7 @@ func DBRetrievePendingRedepositExternalTx(offset, limit int64) ([]common.Externa
 		Skip:  &offset,
 		Limit: &limit,
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -113,4 +115,18 @@ func DBSaveExternalTxStatus(txdata *common.ExternalTxStatus) error {
 		return err
 	}
 	return nil
+}
+
+func DBRetrieveExternalTxByIncTxID(incTxID string) (*common.ExternalTxStatus, error) {
+	var result []common.ExternalTxStatus
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTxID}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.ExternalTxStatus{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("DBRetrieveExternalTxByIncTxID not found with incTxID %v", incTxID)
+	}
+	return &result[0], nil
 }

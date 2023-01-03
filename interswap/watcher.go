@@ -79,16 +79,17 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 	// check tx by hash
 	txDetail, err := incClient.GetTxDetail(interswapTxID)
 	if err != nil {
-		SendSlackAlert(fmt.Sprintf("`InterswapID %v submit first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
-		if strings.Contains(err.Error(), "RPC returns an error:") {
-			err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], err.Error())
-			if err != nil {
-				SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error()))
-				log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error())
-				return err
-			}
-			return nil
-		}
+		SendSlackAlert(fmt.Sprintf("`InterswapID %v get tx detail first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
+		// TOD0: improve
+		// if strings.Contains(err.Error(), "RPC returns an error:") {
+		// 	err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], err.Error())
+		// 	if err != nil {
+		// 		SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error()))
+		// 		log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error())
+		// 		return err
+		// 	}
+		// 	return nil
+		// }
 		return err
 	}
 	if !txDetail.IsInBlock {

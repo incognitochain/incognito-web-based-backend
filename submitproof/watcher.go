@@ -618,7 +618,12 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				case wcommon.ExternalTxTypePdaoVote:
 				case wcommon.ExternalTxTypePdaoCancel:
 				}
-				go slacknoti.SendSlackNoti(fmt.Sprintf("`[externaltx]` retry outchain for tx %v", tx.IncRequestTx))
+
+				err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusSubmitFailed, "")
+				if err != nil {
+					return err
+				}
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[externaltx]` retry outchain for tx %v type %v", tx.IncRequestTx, tx.Type))
 				return nil
 			}
 			return err

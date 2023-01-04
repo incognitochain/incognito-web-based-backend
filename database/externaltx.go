@@ -108,7 +108,7 @@ func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string)
 
 func DBSaveExternalTxStatus(txdata *common.ExternalTxStatus) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: txdata.IncRequestTx}}
-	update := bson.M{"$set": bson.M{"created_at": time.Now(), "txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type}}
+	update := bson.M{"$set": bson.M{"created_at": time.Now(), "txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type, "nonce": txdata.Nonce}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {

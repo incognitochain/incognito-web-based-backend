@@ -967,11 +967,13 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 					log.Printf("")
 					if redepositInfo.UTokenID != redepositInfo.TokenID {
 						// unified token
-						amtResponse, err = convertAmountDec(amtResponse, redepositInfo.TokenID, redepositInfo.UTokenID, config)
+						amtResponseTmp, err := convertAmountDec(amtResponse, redepositInfo.TokenID, redepositInfo.UTokenID, config)
 						if err != nil {
 							log.Printf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err)
 							SendSlackAlert(fmt.Sprintf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err))
 							// return fmt.Errorf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err)
+						} else {
+							amtResponse = amtResponseTmp
 						}
 					}
 

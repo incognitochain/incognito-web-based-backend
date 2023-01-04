@@ -63,6 +63,16 @@ func DBUpdateExternalTxStatus(externalTx string, status string, errStr string) e
 	return nil
 }
 
+func DBDeleteExternalTxStatus(externalTx string) error {
+	filter := bson.M{"txhash": bson.M{operator.Eq: externalTx}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func DBUpdateExternalTxWillRedeposit(externalTx string, willRedeposit bool) error {
 	filter := bson.M{"txhash": bson.M{operator.Eq: externalTx}}
 	update := bson.M{"$set": bson.M{"will_redeposit": willRedeposit}}

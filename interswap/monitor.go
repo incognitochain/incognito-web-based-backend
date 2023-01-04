@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 

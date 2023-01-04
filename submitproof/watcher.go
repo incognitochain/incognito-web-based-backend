@@ -552,7 +552,6 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				return err
 			}
 		case 2:
-			//TODO: @phuong update mint tx with txdata.IncTx success
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusAccepted, "")
 			if err != nil {
 				log.Println("DBUpdateShieldTxStatus err:", err)
@@ -562,7 +561,6 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`, inctx `%v`\n", txdata.ExternalTx, txdata.IncTx))
 			return nil
 		case 3:
-			//TODO: @phuong update mint tx with txdata.IncTx failed
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusRejected, "rejected by chain")
 			if err != nil {
 				log.Println("DBUpdateShieldTxStatus err:", err)

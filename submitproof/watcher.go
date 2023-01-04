@@ -615,8 +615,11 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						return err
 					}
 				case wcommon.ExternalTxTypePdaoReShieldPRV:
+					// inctx := strings.Split(tx.IncRequestTx, "_")
 				case wcommon.ExternalTxTypePdaoVote:
+					// inctx := strings.Split(tx.IncRequestTx, "_")
 				case wcommon.ExternalTxTypePdaoCancel:
+					// inctx := strings.Split(tx.IncRequestTx, "_")
 				}
 
 				err = database.DBDeleteExternalTxStatus(tx.Txhash)

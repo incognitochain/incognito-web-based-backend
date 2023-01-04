@@ -368,14 +368,14 @@ retry:
 		result.Network = network
 		result.IncRequestTx = incTxHash
 
-		address, err := wcommon.GetEVMAddress(config.EVMKey)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		account := common.HexToAddress(address)
-		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
-		auth.Nonce = new(big.Int).SetUint64(pendingNonce)
+		// address, err := wcommon.GetEVMAddress(config.EVMKey)
+		// if err != nil {
+		// 	log.Println(err)
+		// 	continue
+		// }
+		// account := common.HexToAddress(address)
+		// pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
+		// auth.Nonce = new(big.Int).SetUint64(pendingNonce)
 
 		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 		if err != nil {

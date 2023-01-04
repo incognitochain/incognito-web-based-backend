@@ -403,6 +403,12 @@ func DBCreateInterSwapDataIndex() error {
 		{
 			Keys: bsonx.Doc{{Key: "error", Value: bsonx.Int32(1)}},
 		},
+		{
+			Keys: bsonx.Doc{{Key: "num_recheck", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "num_retry", Value: bsonx.Int32(1)}},
+		},
 	}
 	_, err := mgm.Coll(&common.InterSwapTxData{}).Indexes().CreateMany(context.Background(), interswapModel)
 	if err != nil {

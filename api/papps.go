@@ -1410,7 +1410,6 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 			}
 		} else {
-			//TODO: opensea
 			openseaFee, err := estimateOpenSeaFee(v.BurningAmount, tokenInfo, callNetworkList[0], networkFees, spTkList)
 			if err != nil {
 				log.Println("estimateSwapFee error", err)

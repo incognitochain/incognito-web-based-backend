@@ -35,12 +35,6 @@ func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte
 		return nil, err
 	}
 
-	// todo thachtb: update query governance contract address
-	// pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	papps, err := database.DBRetrievePAppsByNetwork(network)
 	if err != nil {
 		return nil, err

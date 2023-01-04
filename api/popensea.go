@@ -94,10 +94,6 @@ func APIEstimateBuyFee(c *gin.Context) {
 		return
 	}
 
-	// c.JSON(200, gin.H{"Result": nftDetail, "fee": feeAmount})
-	// return
-	//TODO: opensea
-
 	pappList, err := database.DBRetrievePAppsByNetwork(network)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {

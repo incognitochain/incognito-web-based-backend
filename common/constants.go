@@ -204,7 +204,7 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
-	ExternalTxTypeOpensea = 96
+	ExternalTxTypeOpensea         = 96
 	ExternalTxTypePdaoProposal    = 69
 	ExternalTxTypePdaoVote        = 70
 	ExternalTxTypePdaoCancel      = 71
@@ -347,7 +347,7 @@ const (
 	ETH_UT_TOKEN_MAINNET = "3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e"
 	ETH_UT_TOKEN_TESTNET = "b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d"
 
-	GOVERNANCE_CONTRACT_ADDRESS = "0x01f6549BeF494C8b0B00C2790577AcC1A3Fa0Bd0"
-	PRV_VOTE                    = "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"
-	PRV_THRESHOLD               = "10000000000"
+	// GOVERNANCE_CONTRACT_ADDRESS = "0x01f6549BeF494C8b0B00C2790577AcC1A3Fa0Bd0"
+	// PRV_VOTE                    = "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"
+	PRV_THRESHOLD = "10000000000"
 )

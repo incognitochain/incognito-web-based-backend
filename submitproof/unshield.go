@@ -132,9 +132,6 @@ func processSubmitUnshieldRequest(ctx context.Context, m *pubsub.Message) {
 }
 
 func processSubmitUnshieldExtTask(ctx context.Context, m *pubsub.Message) {
-	//TODO
-
-	log.Println("processSubmitUnshieldExtTask", "sdfksjdfl")
 	task := SubmitProofOutChainTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {

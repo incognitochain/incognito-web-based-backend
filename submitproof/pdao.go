@@ -393,6 +393,10 @@ func watchReadyToVote() {
 		log.Println("watchReadyToVote there are ", len(proposals), "records!")
 
 		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
+		if err != nil {
+			log.Println("watchVotedToReshield DBGetBridgeNetworkInfo err:" + err.Error())
+			continue
+		}
 
 		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
 		if err != nil {
@@ -400,7 +404,15 @@ func watchReadyToVote() {
 			continue
 		}
 
-		gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+		papps, err := database.DBRetrievePAppsByNetwork("eth")
+		if err != nil {
+			log.Println("watchVotedToReshield DBRetrievePAppsByNetwork err:" + err.Error())
+			continue
+		}
+
+		contract := papps.AppContracts["pdao"]
+
+		gv, err := governance.NewGovernance(common.HexToAddress(contract), evmClient)
 		if err != nil {
 			continue
 		}
@@ -474,7 +486,15 @@ func watchVotedToReshield() {
 			continue
 		}
 
-		gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+		papps, err := database.DBRetrievePAppsByNetwork("eth")
+		if err != nil {
+			log.Println("watchVotedToReshield DBRetrievePAppsByNetwork err:" + err.Error())
+			continue
+		}
+
+		contract := papps.AppContracts["pdao"]
+
+		gv, err := governance.NewGovernance(common.HexToAddress(contract), evmClient)
 		if err != nil {
 			log.Println("watchVotedToReshield NewGovernance err:" + err.Error())
 			continue

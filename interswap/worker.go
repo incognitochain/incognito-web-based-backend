@@ -70,6 +70,7 @@ func StartWorker(cfg wcommon.Config, serviceID uuid.UUID) error {
 	}
 
 	go watchInterswapPendingTx(config)
+	go monitorBalanceISIncKeys(config)
 
 	incclient.Logger = incclient.NewLogger(true)
 	log.Println("Done submit keys")

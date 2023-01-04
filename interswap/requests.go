@@ -568,10 +568,10 @@ func GetBestRoute(paths map[string][]QuoteData) map[string]*QuoteData {
 	return res
 }
 
-func calTotalFee(interswapPath InterSwapPath, config beCommon.Config) (*PappNetworkFee, error) {
+func calTotalFee(interswapPath InterSwapPath, config beCommon.Config, tokenInfos map[string]*beCommon.TokenInfo) (*PappNetworkFee, map[string]*beCommon.TokenInfo, error) {
 	path := interswapPath.Paths
 	if len(path) != 2 || len(path[0].Fee) == 0 || len(path[1].Fee) == 0 {
-		return nil, errors.New("Invalid path to calculate total fee")
+		return nil, tokenInfos, errors.New("Invalid path to calculate total fee")
 	}
 
 	fee1 := path[0].Fee[0]
@@ -579,18 +579,35 @@ func calTotalFee(interswapPath InterSwapPath, config beCommon.Config) (*PappNetw
 
 	// total fee paid in the token fee of the first swap info
 	feeToken := fee1.TokenID
-	feeAmt2, err := convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken, config)
+
+	feeTokenInfo, tokenInfos, err := getTokenInfoWithCache(feeToken, tokenInfos, config)
 	if err != nil {
-		return nil, err
+		return nil, tokenInfos, err
+	}
+
+	feeTokenInfo2, tokenInfos, err := getTokenInfoWithCache(fee2.TokenID, tokenInfos, config)
+	if err != nil {
+		return nil, tokenInfos, err
+	}
+
+	toTokenInfo, tokenInfos, err := getTokenInfoWithCache(interswapPath.ToToken, tokenInfos, config)
+	if err != nil {
+		return nil, tokenInfos, err
+	}
+	// feeAmt2, err := convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken, config)
+	feeAmt2, err := convertAmountFromToTokenInfo(fee2.Amount, *feeTokenInfo2, *feeTokenInfo)
+	if err != nil {
+		return nil, tokenInfos, err
 	}
 	amount := fee1.Amount + feeAmt2
-	amountInBuyToken, err := convertAmountUint64(amount, feeToken, interswapPath.ToToken, config)
+	// amountInBuyToken, err := convertAmountUint64(amount, feeToken, interswapPath.ToToken, config)
+	amountInBuyToken, err := convertAmountFromToTokenInfo(amount, *feeTokenInfo, *toTokenInfo)
 	if err != nil {
-		return nil, err
+		return nil, tokenInfos, err
 	}
-	amountInBuyTokenStr, err := convertToWithoutDecStr(amountInBuyToken, interswapPath.ToToken, config)
+	amountInBuyTokenStr, err := convertToWithoutDecStrWithTokenInfo(amountInBuyToken, toTokenInfo)
 	if err != nil {
-		return nil, err
+		return nil, tokenInfos, err
 	}
 
 	res := &PappNetworkFee{
@@ -603,7 +620,7 @@ func calTotalFee(interswapPath InterSwapPath, config beCommon.Config) (*PappNetw
 
 	fmt.Printf("Calculate total fee : %+v\n", res)
 
-	return res, nil
+	return res, tokenInfos, nil
 }
 
 func getTokenInfo(pUTokenID string, config beCommon.Config) (*beCommon.TokenInfo, error) {

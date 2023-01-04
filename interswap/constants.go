@@ -30,7 +30,7 @@ const InterswapRefundedStr = "Refunded"
 const InterswapRefundingStr = "Refunding"
 const InterswapPendingStr = "Pending"
 const InterswapSuccessStr = "Success"
-const InterswapSubmitFailedStr = "Submit failed"
+const InterswapSubmitFailedStr = "Failed"
 
 var StatusStr = map[int]string{
 	SubmitFailed:    InterswapSubmitFailedStr,

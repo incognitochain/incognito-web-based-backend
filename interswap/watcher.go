@@ -240,6 +240,8 @@ func createTxRefundAndUpdateStatus(
 	return nil
 }
 
+// AmountOutRaw is ext decimal of child token
+
 func callEstimateSwapAndValidation(
 	params *EstimateSwapParam,
 	expectedMinAmount uint64,
@@ -961,6 +963,14 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 					if err != nil {
 						log.Printf("InterswapID %v Calculate the final response amount error %v\n", interswapTxID, err)
 						return fmt.Errorf("InterswapID %v Calculate the final response amount error %v\n", interswapTxID, err)
+					}
+					if redepositInfo.UTokenID != redepositInfo.TokenID {
+						// unified token
+						amtResponse, err = convertAmountUint64(amtResponse, redepositInfo.TokenID, redepositInfo.UTokenID, config)
+						if err != nil {
+							log.Printf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err)
+							return fmt.Errorf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err)
+						}
 					}
 
 					err = SendSlackSwapInfo(interswapTxID, txData.UserAgent, "was success",

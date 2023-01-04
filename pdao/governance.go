@@ -92,8 +92,7 @@ retry:
 		}
 		account := common.HexToAddress(address)
 		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
-		_ = pendingNonce
-		auth.Nonce = new(big.Int).SetUint64(47)
+		auth.Nonce = new(big.Int).SetUint64(pendingNonce)
 
 		tx, err := submitTxOutChain(auth, requestType, payload, gv)
 		if err != nil {

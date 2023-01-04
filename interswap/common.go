@@ -129,6 +129,31 @@ func divStrs(str1, str2 string) (string, error) {
 	return float64ToStr(f1 / f2), nil
 }
 
+func convertAmountDec(amt uint64, fromToken, toToken string, config common.Config) (uint64, error) {
+	tokenInfos, err := getTokensInfo([]string{fromToken, toToken}, config)
+	if err != nil {
+		return 0, err
+	}
+
+	fromTokenInfo := common.TokenInfo{}
+	toTokenInfo := common.TokenInfo{}
+	for _, info := range tokenInfos {
+		if info.TokenID == fromToken {
+			fromTokenInfo = info
+		} else if info.TokenID == toToken {
+			toTokenInfo = info
+		}
+	}
+
+	if fromTokenInfo.TokenID == "" || toTokenInfo.TokenID == "" {
+		return 0, errors.New("Can not get token info")
+	}
+
+	tmp := float64(amt) * float64(math.Pow(10, float64(toTokenInfo.PDecimals)))
+	tmp = float64(tmp) / float64(math.Pow(10, float64(fromTokenInfo.PDecimals)))
+	return uint64(tmp), nil
+}
+
 func convertAmountUint64(amt uint64, fromToken, toToken string, config common.Config) (uint64, error) {
 	tokenInfos, err := getTokensInfo([]string{fromToken, toToken}, config)
 	if err != nil {

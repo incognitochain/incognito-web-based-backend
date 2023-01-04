@@ -319,7 +319,7 @@ retry:
 			continue
 		}
 
-		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(11))
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(12))
 		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
 
 		auth.GasPrice = gasPrice

@@ -12,6 +12,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/mileusna/useragent"
 )
 
@@ -154,11 +155,47 @@ func convertAmountUint64(amt uint64, fromToken, toToken string, config common.Co
 	return uint64(amtTo), nil
 }
 
+func convertAmountFromToTokenInfo(amt uint64, fromTokenInfo, toTokenInfo beCommon.TokenInfo) (uint64, error) {
+	// tokenInfos, err := getTokensInfo([]string{fromToken, toToken}, config)
+	// if err != nil {
+	// 	return 0, err
+	// }
+
+	// fromTokenInfo := common.TokenInfo{}
+	// toTokenInfo := common.TokenInfo{}
+	// for _, info := range tokenInfos {
+	// 	if info.TokenID == fromToken {
+	// 		fromTokenInfo = info
+	// 	} else if info.TokenID == toToken {
+	// 		toTokenInfo = info
+	// 	}
+	// }
+
+	if fromTokenInfo.TokenID == "" || toTokenInfo.TokenID == "" {
+		return 0, errors.New("Invalid token info")
+	}
+
+	amtFloat64, err := ConvertAmountToWithoutDec(amt, uint64(fromTokenInfo.PDecimals))
+	if err != nil {
+		return 0, err
+	}
+
+	amtInUSD := amtFloat64 * fromTokenInfo.ExternalPriceUSD
+	amtToFloat64 := amtInUSD / toTokenInfo.ExternalPriceUSD
+
+	return convertToDecAmtWithTokenInfo(amtToFloat64, toTokenInfo)
+}
+
 func convertToWithoutDecStr(amt uint64, tokenID string, config common.Config) (string, error) {
 	tokenInfo, err := getTokenInfo(tokenID, config)
 	if err != nil {
 		return "", nil
 	}
+	tmp := float64(amt) / float64(math.Pow(10, float64(tokenInfo.PDecimals)))
+	return float64ToStr(tmp), nil
+}
+
+func convertToWithoutDecStrWithTokenInfo(amt uint64, tokenInfo *beCommon.TokenInfo) (string, error) {
 	tmp := float64(amt) / float64(math.Pow(10, float64(tokenInfo.PDecimals)))
 	return float64ToStr(tmp), nil
 }
@@ -181,11 +218,16 @@ func convertToDecAmtUint64(amt string, tokenID string, config common.Config) (ui
 	if err != nil {
 		return 0, nil
 	}
-	amtTmp, err := strToFloat64(amt)
+	amtFloat64, err := strToFloat64(amt)
 	if err != nil {
 		return 0, nil
 	}
-	tmp := uint64(float64(amtTmp) * float64(math.Pow(10, float64(tokenInfo.PDecimals))))
+
+	return convertToDecAmtWithTokenInfo(amtFloat64, *tokenInfo)
+}
+
+func convertToDecAmtWithTokenInfo(amt float64, tokenInfo beCommon.TokenInfo) (uint64, error) {
+	tmp := uint64(amt * float64(math.Pow(10, float64(tokenInfo.PDecimals))))
 	return tmp, nil
 }
 
@@ -201,6 +243,11 @@ func ConvertUint64ToWithoutDecStr(amt uint64, tokenID string, config common.Conf
 func ConvertUint64ToWithoutDecStr2(amt uint64, pDecimal uint64) (string, error) {
 	tmp := float64(amt) / float64(math.Pow(10, float64(pDecimal)))
 	return float64ToStr(tmp), nil
+}
+
+func ConvertAmountToWithoutDec(amt uint64, pDecimal uint64) (float64, error) {
+	tmp := float64(amt) / float64(math.Pow(10, float64(pDecimal)))
+	return tmp, nil
 }
 
 func convertAmtExtDecToAmtPDec(amt *big.Int, tokenID string, config common.Config) (uint64, error) {
@@ -283,4 +330,17 @@ func ParseUserAgent(userAgent string) string {
 		uaStr = userAgent
 	}
 	return uaStr
+}
+
+func getTokenInfoWithCache(tokenID string, tokenInfoCaches map[string]*beCommon.TokenInfo, config beCommon.Config) (*beCommon.TokenInfo, map[string]*beCommon.TokenInfo, error) {
+	tmp := tokenInfoCaches[tokenID]
+	if tmp.TokenID == "" || tmp.TokenID != tokenID {
+		tokenInfo, err := getTokenInfo(tokenID, config)
+		if err != nil {
+			return nil, tokenInfoCaches, err
+		}
+		tokenInfoCaches[tokenID] = tokenInfo
+		return tokenInfo, tokenInfoCaches, nil
+	}
+	return tmp, tokenInfoCaches, nil
 }

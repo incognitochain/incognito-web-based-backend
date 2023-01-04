@@ -375,7 +375,7 @@ retry:
 		}
 		account := common.HexToAddress(address)
 		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
-		auth.Nonce = new(big.Int).SetUint64(pendingNonce + 1)
+		auth.Nonce = new(big.Int).SetUint64(pendingNonce)
 
 		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 		if err != nil {

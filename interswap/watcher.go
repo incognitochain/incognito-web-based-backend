@@ -77,22 +77,23 @@ func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCo
 	}
 
 	// check tx by hash
-	txDetail, err := incClient.GetTxDetail(interswapTxID)
+	isConfirm, isMaxReCheck, _, updatedNumRecheck, err := CheckIncTxIsConfirmed(interswapTxID, txData.NumRecheck)
+	database.DBUpdateInterswapTxNumRecheck(interswapTxID, updatedNumRecheck)
 	if err != nil {
-		SendSlackAlert(fmt.Sprintf("`InterswapID %v get tx detail first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
-		// TOD0: improve
-		// if strings.Contains(err.Error(), "RPC returns an error:") {
-		// 	err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], err.Error())
-		// 	if err != nil {
-		// 		SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error()))
-		// 		log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error())
-		// 		return err
-		// 	}
-		// 	return nil
-		// }
+		if isMaxReCheck {
+			SendSlackAlert(fmt.Sprintf("InterswapID %v First tx is rejected by chain. Update status Failed 😵 `%v` \n", interswapTxID, err.Error()))
+			err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], err.Error())
+			if err != nil {
+				SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error()))
+				log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error())
+				return err
+			}
+			SendSlackSwapInfo(interswapTxID, txData.UserAgent, "failed",
+				txData.FromAmount, txData.FromToken, txData.FinalMinExpectedAmt, txData.ToToken, txData.FromAmount, txData.FromToken, config)
+		}
 		return err
 	}
-	if !txDetail.IsInBlock {
+	if !isConfirm {
 		return nil
 	}
 
@@ -715,19 +716,24 @@ func processInterswapPendingSecondTx(txData beCommon.InterSwapTxData, config beC
 	}
 
 	// check tx by hash
-	txDetail, err := incClient.GetTxDetail(addOnTxID)
+	isConfirm, isMaxReCheck, shouldRefund, updatedNumRecheck, err := CheckIncTxIsConfirmed(addOnTxID, txData.NumRecheck)
+	database.DBUpdateInterswapTxNumRecheck(interswapTxID, updatedNumRecheck)
 	if err != nil {
-		if strings.Contains(err.Error(), "RPC returns an error:") {
-			msg := fmt.Sprintf("InterswapID %v. Please check @hiennguyen. Check addon tx %v error 😵 %v \n", interswapTxID, addOnTxID, err.Error())
-			log.Printf(msg)
-			SendSlackAlert(msg)
-			// TODO: need to retry
+		if isMaxReCheck && shouldRefund {
+			SendSlackAlert(fmt.Sprintf("InterswapID %v AddonTxID %v Second tx is rejected by chain. Need to retry 😵 `%v` \n", interswapTxID, addOnTxID, err.Error()))
+
+			// createTxRefundAndUpdateStatus()
+			status := FirstPending
+			err = database.DBUpdateInterswapTxStatus(interswapTxID, status, StatusStr[status], err.Error())
+			if err != nil {
+				SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, status, err.Error()))
+				log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, status, err.Error())
+				return err
+			}
 		}
 		return err
 	}
-	fmt.Printf("InterswapID %v processing addOnTxID %v\n", interswapTxID, addOnTxID)
-	if !txDetail.IsInBlock {
-		fmt.Printf("InterswapID %v processing addOnTxID %v is not in block\n", interswapTxID, addOnTxID)
+	if !isConfirm {
 		return nil
 	}
 
@@ -1054,4 +1060,31 @@ func processInterswapRefundingTx(txData beCommon.InterSwapTxData, config beCommo
 	}
 
 	return nil
+}
+
+func CheckIncTxIsConfirmed(txID string, numRecheck uint) (isConfirm bool, isMaxRecheck bool, shouldRefund bool, numRecheckRes uint, err error) {
+	isConfirm = false
+	isMaxRecheck = false
+	shouldRefund = false
+	numRecheckRes = numRecheck
+	// check tx by hash
+	txDetail, err := incClient.GetTxDetail(txID)
+	if err != nil {
+		if strings.Contains(err.Error(), "RPC returns an error:") {
+			numRecheckRes++
+			if numRecheckRes >= MaxNumRecheck {
+				isMaxRecheck = true
+				shouldRefund = true
+				numRecheckRes = 0 // reset num recheck
+				// SendSlackAlert(fmt.Sprintf("InterswapID %v check tx is in block error 😵 `%v` \n", txID, err.Error()))
+			}
+			// TODO: 0xkraken recheck tx detail 3 times
+			// if still error, retry to create refund tx
+		}
+		return
+	}
+
+	isConfirm = txDetail.IsInBlock
+	numRecheckRes = 0 // reset num recheck
+	return
 }

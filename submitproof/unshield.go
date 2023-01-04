@@ -343,7 +343,7 @@ retry:
 		}
 		account := common.HexToAddress(address)
 		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
-		auth.Nonce = new(big.Int).SetUint64(pendingNonce)
+		auth.Nonce = new(big.Int).SetUint64(pendingNonce + 1)
 
 		if isPRV {
 			networkID := wcommon.GetNetworkID(network)

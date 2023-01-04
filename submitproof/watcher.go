@@ -609,7 +609,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						return err
 					}
 				case wcommon.ExternalTxTypePdaoProposal:
-					err = database.DBUpdatePdaoProposalStatus(tx.IncRequestTx, wcommon.StatusSubmitting)
+					inctx := strings.Split(tx.IncRequestTx, "_")
+					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusSubmitting)
 					if err != nil {
 						return err
 					}

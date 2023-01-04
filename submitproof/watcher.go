@@ -619,7 +619,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				case wcommon.ExternalTxTypePdaoCancel:
 				}
 
-				err = database.DBUpdateExternalTxStatus(tx.Txhash, wcommon.StatusSubmitFailed, "")
+				err = database.DBDeleteExternalTxStatus(tx.Txhash)
 				if err != nil {
 					return err
 				}

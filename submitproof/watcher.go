@@ -623,7 +623,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				if err != nil {
 					return err
 				}
-				go slacknoti.SendSlackNoti(fmt.Sprintf("`[externaltx]` retry outchain for tx %v type %v", tx.IncRequestTx, tx.Type))
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[externaltx]` retry outchain for tx %v type %v, tx nonce %v, account nonce %v", tx.IncRequestTx, tx.Type, tx.Nonce, pendingNonce))
 				return nil
 			}
 			return err

@@ -323,7 +323,6 @@ func watchPendingProposal() {
 				}
 			}
 			if unshieldStatus.OutchainStatus == wcommon.StatusAccepted {
-
 				proposalJson, err := json.Marshal(p)
 				if err != nil {
 					log.Println("marshal proposal err:", err)

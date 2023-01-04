@@ -157,7 +157,6 @@ type PAppAPIKeyData struct {
 	Key              string `json:"key" bson:"key"`
 }
 
-
 // DATA MODELS FOR INTERSWAP
 type InterSwapTxData struct {
 	mgm.DefaultModel `bson:",inline"`
@@ -193,10 +192,12 @@ type InterSwapTxData struct {
 
 	TxIDOutchain string `json:"txidoutchain" bson:"txidoutchain"`
 
-	Status    int    `json:"status" bson:"status"`
-	StatusStr string `json:"statusstr" bson:"statusstr"`
-	UserAgent string `json:"useragent" bson:"useragent"`
-	Error     string `json:"error" bson:"error"`
+	Status     int    `json:"status" bson:"status"`
+	StatusStr  string `json:"statusstr" bson:"statusstr"`
+	UserAgent  string `json:"useragent" bson:"useragent"`
+	Error      string `json:"error" bson:"error"`
+	NumRecheck uint   `json:"num_recheck" bson:"num_recheck"`
+	NumRetry bool  `json:"num_retry" bson:"num_retry"`
 
 	// IncTx            string   `json:"inctx" bson:"inctx"`
 	// Networks         []string `json:"networks" bson:"networks"`

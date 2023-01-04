@@ -149,9 +149,9 @@ func convertAmountDec(amt uint64, fromToken, toToken string, config common.Confi
 		return 0, errors.New("Can not get token info")
 	}
 
-	tmp := float64(amt) * float64(math.Pow(10, float64(toTokenInfo.PDecimals)))
-	tmp = float64(tmp) / float64(math.Pow(10, float64(fromTokenInfo.PDecimals)))
-	return uint64(tmp), nil
+	tmp := new(big.Int).Mul(new(big.Int).SetUint64(amt), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(toTokenInfo.PDecimals)), nil))
+	tmp = new(big.Int).Div(tmp, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(fromTokenInfo.PDecimals)), nil))
+	return tmp.Uint64(), nil
 }
 
 func convertAmountUint64(amt uint64, fromToken, toToken string, config common.Config) (uint64, error) {

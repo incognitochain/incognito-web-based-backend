@@ -197,7 +197,10 @@ type InterSwapTxData struct {
 	UserAgent  string `json:"useragent" bson:"useragent"`
 	Error      string `json:"error" bson:"error"`
 	NumRecheck uint   `json:"num_recheck" bson:"num_recheck"`
-	NumRetry bool  `json:"num_retry" bson:"num_retry"`
+	NumRetry   bool   `json:"num_retry" bson:"num_retry"`
+	// for retry refund tx
+	CoinInfo         []string `json:"coin_info" bson:"coin_info"`
+	CoinIndex        []uint64 `json:"coin_index" bson:"coin_index"`
 
 	// IncTx            string   `json:"inctx" bson:"inctx"`
 	// Networks         []string `json:"networks" bson:"networks"`

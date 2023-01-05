@@ -62,6 +62,8 @@ func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, 
 		"error":                   txdata.Error,
 		"num_recheck":             txdata.NumRecheck,
 		"num_retry":               txdata.NumRetry,
+		"coin_info":               txdata.CoinInfo,
+		"coin_index":              txdata.CoinIndex,
 	}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	result, err := mgm.Coll(&common.InterSwapTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))

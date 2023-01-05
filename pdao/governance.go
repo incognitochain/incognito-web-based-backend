@@ -47,9 +47,10 @@ func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte
 
 	privKey, _ := crypto.HexToECDSA(config.EVMKey)
 	i := 0
+	var finalErr error
 retry:
 	if i == 10 {
-		return nil, errors.New("submit tx outchain failed")
+		return nil, errors.New("submit tx outchain failed " + finalErr.Error())
 	}
 	for _, endpoint := range networkInfo.Endpoints {
 		evmClient, err := ethclient.Dial(endpoint)
@@ -61,18 +62,21 @@ retry:
 		gv, err := governance.NewGovernance(common.HexToAddress(contract), evmClient)
 		if err != nil {
 			log.Println(err)
+			finalErr = err
 			continue
 		}
 
 		gasPrice, err := evmClient.SuggestGasPrice(context.Background())
 		if err != nil {
 			log.Println(err)
+			finalErr = err
 			continue
 		}
 
 		auth, err := bind.NewKeyedTransactorWithChainID(privKey, networkChainIdInt)
 		if err != nil {
 			log.Println(err)
+			finalErr = err
 			continue
 		}
 
@@ -97,6 +101,7 @@ retry:
 		tx, err := submitTxOutChain(auth, requestType, payload, gv)
 		if err != nil {
 			log.Println(err)
+			finalErr = err
 			if strings.Contains(err.Error(), "insufficient funds") {
 				return nil, errors.New("submit tx outchain failed err insufficient funds")
 			}

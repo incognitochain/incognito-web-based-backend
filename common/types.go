@@ -1,18 +1,37 @@
 package common
 
+import "math/big"
+
 type Config struct {
-	Port           int
-	Mode           string
-	DatabaseURLs   []string
-	DBUSER         string
-	DBPASS         string
-	CoinserviceURL string
-	FullnodeURL    string
-	ShieldService  string
-	FaucetService  string
-	NetworkID      string
-	CaptchaSecret  string
+	Port            int
+	Mode            string
+	Mongo           string
+	Mongodb         string
+	CoinserviceURL  string
+	FullnodeURL     string
+	FullnodeAuthKey string
+	ShieldService   string
+	BTCShieldPortal string
+	FaucetService   string
+	NetworkID       string
+	CaptchaSecret   string
+	SlackMonitor    string
+	// papps submit proof
+	IncKey string
+	EVMKey string
+
+	CentralIncPaymentAddress string
+
+	GGCProject string
+	GGCAuth    string
+
+	OpenSeaAPI    string
+	OpenSeaAPIKey string
+
+	// Interswap
+	ISIncPrivKeys map[string]string
 }
+
 type TokenInfo struct {
 	TokenID            string
 	Name               string
@@ -35,7 +54,7 @@ type TokenInfo struct {
 	PSymbol            string
 	OriginalSymbol     string
 	LiquidityReward    float64
-	ExternalPriceUSD   float64 `json:"ExternalPriceUSD"`
+	ExternalPriceUSD   float64 `json:"ExternalPriceUSD"` // use to convert token
 	PriceUsd           float64 `json:"PriceUsd"`
 	PercentChange1h    string  `json:"PercentChange1h"`
 	PercentChangePrv1h string  `json:"PercentChangePrv1h"`
@@ -51,4 +70,63 @@ type TokenInfo struct {
 	NetworkID         int
 	MovedUnifiedToken bool
 	ParentUnifiedID   int
+	IsSwapable        bool
+	ContractIDSwap    string
+}
+
+type ExternalTxSwapResult struct {
+	LogResult   string
+	IsRedeposit bool
+	IsReverted  bool
+	IsFailed    bool
+
+	// token repsonse : failed/sucess
+	TokenContract string
+	Amount        *big.Int
+}
+
+type PappSwapInfo struct {
+	DappName      string
+	TokenIn       string
+	TokenOut      string
+	TokenInAmount *big.Int
+	MinOutAmount  *big.Int
+}
+
+type TradeDataRespond struct {
+	RequestTx           string
+	RespondTxs          []string
+	RespondTokens       []string
+	RespondAmounts      []uint64
+	WithdrawTxs         map[string]TradeWithdrawInfo
+	SellTokenID         string
+	BuyTokenID          string
+	Status              string
+	StatusCode          int
+	PairID              string
+	PoolID              string
+	MinAccept           uint64
+	Amount              uint64
+	Matched             uint64
+	Requestime          int64
+	NFTID               string
+	Receiver            string
+	Fee                 uint64
+	FeeToken            string
+	IsCompleted         bool
+	SellTokenBalance    uint64
+	BuyTokenBalance     uint64
+	SellTokenWithdrawed uint64
+	BuyTokenWithdrawed  uint64
+	TradingPath         []string
+}
+
+type TradeWithdrawInfo struct {
+	TokenIDs   []string
+	IsRejected bool
+	Responds   map[string]struct {
+		Amount    uint64
+		Status    int
+		RespondTx string
+	}
 }

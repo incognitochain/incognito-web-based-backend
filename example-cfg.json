@@ -2,12 +2,25 @@
 	"Port": 9898,
 	"NetworkID": "mainnet",
 	"Mode": "api",
-	"Database":[],
-	"DBUSER":"",
-	"DBPASS":"",
+	"Mongo": "mongodb://root:example@127.0.0.1:27017",
+	"Mongodb": "data",
 	"CoinserviceURL": "https://api-coinservice.incognito.org",
 	"FullnodeURL": "https://mainnet.incognito.org/fullnode",
 	"ShieldService": "https://api-service.incognito.org",
 	"FaucetService": "https://api-faucet.incognito.org/tool/getfreeprvv2",
-	"CaptchaSecret":""
+	"CaptchaSecret": "",
+	"IncKey": "",
+	"EVMKey": "",
+	"OpenSeaAPI": ""
+	"CentralIncPaymentAddress": "",
+	"ISIncPrivKeys": {
+		"0": "",
+		"1": "", 
+		"2": "",
+		"3": "", 
+		"4": "",
+		"5": "", 
+		"6": "",
+		"7": ""
+	}
 }

@@ -1,11 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"syscall"
 
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/api"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/feeestimator"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
+	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 )
 
@@ -13,6 +19,9 @@ var serviceID uuid.UUID
 
 func init() {
 	id := uuid.New()
+	log.SetPrefix(fmt.Sprintf("pid:%d ", syscall.Getpid()))
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	serviceID = id
 }
 
@@ -21,18 +30,41 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	if config.SlackMonitor != "" {
+		go slacknoti.StartSlackHook()
+	}
+
+	err = database.ConnectDB(config.Mongodb, config.Mongo, config.NetworkID)
+	if err != nil {
+		panic(err)
+	}
+
+	loadPappAPIKey()
+
+	keylist, err := loadKeyList()
+	if err != nil {
+		log.Println(err)
+	}
 	switch config.Mode {
+	case common.MODE_FEEESTIMATOR:
+		if err := feeestimator.StartService(config); err != nil {
+			log.Fatalln(err)
+		}
 	case common.MODE_TXSUBMITWATCHER:
-		if err := submitproof.StartWatcher(config, serviceID); err != nil {
+		if err := submitproof.StartWatcher(keylist, config, serviceID); err != nil {
 			log.Fatalln(err)
 		}
 	case common.MODE_TXSUBMITWORKER:
-		keylist, err := loadKeyList()
-		if err != nil {
-			log.Println(err)
-		}
 		go func() {
 			if err := submitproof.StartWorker(keylist, config, serviceID); err != nil {
+				log.Fatalln(err)
+			}
+		}()
+	case common.MODE_INTERSWAP:
+		go func() {
+			// InterSwap start service
+			if err := interswap.StartWorker(config, serviceID); err != nil {
 				log.Fatalln(err)
 			}
 		}()
@@ -45,4 +77,53 @@ func main() {
 		go api.StartAPIservice(config)
 	}
 	select {}
+}
+
+func loadPappAPIKey() {
+	openseaKey, err := database.DBGetPappAPIKey("opensea")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(opensea)", err)
+		return
+	}
+	config.OpenSeaAPIKey = openseaKey
+	openseaAPI, err := database.DBGetPappAPIKey("openseaAPI")
+	if err != nil {
+		log.Println("DBGetPappAPIKey(opensea)", err)
+		return
+	}
+	config.OpenSeaAPI = openseaAPI
+
+	// itswSlackInfo, err := database.DBGetPappAPIKey("INTERSWAP_SLACK_INFO")
+	// if err != nil {
+	// 	log.Println("DBGetPappAPIKey(INTERSWAP_SLACK_INFO)", err)
+	// 	return
+	// }
+	// os.Setenv("INTERSWAP_SLACK_INFO", itswSlackInfo)
+
+	// itswSlackAlert, err := database.DBGetPappAPIKey("INTERSWAP_SLACK_ALERT")
+	// if err != nil {
+	// 	log.Println("DBGetPappAPIKey(INTERSWAP_SLACK_ALERT)", err)
+	// 	return
+	// }
+	// os.Setenv("INTERSWAP_SLACK_ALERT", itswSlackAlert)
+
+	// itswBE, err := database.DBGetPappAPIKey("INTERSWAP_BE_ENDPOINT")
+	// if err != nil {
+	// 	log.Println("DBGetPappAPIKey(INTERSWAP_BE_ENDPOINT)", err)
+	// 	return
+	// }
+	// os.Setenv("BE_ENDPOINT", itswBE)
+
+	// itswIncKeys, err := database.DBGetPappAPIKey("INTERSWAP_INC_KEYS")
+	// if err != nil {
+	// 	log.Println("DBGetPappAPIKey(INTERSWAP_INC_KEYS)", err)
+	// 	return
+	// }
+	// itswIncKeysMap := make(map[string]string)
+	// err = json.Unmarshal([]byte(itswIncKeys), &itswIncKeysMap)
+	// if err != nil {
+	// 	log.Println("json.Unmarshal (INTERSWAP_INC_KEYS)", err)
+	// 	return
+	// }
+	// config.ISIncPrivKeys = itswIncKeysMap
 }

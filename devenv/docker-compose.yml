@@ -7,33 +7,65 @@ services:
       dockerfile: Dockerfile
     working_dir: /home
     entrypoint: [./run.sh]
+    volumes:
+      - ./ggc.json:/home/ggc.json
     env_file:
       - service.env
     environment:
       MODE: "submitworker"
     depends_on:
-      - redisstack
+      - mongo
   watcher:
     image: servicebe
     working_dir: /home
     entrypoint: [./run.sh]
+    volumes:
+      - ./ggc.json:/home/ggc.json
     env_file:
       - service.env
     environment:
       MODE: "submitwatcher"
     depends_on:
-      - redisstack
+      - mongo
+
+  interopworker:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    volumes:
+      - ./ggc.json:/home/ggc.json
+    env_file:
+      - service.env
+    environment:
+      MODE: "interswap"
+    depends_on:
+      - mongo
+
+  feeestimator:
+    image: servicebe
+    working_dir: /home
+    entrypoint: [./run.sh]
+    volumes:
+      - ./ggc.json:/home/ggc.json
+    env_file:
+      - service.env
+    environment:
+      MODE: "feeestimator"
+    depends_on:
+      - mongo
 
   api:
     image: servicebe
     working_dir: /home
     entrypoint: [./run.sh]
+    volumes:
+      - ./ggc.json:/home/ggc.json
     env_file:
       - service.env
     environment:
       MODE: "api"
     depends_on:
-      - redisstack
+      - mongo
 
   nginx-server:
     image: nginx-load-balancer
@@ -41,28 +73,47 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
     ports:
-      - 6002:80
+      - 9898:80
     restart: unless-stopped
     depends_on:
-      - query
-      - redisstack
-
-  redisstack:
-    image: redis/redis-stack
-    restart: always
-    environment:
-      REDIS_ARGS: "--aclfile /config/users.acl"
-    ports:
-      # - 6379:6379 
-      - 8002:8001
-    volumes:
-      - ./data/redis:/data
-      - ./redis/:/config
+      - api
+      - mongo
       
-  # pancakeswapep:
-  #   image: 0xbahamoot/pancakeswapep
-  #   restart: always
+  mongo:
+    image: mongo
+    restart: always
+    volumes:
+      - ./data/mongodb:/data/db
+      - ./data/mongodb_config:/data/configdb
+    env_file:
+      - service.env
+  mongo-express:
+    image: mongo-express
+    restart: always
+    env_file:
+      - service.env
+    ports:
+      - 9897:8081
 
-  # uniswapep:
-  #   image: 0xbahamoot/uniswapep
-  #   restart: always
+  pancakeswapep:
+    image: 0xbahamoot/pancakeswapep:latest
+    restart: always
+    ports:
+      - 3052:3000
+    environment:
+      JSON_RPC_PROVIDER_POLYGON: "https://bsc-dataseed2.binance.org/"
+
+  uniswapep:
+    image: 0xbahamoot/uniswapep:latest
+    restart: always
+    ports:
+      - 3051:3000
+    environment:
+      JSON_RPC_PROVIDER_POLYGON: "https://rpc-mainnet.matic.quiknode.pro"
+  uniswap_eth_ep:
+    image: 0xbahamoot/uniswapep:latest
+    restart: always
+    ports:
+      - 3050:3000
+    environment:
+      JSON_RPC_PROVIDER: "https://eth-mainnet.g.alchemy.com/v2/Z9TeZseBci080bqyqTdHKHaJ5w4UgZNL"

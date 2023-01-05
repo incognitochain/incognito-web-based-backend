@@ -42,28 +42,43 @@ type RewardModel struct {
 }
 
 type EstimateSwapRequest struct {
-	Network           string
-	BurningAmount     uint64
-	FromToken         string // IncTokenID
-	ToToken           string // ReceiveToken
-	RedepositReceiver string
-	WithdrawAddress   string
+	FeeAddress  string
+	Network     string
+	Amount      string
+	Slippage    string
+	MultiTrades bool
+	MinSplit    int
+	FromToken   string // IncTokenID
+	ToToken     string // IncTokenID
+	ShardID     string
+
+	IsFromInterswap bool // dafault false
 }
 
-type EstimateSwapRespone struct {
-	Quote      QuoteDataResp
-	ExpiredAt  time.Time
-	Fee        uint64
-	FeeAddress uint64
+type EstimateSwapRespond struct {
+	Networks      map[string]interface{}
+	NetworksError map[string]interface{}
 }
 
 type QuoteDataResp struct {
-	TokenIn      string
-	TokenOut     string
-	AmountIn     string
-	AmountInRaw  string
-	AmountOut    string
-	AmountOutRaw string
+	AppName              string
+	CallContract         string
+	AmountIn             string
+	AmountInRaw          string
+	AmountOut            string
+	AmountOutRaw         string
+	AmountOutPreSlippage string
+	RedepositReward      string
+	Rate                 string
+	Fee                  []PappNetworkFee
+	FeeAddress           string
+	FeeAddressShardID    int
+	Paths                interface{}
+	PathsContract        interface{}
+	PoolPairs            []string
+	Calldata             string
+	ImpactAmount         string
+	RouteDebug           interface{}
 }
 
 type SubmitSwapTx struct {
@@ -87,6 +102,8 @@ type EstimateUnshieldRequest struct {
 	TokenID        string
 	ExpectedAmount uint64
 	BurntAmount    uint64
+
+	Network string
 }
 
 type EstimateUnshieldRespond struct {
@@ -183,6 +200,7 @@ type GenUnshieldAddressRequest struct {
 	IncognitoTx         string
 	UnifiedTokenID      string
 	SignPublicKeyEncode string
+	CurrencyType        int
 }
 
 type SubmitUnshieldTxRequest struct {
@@ -196,13 +214,29 @@ type SubmitUnshieldTxRequest struct {
 	ID               int
 	IncognitoTx      string
 	UserFeeSelection int
+
+	//centralized
+	PrivacyFee                      string
+	TokenFee                        string
+	Address                         string
+	IncognitoTxToPayOutsideChainFee string
 }
 
 type GenShieldAddressRequest struct {
 	Network             string
 	AddressType         int
+	CurrencyType        int
 	PrivacyTokenAddress string
 	WalletAddress       string
+	RequestedAmount     string
+	IncognitoAmount     string
+	PaymentAddress      string
+
+	BTCIncAddress string
+}
+type GenBTCShieldAddressRequest struct {
+	ShieldAddress string `json:"btcaddress"`
+	IncAddress    string `json:"incaddress"`
 }
 
 type SubmitShieldTx struct {
@@ -253,4 +287,175 @@ type TransactionDetail struct {
 	IsInBlock   bool `json:"IsInBlock"`
 
 	Info string `json:"Info"`
+}
+
+type SubmitTxListRequest struct {
+	TxList []string
+}
+
+type SubmitSwapTxRequest struct {
+	TxRaw            string
+	TxHash           string
+	FeeRefundOTA     string
+	FeeRefundAddress string
+}
+
+type TxStatusRespond struct {
+	TxHash string
+	Status string
+	Error  string
+}
+
+type PappSupportedTokenData struct {
+	ID                string
+	ContractID        string
+	ContractIDGetRate string
+	Name              string
+	Symbol            string
+	PricePrv          float64
+	Decimals          int
+	PDecimals         int
+	Protocol          string
+	Verify            bool
+	IsPopular         bool
+	Priority          int
+	DappID            int
+	CurrencyType      int
+	NetworkID         int
+	MovedUnifiedToken bool
+	NetworkName       string
+}
+
+type UniswapQuote struct {
+	Data struct {
+		AmountIn         string           `json:"amountIn"`
+		AmountOut        string           `json:"amountOut"`
+		AmountOutRaw     string           `json:"amountOutRaw"`
+		Route            [][]UniswapRoute `json:"route"`
+		Impact           float64          `json:"impact"`
+		EstimatedGasUsed string           `json:"estimatedGasUsed"`
+	} `json:"data"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
+type UniswapRoute struct {
+	AmountIn          string            `json:"amountIn"`
+	AmountOut         string            `json:"amountOut"`
+	Fee               int64             `json:"fee"`
+	Liquidity         string            `json:"liquidity"`
+	Percent           float64           `json:"percent"`
+	Type              string            `json:"type"`
+	PoolAddress       string            `json:"poolAddress"`
+	RawQuote          string            `json:"rawQuote"`
+	SqrtPriceX96After string            `json:"sqrtPriceX96After"`
+	TokenIn           UniswapQuoteToken `json:"tokenIn"`
+	TokenOut          UniswapQuoteToken `json:"tokenOut"`
+}
+
+type UniswapQuoteToken struct {
+	Address  string `json:"address"`
+	Name     string `json:"name"`
+	Symbol   string `json:"symbol"`
+	IsNative bool   `json:"isNative"`
+}
+
+type PancakeQuote struct {
+	Data struct {
+		Outputs []string `json:"outputs"`
+		Route   []string `json:"paths"`
+		Impact  float64  `json:"impactAmount"`
+	} `json:"data"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
+type PappNetworkFee struct {
+	TokenID          string  `json:"tokenid"`
+	Amount           uint64  `json:"amount"`
+	AmountInBuyToken string  `json:"amountInBuyToken"`
+	PrivacyFee       uint64  `json:"privacyFee"`
+	FeeInUSD         float64 `json:"feeInUSD"`
+}
+
+type UnshieldNetworkFee struct {
+	FeeAddress        string  `json:"feeAddress"`
+	FeeAddressShardID int     `json:"feeAddressShardID"`
+	ExpectedReceive   uint64  `json:"expectedReceive"`
+	BurntAmount       uint64  `json:"burntAmount"`
+	TokenID           string  `json:"tokenid"`
+	Amount            uint64  `json:"feeAmount"`
+	PrivacyFee        uint64  `json:"privacyFee"`
+	ProtocolFee       uint64  `json:"protocolFee"`
+	FeeInUSD          float64 `json:"feeInUSD"`
+}
+
+type OpenSeaFee struct {
+	FeeAddress        string `json:"feeAddress"`
+	FeeAddressShardID int    `json:"feeAddressShardID"`
+	TokenID           string `json:"tokenid"`
+	Amount            uint64 `json:"feeAmount"`
+	PrivacyFee        uint64 `json:"privacyFee"`
+	// ProtocolFee       uint64  `json:"protocolFee"`
+	FeeInUSD float64 `json:"feeInUSD"`
+}
+
+type PancakeTokenMapItem struct {
+	Decimals int    `json:"decimals"`
+	Symbol   string `json:"symbol"`
+}
+
+type CurvePoolIndex struct {
+	CurveTokenIndex  int
+	CurvePoolAddress string
+	DappTokenAddress string
+	DappTokenSymbol  string
+}
+
+type StatusSwapTxDetail struct {
+	SellToken  string
+	SellAmount uint64
+	BuyToken   string
+	Networks   []string
+}
+
+type PdexEstimateRespond struct {
+	SellAmount    float64
+	MaxGet        float64
+	Fee           uint64
+	Route         []string
+	TokenRoute    []string
+	IsSignificant bool
+	ImpactAmount  float64
+}
+
+type RetrySwapTx struct {
+	Txs []string
+}
+type APITokenInfoRequest struct {
+	TokenIDs []string
+	Nocache  bool
+}
+
+type ShieldStatusData struct {
+	Amount uint64 `json:"Amount"`
+	Reward uint64 `json:"Reward"`
+}
+
+type ShieldStatus struct {
+	Status    byte               `json:"Status"`
+	Data      []ShieldStatusData `json:"Data,omitempty"`
+	ErrorCode int                `json:"ErrorCode,omitempty"`
+}
+
+type DexSwap struct {
+	Txhash       string `json:"txhash"`
+	TokenSell    string `json:"token_sell"`
+	TokenBuy     string `json:"token_buy"`
+	AmountIn     string `json:"amount_in"`
+	MinAmountOut string `json:"amount_out"`
+}
+
+type TokenStruct struct {
+	ID string `json:"id"`
 }

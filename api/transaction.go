@@ -1,23 +1,24 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/submitproof"
-	"github.com/mongodb/mongo-tools/common/json"
 )
 
 func APISubmitUnshieldTx(c *gin.Context) {
 	var req SubmitUnshieldTxRequest
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	err = requestUSAToken(config.ShieldService)
@@ -26,13 +27,13 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		return
 	}
 	switch req.Network {
-	case "eth", "bsc", "plg", "ftm":
+	case "centralized":
 		re, err := restyClient.R().
 			EnableTrace().
 			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
-			Post(config.ShieldService + "/" + req.Network + "/add-tx-withdraw")
+			Post(config.ShieldService + "/ota/update-fee")
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
 		var responseBodyData struct {
@@ -41,7 +42,27 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		}
 		err = json.Unmarshal(re.Body(), &responseBodyData)
 		if err != nil {
-			c.JSON(200, gin.H{"Error": err})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err})
+			return
+		}
+		c.JSON(200, responseBodyData)
+		return
+	case "eth", "bsc", "plg", "ftm", "avax", "aurora", "near":
+		re, err := restyClient.R().
+			EnableTrace().
+			SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(req).
+			Post(config.ShieldService + "/" + req.Network + "/add-tx-withdraw")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		var responseBodyData struct {
+			Result interface{}
+			Error  interface{}
+		}
+		err = json.Unmarshal(re.Body(), &responseBodyData)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 			return
 		}
 		c.JSON(200, responseBodyData)
@@ -50,13 +71,13 @@ func APISubmitUnshieldTx(c *gin.Context) {
 		if req.ID == 0 && req.PaymentAddress == "" && req.WalletAddress != "" && req.IncognitoTx != "" {
 			txdetail, err := getTxDetails(req.IncognitoTx)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 				return
 			}
 
 			ID, PaymentAddress, PrivacyTokenAddress, IncognitoAmount, Network, err := extractUnshieldInfoField(txdetail)
 			if err != nil {
-				c.JSON(200, gin.H{"Error": err})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 				return
 			}
 			newReq := SubmitUnshieldTxRequest{
@@ -74,13 +95,13 @@ func APISubmitUnshieldTx(c *gin.Context) {
 			fmt.Println("newReq", string(a))
 
 			switch Network {
-			case "eth", "bsc", "plg", "ftm":
+			case "eth", "bsc", "plg", "ftm", "avax", "aurora":
 				re, err := restyClient.R().
 					EnableTrace().
 					SetHeader("Content-Type", "application/json").SetHeader("Authorization", "Bearer "+usa.token).SetBody(newReq).
 					Post(config.ShieldService + "/" + Network + "/add-tx-withdraw")
 				if err != nil {
-					c.JSON(200, gin.H{"Error": err.Error()})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 					return
 				}
 				var responseBodyData struct {
@@ -89,17 +110,17 @@ func APISubmitUnshieldTx(c *gin.Context) {
 				}
 				err = json.Unmarshal(re.Body(), &responseBodyData)
 				if err != nil {
-					c.JSON(200, gin.H{"Error": err})
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 					return
 				}
 				c.JSON(200, responseBodyData)
 				return
 			default:
-				c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
 				return
 			}
 		}
-		c.JSON(200, gin.H{"Error": errors.New("unsupport network")})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("unsupport network")})
 		return
 	}
 }
@@ -108,7 +129,7 @@ func APISubmitShieldTx(c *gin.Context) {
 	var req SubmitShieldTx
 	err := c.MustBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -116,22 +137,22 @@ func APISubmitShieldTx(c *gin.Context) {
 		if ok, err := VerifyCaptcha(req.Captcha, config.CaptchaSecret); !ok {
 			if err != nil {
 				log.Println("VerifyCaptcha", err)
-				c.JSON(200, gin.H{"Error": err})
+				c.JSON(http.StatusBadRequest, gin.H{"Error": err})
 				return
 			}
-			c.JSON(200, gin.H{"Error": errors.New("invalid captcha")})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid captcha")})
 			return
 		}
 
 	}
 
 	if req.Txhash == "" {
-		c.JSON(200, gin.H{"Error": errors.New("invalid params").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid params").Error()})
 		return
 	}
-	status, err := submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID)
+	status, err := submitproof.SubmitShieldProof(req.Txhash, req.Network, req.TokenID, submitproof.TxTypeShielding, false)
 	if err != nil {
-		c.JSON(200, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"Result": status})
@@ -193,6 +214,10 @@ func extractUnshieldInfoField(txdetail *TransactionDetail) (ID int, PaymentAddre
 		Network = "plg"
 	case 4:
 		Network = "ftm"
+	case 5:
+		Network = "avax"
+	case 6:
+		Network = "aurora"
 	}
 	IncognitoAmount = fmt.Sprintf("%d", unshieldMeta.Data[0].BurningAmount)
 	PaymentAddress = "0x" + unshieldMeta.Data[0].RemoteAddress
@@ -200,7 +225,6 @@ func extractUnshieldInfoField(txdetail *TransactionDetail) (ID int, PaymentAddre
 }
 
 func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
-
 	type APIRespond struct {
 		Result []common.TokenInfo
 		Error  *string
@@ -226,6 +250,34 @@ func getTokenInfo(pUTokenID string) (*common.TokenInfo, error) {
 		return &responseBodyData.Result[0], nil
 	}
 	return nil, errors.New(fmt.Sprintf("token not found"))
+}
+
+func getTokensInfo(pUTokenID []string) ([]common.TokenInfo, error) {
+	type APIRespond struct {
+		Result []common.TokenInfo
+		Error  *string
+	}
+
+	reqBody := struct {
+		TokenIDs []string
+	}{
+		TokenIDs: pUTokenID,
+	}
+
+	var responseBodyData APIRespond
+	_, err := restyClient.R().
+		EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetResult(&responseBodyData).SetBody(reqBody).
+		Post(config.CoinserviceURL + "/coins/tokeninfo")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(responseBodyData.Result) == 0 {
+		return nil, errors.New(fmt.Sprintf("tokens not found"))
+	}
+	return responseBodyData.Result, nil
 }
 
 func getTokenNetwork(pUTokenID string, tokenID string) int {

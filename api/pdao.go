@@ -140,7 +140,11 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	rcAddr := crypto.PubkeyToAddress(*rcPubKey)
 	// if total burn prv + current prv balance of recover address from signature must pass threshold
 	bal, _ := pv.BalanceOf(nil, rcAddr)
-	threshold, isOk := big.NewInt(0).SetString(wcommon.PRV_THRESHOLD, 10)
+	thresholdMinStr := wcommon.PRV_THRESHOLD_MAINNET
+	if config.NetworkID == "testnet" {
+		thresholdMinStr = wcommon.PRV_THRESHOLD_TESTNET
+	}
+	threshold, isOk := big.NewInt(0).SetString(thresholdMinStr, 10)
 	if !isOk {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
 		return

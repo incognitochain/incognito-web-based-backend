@@ -231,6 +231,17 @@ func DBGetVotingToReShield() ([]common.Vote, error) {
 	return result, nil
 }
 
+func DBUpdateVotingReshieldStatus(incTx string, status string) error {
+	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
+	update := bson.M{"$set": bson.M{"reshield_status": status}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // create proposal with increase PID:
 func DBCreateAProposalTable(data *common.Proposal) error {
 	// get last ID:

@@ -591,7 +591,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
 
 		if pendingNonce <= tx.Nonce {
-			return nil
+			continue
 		}
 
 		txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
@@ -615,11 +615,23 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 						return err
 					}
 				case wcommon.ExternalTxTypePdaoReShieldPRV:
-					// inctx := strings.Split(tx.IncRequestTx, "_")
+					inctx := strings.Split(tx.IncRequestTx, "_")
+					err = database.DBUpdateVotingReshieldStatus(inctx[0], wcommon.StatusPending)
+					if err != nil {
+						return err
+					}
 				case wcommon.ExternalTxTypePdaoVote:
-					// inctx := strings.Split(tx.IncRequestTx, "_")
+					inctx := strings.Split(tx.IncRequestTx, "_")
+					err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaoReadyForVote)
+					if err != nil {
+						return err
+					}
 				case wcommon.ExternalTxTypePdaoCancel:
 					// inctx := strings.Split(tx.IncRequestTx, "_")
+					// err = database.DBUpdatePdaoVoteStatus(inctx[0], wcommon.StatusPdaoReadyForVote)
+					// if err != nil {
+					// 	return err
+					// }
 				}
 
 				err = database.DBDeleteExternalTxStatus(tx.Txhash)

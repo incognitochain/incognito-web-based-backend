@@ -27,3 +27,17 @@ type OpenseaDefaultCollectionData struct {
 	Slug             string `bson:"slug"`
 	Verify           bool   `bson:"verify"`
 }
+
+// TODO: opensea
+type OpenseaOfferData struct {
+	mgm.DefaultModel   `bson:",inline"`
+	Receiver           string `bson:"receiver"`
+	NFTID              string `bson:"nft_id"`
+	NFTCollection      string `bson:"collection_id"`
+	OfferToken         string `bson:"offer_token"`
+	OfferAmount        string `bson:"offer_amount"`
+	TimeoutAt          string `bson:"timeout_at"`
+	CustodialWallet    string `bson:"custodial_wallet"`
+	CancelTxRequest    string `bson:"cancel_tx_request"`
+	WithdrawOutchainTx string `bson:"withdraw_outchain_tx"`
+}

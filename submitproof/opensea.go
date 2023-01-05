@@ -210,3 +210,10 @@ func loadOpenseaAPIKey() {
 	}
 	config.OpenSeaAPI = openseaAPI
 }
+
+// TODO: opensea
+func watchOpenseaPendingOffer() {
+	for {
+		time.Sleep(10 * time.Second)
+	}
+}

@@ -145,8 +145,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			continue
 		}
 
-		SendSlackAlert("[debug] Estimate path 1 done!")
-
 		bytes, _ := json.Marshal(est1)
 		fmt.Printf("Est 1: %+v\n", bytes)
 
@@ -180,7 +178,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 				continue
 			}
 			log.Printf("HHH Time5: %v", time.Since(time1).Seconds())
-			SendSlackAlert("[debug] Estimate path 2 done!")
 
 			bytes, _ := json.Marshal(est2)
 			fmt.Printf("Est 2: %+v\n", bytes)
@@ -232,7 +229,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 				}
 			}
 			log.Printf("HHH Time7: %v", time.Since(time1).Seconds())
-			SendSlackAlert("[debug] Estimate find path done!")
 		}
 	}
 	bytes, _ := json.Marshal(paths)
@@ -260,8 +256,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			bestPath = &path
 		}
 	}
-
-	SendSlackAlert("[debug] Estimate find best path done!")
 	log.Printf("HHH Time8: %v", time.Since(time1).Seconds())
 
 	bytes, _ = json.Marshal(bestPath)
@@ -334,8 +328,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 
 	log.Printf("HHH Time9: %v", time.Since(time1).Seconds())
 
-	SendSlackAlert(fmt.Sprintf("[debug] Estimate prepare response done! bestPath %+v", bestPath))
-
 	swapInfo := InterSwapEstRes{
 		// this object to get info to show on UI
 		QuoteData: QuoteData{
@@ -360,8 +352,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		// use the first item in the array to create the first tx
 		Details: bestPath.Paths,
 	}
-
-	SendSlackAlert(fmt.Sprintf("[debug] Estimate prepare response done! swapInfo %+v", swapInfo))
 
 	res := map[string][]InterSwapEstRes{
 		InterSwapStr: []InterSwapEstRes{swapInfo},

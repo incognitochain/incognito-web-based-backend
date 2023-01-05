@@ -245,7 +245,7 @@ func createTxRefundAndUpdateStatus(
 ) error {
 	interswapTxID := txData.TxID
 	refundTxID, _, err := createTxTokenWithInputCoins(privateKey, txData.OTARefund, tokenRefund, amountRefund,
-		tokenUtxos, tokenUtxoIndices, nil, false)
+		tokenUtxos, tokenUtxoIndices, nil, true)
 	if err != nil {
 		log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
 		return fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
@@ -1033,14 +1033,10 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 					// update database
 					log.Printf("InterswapID %v Response amount: redepositInfo.TokenID %v, redepositInfo.UTokenID %v, outchainTxResult.Amount %v",
 						interswapTxID, redepositInfo.TokenID, redepositInfo.UTokenID, outchainTxResult.Amount.Uint64())
-					// TODO: remove
-					SendSlackAlert(fmt.Sprintf("InterswapID %v Response amount: redepositInfo.TokenID %v, redepositInfo.UTokenID %v, outchainTxResult.Amount %v",
-						interswapTxID, redepositInfo.TokenID, redepositInfo.UTokenID, outchainTxResult.Amount.Uint64()))
+
 					tokenTmp, err := getTokenInfo(redepositInfo.TokenID, config)
 					if err != nil {
 						log.Printf("InterswapID %v Calculate the final response amount - Get token info error %v\n", interswapTxID, err)
-						// TODO: remove
-						SendSlackAlert(fmt.Sprintf("InterswapID %v Calculate the final response amount - Get unified token info 1 error %v\n", interswapTxID, err))
 						return fmt.Errorf("InterswapID %v Calculate the final response amount - Get token info error %v\n", interswapTxID, err)
 					}
 					fromDec := tokenTmp.Decimals
@@ -1049,8 +1045,6 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 						tokenTmp, err := getTokenInfo(redepositInfo.UTokenID, config)
 						if err != nil {
 							log.Printf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err)
-							// TODO: remove
-							SendSlackAlert(fmt.Sprintf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err))
 							return fmt.Errorf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err)
 						}
 						toDec = tokenTmp.PDecimals
@@ -1133,6 +1127,10 @@ func processInterswapRefundingTx(txData beCommon.InterSwapTxData, config beCommo
 	interswapTxID := txData.TxID
 	refundTxID := txData.TxIDRefund
 	shardID := fmt.Sprint(txData.ShardID)
+
+	if IsExist(SkipTxs, interswapTxID) {
+		return nil
+	}
 	fmt.Printf("InterswapID %v Start processing refundTxID %v\n", interswapTxID, refundTxID)
 
 	// check tx by hash

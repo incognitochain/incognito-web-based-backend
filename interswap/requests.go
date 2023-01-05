@@ -548,10 +548,10 @@ func GetBestRoute(paths map[string][]QuoteData) map[string]*QuoteData {
 				tmpBestPath = d
 			}
 		}
-		res[network] = &tmpBestPath
-
-		// find the best one for all papp
-		if network != IncNetworkStr {
+		if network == IncNetworkStr {
+			res[network] = &tmpBestPath
+		} else {
+			// find the best one for all papp
 			tmpBestPath.PAppNetwork = network
 			if bestPAppPath.AppName == "" {
 				bestPAppPath = tmpBestPath

@@ -24,6 +24,11 @@ var SkipTxs = []string{
 	"82a30987e144aed3f3a3c56c0f1209477fe1c0444d8c38643989674ed24bf339",
 	"b8d289152ca4e8819a2cc81cc5cff59ca999a71d80b34c2160df320936cbe669",
 	"1cd9e638e1a10182348dae56ca974356c5ee2d876b7ba0fedcb44594a08c8711",
+
+	// mainnet
+	"22afead70a3e2a6a05110e38c828582fe821ad14e8abca8c892e016b4ef6a5aa",
+	"d5d32617f5418020e0237d8645961cee70fde3ba19be600865094b39ca40c168",
+	"5ab8cbd67e5d17c8dbc392323dd74635e2aba2af0e609bbc4620ebac22e8d6e3",
 }
 
 // watchInterswapPendingTx listen status of interswap and handle the next step

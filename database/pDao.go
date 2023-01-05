@@ -221,7 +221,7 @@ func DBGetReadyToVote() ([]common.Vote, error) {
 
 func DBGetVotingToReShield() ([]common.Vote, error) {
 	result := []common.Vote{}
-	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess}}, "reshield_status": bson.M{operator.Eq: common.StatusPending}}
+	filter := bson.M{"status": bson.M{operator.In: []string{common.StatusPdaOutchainTxSuccess, common.StatusPdaOutchainTxFailed}}, "reshield_status": bson.M{operator.Eq: common.StatusPending}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.Vote{}).SimpleFindWithCtx(ctx, &result, filter)
 	if err != nil {

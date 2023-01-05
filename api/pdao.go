@@ -309,7 +309,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	}
 	log.Println("Insert db success!")
 
-	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
+	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status, "pid": proposal.PID}, "feeDiff": feeDiff})
 	return
 
 }

@@ -65,6 +65,13 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 		var gv *governance.Governance
 		var pv *prvvote.Prvvote
+
+		papps, err := database.DBRetrievePAppsByNetwork("eth")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+			return
+		}
+
 		for _, endpoint := range networkInfo.Endpoints {
 			evmClient, err := ethclient.Dial(endpoint)
 			if err != nil {
@@ -72,13 +79,26 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 				continue
 			}
 
-			gv, err = governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+			contract := papps.AppContracts["pdao"]
+			gv, err = governance.NewGovernance(common.HexToAddress(contract), evmClient)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 				return
 			}
 
-			pv, err = prvvote.NewPrvvote(common.HexToAddress(wcommon.PRV_VOTE), evmClient)
+			prvInfo, err := getTokenInfo(wcommon.PRV_TOKENID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+				return
+			}
+			prvContract := ""
+			for _, v := range prvInfo.ListChildToken {
+				if v.CurrencyType == wcommon.ERC20 {
+					prvContract = v.ContractID
+				}
+			}
+
+			pv, err = prvvote.NewPrvvote(common.HexToAddress(prvContract), evmClient)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 				return
@@ -348,7 +368,14 @@ func APIPDaoVoting(c *gin.Context) {
 		return
 	}
 
-	gv, err := governance.NewGovernance(common.HexToAddress(wcommon.GOVERNANCE_CONTRACT_ADDRESS), evmClient)
+	papps, err := database.DBRetrievePAppsByNetwork("eth")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+
+	contract := papps.AppContracts["pdao"]
+	gv, err := governance.NewGovernance(common.HexToAddress(contract), evmClient)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return

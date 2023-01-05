@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -43,6 +44,7 @@ func DBRetrievePendingRedepositExternalTx(offset, limit int64) ([]common.Externa
 		Skip:  &offset,
 		Limit: &limit,
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +57,16 @@ func DBUpdateExternalTxStatus(externalTx string, status string, errStr string) e
 	update := bson.M{"$set": bson.M{"status": status, "error": errStr}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBDeleteExternalTxStatus(externalTx string) error {
+	filter := bson.M{"txhash": bson.M{operator.Eq: externalTx}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.ExternalTxStatus{}).DeleteOne(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -93,7 +105,6 @@ func DBUpdateExternalTxOtherInfo(externalTx string, otherInfo string) error {
 	}
 	return nil
 }
-
 func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status, "error": errStr}}
@@ -107,11 +118,25 @@ func DBUpdateExternalTxStatusByIncTx(incTx string, status string, errStr string)
 
 func DBSaveExternalTxStatus(txdata *common.ExternalTxStatus) error {
 	filter := bson.M{"increquesttx": bson.M{operator.Eq: txdata.IncRequestTx}}
-	update := bson.M{"$set": bson.M{"created_at": time.Now(), "txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type}}
+	update := bson.M{"$set": bson.M{"created_at": time.Now(), "txhash": txdata.Txhash, "status": txdata.Status, "network": txdata.Network, "type": txdata.Type, "nonce": txdata.Nonce}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.ExternalTxStatus{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func DBRetrieveExternalTxByIncTxID(incTxID string) (*common.ExternalTxStatus, error) {
+	var result []common.ExternalTxStatus
+	filter := bson.M{"increquesttx": bson.M{operator.Eq: incTxID}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.ExternalTxStatus{}).SimpleFindWithCtx(ctx, &result, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("DBRetrieveExternalTxByIncTxID not found with incTxID %v", incTxID)
+	}
+	return &result[0], nil
 }

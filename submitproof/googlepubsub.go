@@ -13,6 +13,8 @@ var (
 	shieldTxTopic   *pubsub.Topic
 	unshieldTxTopic *pubsub.Topic
 	pappTxTopic     *pubsub.Topic
+
+	interSwapTxTopic *pubsub.Topic
 )
 
 func startPubsubClient(ggc_project string, ggc_acc string) error {

@@ -54,6 +54,16 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 	if err != nil {
 		return err
 	}
+	
+	err = DBCreateInterSwapDataIndex()
+	if err != nil {
+		return err
+	}
+
+	err = DBCreateOpenSeaIndex()
+	if err != nil {
+		return err
+	}
 
 	DBCreateDefaultNetworkInfo(network)
 

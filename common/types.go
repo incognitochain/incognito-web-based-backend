@@ -24,6 +24,12 @@ type Config struct {
 
 	GGCProject string
 	GGCAuth    string
+
+	OpenSeaAPI    string
+	OpenSeaAPIKey string
+
+	// Interswap
+	ISIncPrivKeys map[string]string
 }
 
 type TokenInfo struct {
@@ -48,7 +54,7 @@ type TokenInfo struct {
 	PSymbol            string
 	OriginalSymbol     string
 	LiquidityReward    float64
-	ExternalPriceUSD   float64 `json:"ExternalPriceUSD"`
+	ExternalPriceUSD   float64 `json:"ExternalPriceUSD"` // use to convert token
 	PriceUsd           float64 `json:"PriceUsd"`
 	PercentChange1h    string  `json:"PercentChange1h"`
 	PercentChangePrv1h string  `json:"PercentChangePrv1h"`
@@ -69,10 +75,12 @@ type TokenInfo struct {
 }
 
 type ExternalTxSwapResult struct {
-	LogResult     string
-	IsRedeposit   bool
-	IsReverted    bool
-	IsFailed      bool
+	LogResult   string
+	IsRedeposit bool
+	IsReverted  bool
+	IsFailed    bool
+
+	// token repsonse : failed/sucess
 	TokenContract string
 	Amount        *big.Int
 }

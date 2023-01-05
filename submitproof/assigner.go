@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -38,6 +39,11 @@ func StartAssigner(cfg common.Config, serviceID uuid.UUID) error {
 	}
 
 	pappTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + PAPP_TX_TOPIC)
+	if err != nil {
+		panic(err)
+	}
+
+	interSwapTxTopic, err = startPubsubTopic(cfg.NetworkID + "_" + INTERSWAP_TX_TOPIC)
 	if err != nil {
 		panic(err)
 	}
@@ -87,7 +93,7 @@ func SubmitShieldProof(txhash string, networkID int, tokenID string, txtype stri
 	return "submitting", nil
 }
 
-func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, pfeeAmount uint64, burntToken string, burntAmount uint64, swapInfo *common.PappSwapInfo, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string, userAgent string) (interface{}, error) {
+func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string, feeAmount uint64, pfeeAmount uint64, burntToken string, burntAmount uint64, swapInfo *common.PappSwapInfo, isUnifiedToken bool, networks []string, refundFeeOTA string, refundFeeAddress string, userAgent string, txType int) (interface{}, error) {
 	currentStatus, err := database.DBGetPappTxStatus(txhash)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -114,6 +120,7 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		Networks:         networks,
 		Time:             time.Now(),
 		UserAgent:        userAgent,
+		TxType:           txType,
 	}
 	taskBytes, _ := json.Marshal(task)
 
@@ -130,12 +137,19 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		return nil, err
 	}
 	log.Println("publish msgID:", msgID)
+	txTypeStr := "unknown"
+	switch txType {
+	case common.ExternalTxTypeSwap:
+		txTypeStr = "txswap"
+	case common.ExternalTxTypeOpensea:
+		txTypeStr = "opensea"
+	}
 	go func() {
 		tkInfo, _ := getTokenInfo(feeToken)
 		amount := new(big.Float).SetUint64(feeAmount)
 		decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
 		afl64, _ := amount.Mul(amount, decimal).Float64()
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` swaptx `%v` approved with fee `%f %v` 👌", txhash, afl64, tkInfo.Symbol))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx `%v` approved with fee `%f %v` 👌", txTypeStr, txhash, afl64, tkInfo.Symbol))
 	}()
 
 	return "submitting", nil
@@ -195,7 +209,7 @@ func SubmitOutChainTx(incTxHash string, network string, isUnifiedToken bool, ret
 
 	ctx := context.Background()
 	switch txType {
-	case common.ExternalTxTypeSwap:
+	case common.ExternalTxTypeSwap, common.ExternalTxTypeOpensea:
 		msg := &pubsub.Message{
 			Attributes: map[string]string{
 				"txhash": incTxHash,
@@ -280,6 +294,40 @@ func SubmitUnshieldTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken st
 		decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
 		afl64, _ := amount.Mul(amount, decimal).Float64()
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[unshield]` unshield `%v` approved with fee `%f %v` 👌", txhash, afl64, tkInfo.Symbol))
+	}()
+
+	return "submitting", nil
+}
+
+func PublishMsgInterswapTx(
+	task interswap.InterswapSubmitTxTask,
+) (interface{}, error) {
+	taskBytes, _ := json.Marshal(task)
+
+	taskType := interswap.InterswapPdexPappTxTask
+	if task.PathType == interswap.PAppToPdex {
+		taskType = interswap.InterswapPappPdexTask
+	}
+
+	ctx := context.Background()
+	msg := &pubsub.Message{
+		Attributes: map[string]string{
+			"txhash": task.TxID,
+			"task":   taskType,
+		},
+		Data: taskBytes,
+	}
+	msgID, errPub := interSwapTxTopic.Publish(ctx, msg).Get(ctx)
+	if errPub != nil {
+		return nil, errPub
+	}
+	log.Println("publish msgID:", msgID)
+	go func() {
+		// tkInfo, _ := getTokenInfo(feeToken)
+		// amount := new(big.Float).SetUint64(feeAmount)
+		// decimal := new(big.Float).SetFloat64(math.Pow10(-tkInfo.PDecimals))
+		// afl64, _ := amount.Mul(amount, decimal).Float64()
+		// go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` swaptx `%v` approved with fee `%f %v` 👌", txhash, afl64, tkInfo.Symbol))
 	}()
 
 	return "submitting", nil

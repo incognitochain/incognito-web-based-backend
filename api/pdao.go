@@ -61,124 +61,122 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	log.Println("check network ok!")
 
-	if len(req.Calldatas) > 0 && len(req.Values) > 0 && len(req.Signatures) > 0 {
+	if !(len(req.Calldatas) > 0 && len(req.Values) > 0 && len(req.Signatures) > 0) {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop's data"})
+		return
+	}
 
-		var gv *governance.Governance
-		var pv *prvvote.Prvvote
+	var gv *governance.Governance
+	var pv *prvvote.Prvvote
 
-		papps, err := database.DBRetrievePAppsByNetwork("eth")
+	papps, err := database.DBRetrievePAppsByNetwork("eth")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+
+	for _, endpoint := range networkInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		contract := papps.AppContracts["pdao"]
+		gv, err = governance.NewGovernance(common.HexToAddress(contract), evmClient)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
 		}
 
-		for _, endpoint := range networkInfo.Endpoints {
-			evmClient, err := ethclient.Dial(endpoint)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-
-			contract := papps.AppContracts["pdao"]
-			gv, err = governance.NewGovernance(common.HexToAddress(contract), evmClient)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-				return
-			}
-
-			prvInfo, err := getTokenInfo(wcommon.PRV_TOKENID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-				return
-			}
-			prvContract := ""
-			for _, v := range prvInfo.ListChildToken {
-				if v.CurrencyType == wcommon.ERC20 {
-					prvContract = v.ContractID
-				}
-			}
-
-			pv, err = prvvote.NewPrvvote(common.HexToAddress(prvContract), evmClient)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-				return
-			}
-
-			break
-		}
-
-		if gv == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "no endpoint available"})
-			return
-		}
-
-		// recover address from user's signature
-		gvHelperAbi, err := abi.JSON(strings.NewReader(governance.GovernanceHelperMetaData.ABI))
+		prvInfo, err := getTokenInfo(wcommon.PRV_TOKENID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
 		}
-		propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
-		if err != nil || len(propEncode) < 4 {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop encode abi"})
-			return
+		prvContract := ""
+		for _, v := range prvInfo.ListChildToken {
+			if v.CurrencyType == wcommon.ERC20 {
+				prvContract = v.ContractID
+			}
 		}
-		signData, err := gv.GetDataSign(nil, keccak256(propEncode[4:]))
+
+		pv, err = prvvote.NewPrvvote(common.HexToAddress(prvContract), evmClient)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
 		}
-		rcPubKey, err := crypto.SigToPub(signData[:], common.Hex2Bytes(req.CreatePropSignature))
-		// todo: compare address recover and address from burning metadata if has
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid signature"})
+
+		break
+	}
+
+	if gv == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "no endpoint available"})
+		return
+	}
+
+	// recover address from user's signature
+	gvHelperAbi, err := abi.JSON(strings.NewReader(governance.GovernanceHelperMetaData.ABI))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
+	if err != nil || len(propEncode) < 4 {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop encode abi"})
+		return
+	}
+	signData, err := gv.GetDataSign(nil, keccak256(propEncode[4:]))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	rcPubKey, err := crypto.SigToPub(signData[:], common.Hex2Bytes(req.CreatePropSignature))
+	// todo: compare address recover and address from burning metadata if has
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid signature"})
+		return
+	}
+	rcAddr := crypto.PubkeyToAddress(*rcPubKey)
+	// if total burn prv + current prv balance of recover address from signature must pass threshold
+	bal, _ := pv.BalanceOf(nil, rcAddr)
+	threshold, isOk := big.NewInt(0).SetString(wcommon.PRV_THRESHOLD, 10)
+	if !isOk {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
+		return
+	}
+
+	// convert Targets address to hex address:
+	var targetsArr []common.Address
+	for _, address := range req.Targets {
+		//convert
+		targetsArr = append(targetsArr, common.HexToAddress(address))
+	}
+
+	var valuesArr []*big.Int
+	for _, value := range req.Values {
+		//convert
+		valueBigInt := big.NewInt(0)
+		valueBigInt, ok := valueBigInt.SetString(value, 10)
+
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not convert values to bigInt")})
 			return
 		}
-		rcAddr := crypto.PubkeyToAddress(*rcPubKey)
-		// if total burn prv + current prv balance of recover address from signature must pass threshold
-		bal, _ := pv.BalanceOf(nil, rcAddr)
-		threshold, isOk := big.NewInt(0).SetString(wcommon.PRV_THRESHOLD, 10)
-		if !isOk {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
-			return
-		}
-		if bal.Cmp(threshold) < 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "insufficient balance to create prop"})
-			return
-		}
+		valuesArr = append(valuesArr, valueBigInt)
+	}
 
-		// convert Targets address to hex address:
-		var targetsArr []common.Address
-		for _, address := range req.Targets {
-			//convert
-			targetsArr = append(targetsArr, common.HexToAddress(address))
-		}
+	var calldataArr [][]byte
+	for _, calldata := range req.Calldatas {
+		calldataArr = append(calldataArr, []byte(calldata))
+	}
 
-		var valuesArr []*big.Int
-		for _, value := range req.Values {
-			//convert
-			valueBigInt := big.NewInt(0)
-			valueBigInt, ok := valueBigInt.SetString(value, 10)
-
-			if !ok {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not convert values to bigInt")})
-				return
-			}
-			valuesArr = append(valuesArr, valueBigInt)
-		}
-
-		var calldataArr [][]byte
-		for _, calldata := range req.Calldatas {
-			calldataArr = append(calldataArr, []byte(calldata))
-		}
-
-		// check proposal existed
-		propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Title)))
-		prop, _ := gv.Proposals(nil, propId)
-		if prop.StartBlock.Uint64() != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
-			return
-		}
+	// check proposal existed
+	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Title)))
+	prop, _ := gv.Proposals(nil, propId)
+	if prop.StartBlock.Uint64() != 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
+		return
 	}
 
 	// check valid info:
@@ -233,6 +231,11 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 		externalAddr = md.RemoteAddress
 		// todo: update sdk to get returnOTA
+	}
+
+	if bal.Uint64()+burntAmount < threshold.Uint64() {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "insufficient balance to create prop"})
+		return
 	}
 
 	// verify fee eth (UT):

@@ -2,33 +2,23 @@ package submitproof
 
 import (
 	"bytes"
-	"context"
-	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/adjust/rmq/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/incognitochain/bridge-eth/bridge/vault"
-	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
-	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
-	"github.com/mileusna/useragent"
 	"github.com/pkg/errors"
 )
 
@@ -57,67 +47,70 @@ var encodeBufferPool = sync.Pool{
 const ADDRESS_0 = "0x0000000000000000000000000000000000000000"
 
 func getETHDepositProof(
-	evmClient *ethclient.Client,
-	txHashStr string,
-) (*big.Int, string, uint, []string, string, string, bool, string, uint64, string, bool, error) {
+	client *incclient.IncClient,
+	evmNetworkID int,
+	txHash string,
+) (*big.Int, string, uint, []string, string, string, error) {
 	var contractID string
 	var paymentaddress string
-	var otaStr string
-	var shieldAmount uint64
-	var isRedeposit bool
-	var logResult string
-	var isTxPass bool
-
-	txHash := common.Hash{}
-	err := txHash.UnmarshalText([]byte(txHashStr))
+	// Get tx content
+	txContent, err := client.GetEVMTxByHash(txHash, evmNetworkID)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+		return nil, "", 0, nil, "", "", err
 	}
-	txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
+	blockHash, success := txContent["blockHash"].(string)
+	if !success {
+		return nil, "", 0, nil, "", "", err
+	}
+	txIndexStr, success := txContent["transactionIndex"].(string)
+	if !success {
+		return nil, "", 0, nil, "", "", errors.New("Cannot find transactionIndex field")
+	}
+	txIndex, err := strconv.ParseUint(txIndexStr[2:], 16, 64)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+		return nil, "", 0, nil, "", "", err
 	}
 
-	txIndex := txReceipt.TransactionIndex
-	blockHash := txReceipt.BlockHash.String()
-	blockNumber := txReceipt.BlockNumber
+	// Get tx's block for constructing receipt trie
+	blockNumString, success := txContent["blockNumber"].(string)
+	if !success {
+		return nil, "", 0, nil, "", "", errors.New("Cannot find blockNumber field")
+	}
+	blockNumber := new(big.Int)
+	_, success = blockNumber.SetString(blockNumString[2:], 16)
+	if !success {
+		return nil, "", 0, nil, "", "", errors.New("Cannot convert blockNumber into integer")
+	}
 
-	blk, err := evmClient.BlockByHash(context.Background(), txReceipt.BlockHash)
+	blockHeader, err := client.GetEVMBlockByHash(blockHash, evmNetworkID)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+		return nil, "", 0, nil, "", "", err
 	}
-	log.Println("txReceipt.Status", txReceipt.Status, txReceipt)
 
-	if txReceipt.Status == 1 {
-		isTxPass = true
+	// Get all sibling Txs
+	siblingTxs, success := blockHeader["transactions"].([]interface{})
+	if !success {
+		return nil, "", 0, nil, "", "", errors.New("Cannot find transactions field")
 	}
-	siblingTxs := blk.Body().Transactions
+	// Constructing the receipt trie (source: go-ethereum/core/types/derive_sha.go)
 	keybuf := new(bytes.Buffer)
 	receiptTrie := new(trie.Trie)
 	receipts := make([]*types.Receipt, 0)
-
-	for i, siblingTx := range siblingTxs {
-		siblingReceipt, err := evmClient.TransactionReceipt(context.Background(), siblingTx.Hash())
+	for i, tx := range siblingTxs {
+		siblingReceipt, err := client.GetEVMTxReceipt(tx.(string), evmNetworkID)
 		if err != nil {
-			return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+			return nil, "", 0, nil, "", "", err
 		}
 		if i == len(siblingTxs)-1 {
-			txData, _, err := evmClient.TransactionByHash(context.Background(), siblingTx.Hash())
+			txOut, err := client.GetEVMTxByHash(tx.(string), evmNetworkID)
 			if err != nil {
-				return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+				return nil, "", 0, nil, "", "", err
 			}
-			from, err := evmClient.TransactionSender(context.Background(), txData, txReceipt.BlockHash, uint(i))
-			if err != nil {
-				return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
-			}
-			if txData.To() != nil {
-				if txData.To().String() == ADDRESS_0 && from.String() == ADDRESS_0 {
-					break
-				}
+			if txOut["to"] == ADDRESS_0 && txOut["from"] == ADDRESS_0 {
+				break
 			}
 		}
 		receipts = append(receipts, siblingReceipt)
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	receiptList := types.Receipts(receipts)
@@ -126,10 +119,10 @@ func getETHDepositProof(
 	valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
 	defer encodeBufferPool.Put(valueBuf)
 
-	vaultABI, err := abi.JSON(strings.NewReader(vault.VaultABI))
+	vaultABI, err := abi.JSON(strings.NewReader(VaultABI))
 	if err != nil {
 		fmt.Println("abi.JSON", err.Error())
-		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+		return nil, "", 0, nil, "", "", err
 	}
 	// erc20ABI, err := abi.JSON(strings.NewReader(IERC20ABI))
 	// if err != nil {
@@ -142,82 +135,55 @@ func getETHDepositProof(
 	// 	return nil, "", 0, nil, "", err
 	// }
 
-	// for _, v := range receiptList {
-	for _, d := range txReceipt.Logs {
-		switch len(d.Data) {
-		// case 32:
-		// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
-		// 	if err != nil {
-		// 		fmt.Println("Unpack", err)
-		// 		continue
-		// 	}
-		// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
-		// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
-		// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
-		// 		fmt.Println("len(unpackResult)", err)
-		// 		continue
-		// 	}
-		// 	fmt.Println("32", d.Address.String())
-		case 96:
-			unpackResult, err := vaultABI.Unpack("Withdraw", d.Data)
-			if err != nil {
-				fmt.Println("Unpack2", err)
-				continue
-			}
-			if len(unpackResult) < 3 {
-				err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
-				fmt.Println("len(unpackResult)2", err)
-				continue
-			}
-			fmt.Println("96", d.Address.String(), unpackResult[0].(common.Address).String(), unpackResult[1].(common.Address).String(), unpackResult[2].(*big.Int))
-		// event indexed both from and to
-		case 256, 288:
-			// if contractID == "" {
-			topicHash := strings.ToLower(d.Topics[0].String())
-			if !strings.Contains(topicHash, "00b45d95b5117447e2fafe7f34def913ff3ba220e4b8688acf37ae2328af7a3d") {
-				continue
-			}
-			if paymentaddress == "" && otaStr == "" {
-				unpackResult, err := vaultABI.Unpack("Redeposit", d.Data)
+	for _, v := range receiptList {
+		for _, d := range v.Logs {
+			switch len(d.Data) {
+			// case 32:
+			// 	unpackResult, err := erc20ABI.Unpack("Transfer", d.Data)
+			// 	if err != nil {
+			// 		fmt.Println("Unpack", err)
+			// 		continue
+			// 	}
+			// 	if len(unpackResult) < 1 || len(d.Topics) < 3 {
+			// 		err = errors.New(fmt.Sprintf("Unpack event error match data needed %v\n", unpackResult))
+			// 		// b.notifyShieldDecentalized(queryAtHeight.Uint64(), err.Error(), conf)
+			// 		fmt.Println("len(unpackResult)", err)
+			// 		continue
+			// 	}
+			// 	fmt.Println("32", d.Address.String())
+			// case 96:
+			// 	unpackResult, err := erc20ABINoIndex.Unpack("Transfer", d.Data)
+			// 	if err != nil {
+			// 		fmt.Println("Unpack2", err)
+			// 		continue
+			// 	}
+			// 	if len(unpackResult) < 3 {
+			// 		err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
+			// 		fmt.Println("len(unpackResult)2", err)
+			// 		continue
+			// 	}
+			// 	fmt.Println("96", d.Address.String(), d.Address.Hex())
+			// event indexed both from and to
+			case 256, 288:
+				unpackResult, err := vaultABI.Unpack("Deposit", d.Data)
 				if err != nil {
-					log.Println("unpackResult3 err", err)
+					log.Println("unpackResult err", err)
 					continue
 				}
 				if len(unpackResult) < 3 {
 					err = errors.New(fmt.Sprintf("Unpack event not match data needed %v\n", unpackResult))
 					log.Println("len(unpackResult) err", err)
-					return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+					continue
 				}
+				fmt.Println("unpackResult", unpackResult)
 				contractID = unpackResult[0].(common.Address).String()
-				amount := unpackResult[2].(*big.Int)
-				shieldAmount = amount.Uint64()
-				var ok bool
-				paymentaddress, ok = unpackResult[1].(string)
-				if !ok {
-					OTAReceiver := unpackResult[1].([]byte)
-					newOTA := coin.OTAReceiver{}
-					err = newOTA.SetBytes(OTAReceiver)
-					if err != nil {
-						log.Println("unpackResult4 err", err)
-						continue
-					}
-					isRedeposit = true
-					otaStr = newOTA.String()
-				}
-			}
-		default:
-			unpackResult, err := vaultABI.Unpack("ExecuteFnLog", d.Data)
-			if err != nil {
-				log.Println("unpackResult2 err", err)
-				continue
-			} else {
-				logResult = fmt.Sprintf("%s", unpackResult)
-				log.Println("logResult", logResult)
+				paymentaddress = unpackResult[1].(string)
+			default:
+				// log.Println("invalid event index")
 			}
 		}
-	}
 
-	// }
+	}
 	// StackTrie requires values to be inserted in increasing hash order, which is not the
 	// order that `list` provides hashes in. This insertion sequence ensures that the
 	// order is correct.
@@ -241,13 +207,10 @@ func getETHDepositProof(
 	// Constructing the proof for the current receipt (source: go-ethereum/trie/proof.go)
 	proof := light.NewNodeSet()
 	keybuf.Reset()
-	err = rlp.Encode(keybuf, uint(txIndex))
-	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
-	}
+	rlp.Encode(keybuf, uint(txIndex))
 	err = receiptTrie.Prove(keybuf.Bytes(), 0, proof)
 	if err != nil {
-		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
+		return nil, "", 0, nil, "", "", err
 	}
 	nodeList := proof.NodeList()
 	encNodeList := make([]string, 0)
@@ -255,7 +218,7 @@ func getETHDepositProof(
 		str := base64.StdEncoding.EncodeToString(node)
 		encNodeList = append(encNodeList, str)
 	}
-	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, isRedeposit, otaStr, shieldAmount, logResult, isTxPass, nil
+	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, nil
 }
 
 func findTokenByContractID(contractID string, networkID int) (string, string, error) {
@@ -266,10 +229,9 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 		return "", "", err
 	}
 	contractID = strings.ToLower(contractID)
-	if contractID == EthNativeAddrStr {
+	if contractID == EthAddrStr {
 		for _, token := range tokenList {
-			tokenNetwork, _ := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
-			if token.Verified && tokenNetwork == networkID && wcommon.IsNativeCurrency(token.CurrencyType) {
+			if token.IsBridge && token.Verified && token.NetworkID == networkID {
 				linkedTokenID = token.TokenID
 				if token.MovedUnifiedToken {
 					for _, pUtokenInfo := range tokenList {
@@ -290,25 +252,16 @@ func findTokenByContractID(contractID string, networkID int) (string, string, er
 		}
 	} else {
 		for _, token := range tokenList {
-			if token.Verified {
+			if token.IsBridge && token.Verified {
 				tkContractID := strings.ToLower(token.ContractID)
-				tkNetworkID, err := wcommon.GetNetworkIDFromCurrencyType(token.CurrencyType)
-				if err != nil {
-					continue
-				}
-				if tkContractID == contractID && tkNetworkID == networkID && !token.MovedUnifiedToken { //non-punified
+				if tkContractID == contractID && token.NetworkID == networkID && !token.MovedUnifiedToken { //non-punified
 					pUtokenID = token.TokenID
 					linkedTokenID = token.TokenID
 					break
 				}
 				for _, childToken := range token.ListUnifiedToken { //punified
 					ctkContractID := strings.ToLower(childToken.ContractID)
-
-					ctkNetworkID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
-					if err != nil {
-						continue
-					}
-					if ctkContractID == contractID && ctkNetworkID == networkID {
+					if ctkContractID == contractID && childToken.NetworkID == networkID {
 						pUtokenID = token.TokenID
 						linkedTokenID = childToken.TokenID
 						return pUtokenID, linkedTokenID, nil
@@ -397,9 +350,13 @@ func initIncClient(network string) error {
 	var err error
 	switch network {
 	case "mainnet":
-		incClient, err = incclient.NewIncClient(config.FullnodeURL, incclient.MainNetETHHost, 2, network)
-	default:
-		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, network)
+		incClient, err = incclient.NewMainNetClient()
+	case "testnet-2": // testnet2
+		incClient, err = incclient.NewTestNetClient()
+	case "testnet-1":
+		incClient, err = incclient.NewTestNet1Client()
+	case "devnet":
+		return errors.New("unsupported network")
 	}
 	if err != nil {
 		return err
@@ -441,204 +398,4 @@ func faucetPRV(paymentaddress string) {
 			return
 		}
 	}
-}
-
-func getEVMBlockHeight(endpoints []string) (uint64, error) {
-	for _, endpoint := range endpoints {
-		evmClient, err := ethclient.Dial(endpoint)
-		if err != nil {
-			return 0, err
-		}
-		result, err := evmClient.BlockNumber(context.Background())
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		return result, nil
-	}
-	return 0, errors.New("failed to get EVM block height")
-}
-
-func getNonceByPrivateKey(c *ethclient.Client, senderPrivKey string) (uint64, error) {
-	privateKey, err := crypto.HexToECDSA(senderPrivKey)
-	if err != nil {
-		return 0, errors.Wrap(err, "crypto.HexToECDSA")
-	}
-	publicKey := privateKey.Public()
-	publicKeyECDSA, _ := publicKey.(*ecdsa.PublicKey)
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := c.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return 0, errors.Wrap(err, "s.ethClient.PendingNonceAt")
-	}
-
-	return nonce, nil
-}
-
-func genShardsAccount(mainAcc string) error {
-	incShardsAccount = make(map[int]string)
-	seed := mainAcc
-	shardsNum, err := incClient.GetActiveShard()
-	if err != nil {
-		return err
-	}
-	child := 0
-	for {
-		nSeed := seed[:16] + strconv.Itoa(child)
-		wl, err := wallet.NewMasterKeyFromSeed([]byte(nSeed))
-		if err != nil {
-			log.Println(err, nSeed)
-			return err
-			// continue
-		}
-		pk := wl.KeySet.PaymentAddress.Pk
-		lastByte := pk[len(pk)-1]
-		shardid := int(lastByte) % shardsNum
-
-		if _, exist := incShardsAccount[shardid]; !exist {
-			incShardsAccount[shardid] = wl.Base58CheckSerialize(wallet.PrivateKeyType)
-			log.Println("match found: ", shardid, incShardsAccount[shardid])
-		}
-		child++
-		if len(incShardsAccount) == shardsNum {
-			return nil
-		}
-	}
-}
-
-// // GenRandomWalletForShardID generates a random wallet for a specific shardID.
-// func GenRandomWalletForShardID(shardID byte) (*KeyWallet, error) {
-// 	numTries := 100000
-// 	for numTries > 0 {
-// 		tmpWallet, err := NewMasterKeyFromSeed(common.RandBytes(32))
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		pk := tmpWallet.KeySet.PaymentAddress.Pk
-
-// 		lastByte := pk[len(pk)-1]
-// 		if lastByte == shardID {
-// 			return tmpWallet, nil
-// 		}
-
-// 		numTries--
-// 	}
-
-// 	return nil, fmt.Errorf("failed after %v tries", numTries)
-// }
-
-func getTokenDecimalOnNetwork(tokenInfo *wcommon.TokenInfo, networkID int) (int64, error) {
-	if tokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-		for _, ctk := range tokenInfo.ListUnifiedToken {
-			netID, err := wcommon.GetNetworkIDFromCurrencyType(ctk.CurrencyType)
-			if err != nil {
-				return 0, err
-			}
-			if netID == networkID {
-				return ctk.Decimals, nil
-			}
-		}
-	} else {
-		return tokenInfo.Decimals, nil
-	}
-	return 0, errors.New("invalid token and network")
-}
-
-func parseUserAgent(userAgent string) string {
-	ua := useragent.Parse(userAgent)
-	uaStr := ""
-
-	if ua.IsAndroid() {
-		uaStr = "mobile-android"
-	}
-	if ua.IsIOS() {
-		uaStr = "mobile-ios"
-	}
-	if ua.IsEdge() {
-		uaStr = "web-edge"
-	}
-	if ua.IsFirefox() {
-		uaStr = "web-firefox"
-	}
-	if ua.IsChrome() {
-		uaStr = "web-chrome"
-	}
-	if ua.IsOpera() {
-		uaStr = "web-opera"
-	}
-
-	if uaStr == "" {
-		if ua.Mobile || ua.Tablet {
-			uaStr = "mobile"
-		}
-		if ua.Bot {
-			uaStr = "bot"
-		}
-		if ua.Desktop {
-			uaStr = "web"
-		}
-	}
-	if uaStr == "" {
-		if strings.Contains(userAgent, "okhttp") {
-			uaStr = "mobile-android-ish"
-		}
-		if strings.Contains(userAgent, "CFNetwork") {
-			uaStr = "mobile-ios-ish"
-		}
-	}
-	if uaStr == "" {
-		uaStr = userAgent
-	}
-	return uaStr
-}
-
-func getPdexSwapTxStatus(txhash, tokenOut string) (bool, string, error) {
-
-	type APIRespond struct {
-		Result []wcommon.TradeDataRespond
-		Error  *string
-	}
-
-	var responseBodyData APIRespond
-
-	_, err := restyClient.R().
-		EnableTrace().
-		SetHeader("Content-Type", "application/json").
-		SetResult(&responseBodyData).
-		Get(config.CoinserviceURL + "/pdex/v3/tradedetail?txhash=" + txhash)
-	if err != nil {
-		log.Println("getPdexSwapTxStatus", err)
-		return false, "", err
-	}
-	if responseBodyData.Error != nil {
-		log.Println("getPdexSwapTxStatus", errors.New(*responseBodyData.Error))
-		return false, "", errors.New(*responseBodyData.Error)
-	}
-
-	if len(responseBodyData.Result) == 0 {
-		return false, "", errors.New("not found")
-	}
-
-	swapResult := responseBodyData.Result[0]
-
-	if len(swapResult.RespondTxs) > 0 {
-		if swapResult.Status == "accepted" {
-			outAmountBig := new(big.Float).SetUint64(swapResult.RespondAmounts[0])
-			var outDecimal *big.Float
-			tokenOutInfo, err := getTokenInfo(tokenOut)
-			if err != nil {
-				return false, "", errors.New("not found")
-			}
-			outDecimal = new(big.Float).SetFloat64(math.Pow10(-tokenOutInfo.PDecimals))
-			outAmountfl64, _ := new(big.Float).Mul(outAmountBig, outDecimal).Float64()
-			outAmount := fmt.Sprintf("%f", outAmountfl64)
-			return true, outAmount, nil
-		} else {
-			return true, "", nil
-		}
-	}
-
-	return false, "", nil
 }

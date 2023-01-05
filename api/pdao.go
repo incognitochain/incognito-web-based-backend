@@ -115,37 +115,6 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		return
 	}
 
-	// recover address from user's signature
-	gvHelperAbi, err := abi.JSON(strings.NewReader(governance.GovernanceHelperMetaData.ABI))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-		return
-	}
-	propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
-	if err != nil || len(propEncode) < 4 {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop encode abi"})
-		return
-	}
-	signData, err := gv.GetDataSign(nil, keccak256(propEncode[4:]))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-		return
-	}
-	rcPubKey, err := crypto.SigToPub(signData[:], common.Hex2Bytes(req.CreatePropSignature))
-	// todo: compare address recover and address from burning metadata if has
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid signature"})
-		return
-	}
-	rcAddr := crypto.PubkeyToAddress(*rcPubKey)
-	// if total burn prv + current prv balance of recover address from signature must pass threshold
-	bal, _ := pv.BalanceOf(nil, rcAddr)
-	threshold, isOk := big.NewInt(0).SetString(wcommon.PRV_THRESHOLD, 10)
-	if !isOk {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
-		return
-	}
-
 	// convert Targets address to hex address:
 	var targetsArr []common.Address
 	for _, address := range req.Targets {
@@ -169,6 +138,37 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	var calldataArr [][]byte
 	for _, calldata := range req.Calldatas {
 		calldataArr = append(calldataArr, []byte(calldata))
+	}
+
+	// recover address from user's signature
+	gvHelperAbi, err := abi.JSON(strings.NewReader(governance.GovernanceHelperMetaData.ABI))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), targetsArr, valuesArr, calldataArr, req.Title)
+	if err != nil || len(propEncode) < 4 {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop encode abi"})
+		return
+	}
+	signData, err := gv.GetDataSign(nil, keccak256(propEncode[4:]))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	rcPubKey, err := crypto.SigToPub(signData[:], common.Hex2Bytes(req.CreatePropSignature))
+	// todo: compare address recover and address from burning metadata if has
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid signature"})
+		return
+	}
+	rcAddr := crypto.PubkeyToAddress(*rcPubKey)
+	// if total burn prv + current prv balance of recover address from signature must pass threshold
+	bal, _ := pv.BalanceOf(nil, rcAddr)
+	threshold, isOk := big.NewInt(0).SetString(wcommon.PRV_THRESHOLD, 10)
+	if !isOk {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
+		return
 	}
 
 	// check proposal existed
@@ -307,7 +307,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		SubmitProposalTx:    "",
 		Status:              wcommon.StatusSubmitting,
 		ProposalID:          req.ProposalID,
-		Proposer:            "",
+		Proposer:            rcAddr.String(),
 		Targets:             strings.Join(req.Targets, ","),
 		Values:              strings.Join(req.Values, ","),
 		Signatures:          strings.Join(req.Signatures, ","),

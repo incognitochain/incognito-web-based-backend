@@ -308,7 +308,6 @@ func retryCreateTxRefund(
 }
 
 // AmountOutRaw is ext decimal of child token
-
 func callEstimateSwapAndValidation(
 	params *EstimateSwapParam,
 	expectedMinAmount uint64,
@@ -1029,9 +1028,14 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 					// update database
 					log.Printf("InterswapID %v Response amount: redepositInfo.TokenID %v, redepositInfo.UTokenID %v, outchainTxResult.Amount %v",
 						interswapTxID, redepositInfo.TokenID, redepositInfo.UTokenID, outchainTxResult.Amount.Uint64())
+					// TODO: remove
+					SendSlackAlert(fmt.Sprintf("InterswapID %v Response amount: redepositInfo.TokenID %v, redepositInfo.UTokenID %v, outchainTxResult.Amount %v",
+						interswapTxID, redepositInfo.TokenID, redepositInfo.UTokenID, outchainTxResult.Amount.Uint64()))
 					tokenTmp, err := getTokenInfo(redepositInfo.TokenID, config)
 					if err != nil {
 						log.Printf("InterswapID %v Calculate the final response amount - Get token info error %v\n", interswapTxID, err)
+						// TODO: remove
+						SendSlackAlert(fmt.Sprintf("InterswapID %v Calculate the final response amount - Get unified token info 1 error %v\n", interswapTxID, err))
 						return fmt.Errorf("InterswapID %v Calculate the final response amount - Get token info error %v\n", interswapTxID, err)
 					}
 					fromDec := tokenTmp.Decimals
@@ -1040,6 +1044,8 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 						tokenTmp, err := getTokenInfo(redepositInfo.UTokenID, config)
 						if err != nil {
 							log.Printf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err)
+							// TODO: remove
+							SendSlackAlert(fmt.Sprintf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err))
 							return fmt.Errorf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err)
 						}
 						toDec = tokenTmp.PDecimals

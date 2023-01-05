@@ -286,6 +286,13 @@ func convertAmtExtDecToAmtPDec(amt *big.Int, tokenID string, config common.Confi
 	return tmp.Uint64(), nil
 }
 
+func convertAmtByDec(amt *big.Int, fromDec, toDec int) uint64 {
+	tmp := new(big.Int).Mul(amt, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(toDec)), nil))
+	tmp = new(big.Int).Div(tmp, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(fromDec)), nil))
+
+	return tmp.Uint64()
+}
+
 func IsUniqueSlices(s []string) bool {
 	m := map[string]bool{}
 	for _, i := range s {

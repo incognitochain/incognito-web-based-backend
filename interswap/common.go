@@ -366,7 +366,7 @@ func ParseUserAgent(userAgent string) string {
 
 func getTokenInfoWithCache(tokenID string, tokenInfoCaches map[string]*beCommon.TokenInfo, config beCommon.Config) (*beCommon.TokenInfo, map[string]*beCommon.TokenInfo, error) {
 	tmp := tokenInfoCaches[tokenID]
-	if tmp.TokenID == "" || tmp.TokenID != tokenID {
+	if tmp == nil || tmp.TokenID == "" || tmp.TokenID != tokenID {
 		tokenInfo, err := getTokenInfo(tokenID, config)
 		if err != nil {
 			return nil, tokenInfoCaches, err

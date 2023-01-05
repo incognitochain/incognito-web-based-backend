@@ -1133,6 +1133,10 @@ func processInterswapRefundingTx(txData beCommon.InterSwapTxData, config beCommo
 	interswapTxID := txData.TxID
 	refundTxID := txData.TxIDRefund
 	shardID := fmt.Sprint(txData.ShardID)
+
+	if IsExist(SkipTxs, interswapTxID) {
+		return nil
+	}
 	fmt.Printf("InterswapID %v Start processing refundTxID %v\n", interswapTxID, refundTxID)
 
 	// check tx by hash

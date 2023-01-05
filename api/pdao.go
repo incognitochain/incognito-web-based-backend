@@ -61,7 +61,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	log.Println("check network ok!")
 
-	if !(len(req.Calldatas) > 0 && len(req.Values) > 0 && len(req.Signatures) > 0) {
+	if !(len(req.Calldatas) > 0 && len(req.Values) > 0 && len(req.Targets) > 0) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop's data"})
 		return
 	}

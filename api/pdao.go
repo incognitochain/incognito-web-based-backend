@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/bridge-eth/common/base58"
@@ -94,21 +93,35 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 
 		// recover address from user's signature
-		gvAbi, _ := abi.JSON(strings.NewReader(governance.GovernanceMetaData.ABI))
-		propEncode, _ := gvAbi.Pack("BuildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
-		signData, _ := gv.GetDataSign(nil, keccak256(propEncode[4:]))
-
-		rcAddr, err := crypto.Ecrecover(signData[:], common.Hex2Bytes(req.CreatePropSignature))
+		gvHelperAbi, err := abi.JSON(strings.NewReader(governance.GovernanceHelperMetaData.ABI))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+			return
+		}
+		propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
+		if err != nil || len(propEncode) < 4 {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop encode abi"})
+			return
+		}
+		signData, err := gv.GetDataSign(nil, keccak256(propEncode[4:]))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+			return
+		}
+		rcPubKey, err := crypto.SigToPub(signData[:], common.Hex2Bytes(req.CreatePropSignature))
 		// todo: compare address recover and address from burning metadata if has
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid signature"})
 			return
 		}
-
+		rcAddr := crypto.PubkeyToAddress(*rcPubKey)
 		// if total burn prv + current prv balance of recover address from signature must pass threshold
-		bal, _ := pv.BalanceOf(nil, common.HexToAddress(hexutil.Encode(rcAddr[12:])))
-		var threshold *big.Int
-		threshold.SetString(wcommon.PRV_THRESHOLD, 10)
+		bal, _ := pv.BalanceOf(nil, rcAddr)
+		threshold, isOk := big.NewInt(0).SetString(wcommon.PRV_THRESHOLD, 10)
+		if !isOk {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
+			return
+		}
 		if bal.Cmp(threshold) < 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": "insufficient balance to create prop"})
 			return

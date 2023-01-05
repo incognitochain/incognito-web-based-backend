@@ -98,6 +98,30 @@ func DBCreateNetworkIndex() error {
 }
 
 func DBCreatePappsIndex() error {
+	pappsModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "network", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.PAppsEndpointData{}).Indexes().CreateMany(context.Background(), pappsModel)
+	if err != nil {
+		return err
+	}
+	pappsKeyModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "app", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err = mgm.Coll(&common.PAppAPIKeyData{}).Indexes().CreateMany(context.Background(), pappsKeyModel)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBCreateInterswapIndex() error {
 	startTime := time.Now()
 	pappsModel := []mongo.IndexModel{
 		{
@@ -145,7 +169,6 @@ func DBCreateIndex() error {
 			Keys:    bsonx.Doc{{Key: "inctx", Value: bsonx.Int32(1)}},
 			Options: options.Index().SetUnique(true),
 		},
-
 		{
 			Keys: bsonx.Doc{{Key: "externaltx", Value: bsonx.Int32(1)}},
 			// Options: options.Index().SetUnique(true),
@@ -231,6 +254,159 @@ func DBCreatePappSupportTokenIndex() error {
 	_, err := mgm.Coll(&common.PappSupportedTokenData{}).Indexes().CreateMany(context.Background(), pappTokenModel)
 	if err != nil {
 		log.Println("failed to index tokens")
+		return err
+	}
+	return nil
+}
+
+func DBCreateOpenSeaIndex() error {
+	startTime := time.Now()
+	collectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.OpenseaCollectionData{}).Indexes().CreateMany(context.Background(), collectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
+	assetModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "uid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetExpireAfterSeconds(7200),
+		},
+	}
+	// _, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().DropAll(context.Background())
+	// if err != nil {
+	// 	log.Printf("failed to index op-asset in %v", time.Since(startTime))
+	// 	return err
+	// }
+	_, err = mgm.Coll(&common.OpenseaAssetData{}).Indexes().CreateMany(context.Background(), assetModel)
+	if err != nil {
+		log.Printf("failed to index op-asset in %v", time.Since(startTime))
+		return err
+	}
+
+	defaultCollectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "verify", Value: bsonx.Int32(1)}, {Key: "address", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err = mgm.Coll(&common.OpenseaDefaultCollectionData{}).Indexes().CreateMany(context.Background(), defaultCollectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}
+
+func DBCreateInterSwapDataIndex() error {
+	startTime := time.Now()
+	interswapModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "txid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "txraw", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "fromamount", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "fromtoken", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "totoken", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "midtoken", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "pathtype", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "final_minacceptedamount", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "slippage", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "ota_refundfee", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "ota_refund", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "ota_fromtoken", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "ota_totoken", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "withdrawaddress", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "addon_txid", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "txidrefund", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "txidresponse", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "amountresponse", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "tokenresponse", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "shardid", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "txidoutchain", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "papp_name", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "papp_network", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "papp_contract", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "statusstr", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "useragent", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "error", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.InterSwapTxData{}).Indexes().CreateMany(context.Background(), interswapModel)
+	if err != nil {
+		log.Printf("failed to index interswap data in %v", time.Since(startTime))
 		return err
 	}
 	return nil

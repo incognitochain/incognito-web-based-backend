@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	"github.com/incognitochain/incognito-web-based-backend/common"
+	"github.com/incognitochain/incognito-web-based-backend/interswap"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -30,6 +32,13 @@ func StartAPIservice(cfg common.Config) {
 			log.Println("err loadOTAKey: ", err)
 		}
 	}
+	log.Println("cfg.ISIncPrivKey", cfg.ISIncPrivKeys)
+	if len(cfg.ISIncPrivKeys) > 0 {
+		err := InitInterswapIncKeySet(cfg.ISIncPrivKeys)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	if network == "mainnet" {
 		err := parseDefaultToken()
@@ -42,6 +51,12 @@ func StartAPIservice(cfg common.Config) {
 		panic(err)
 	}
 	store := persistence.NewInMemoryStore(time.Second)
+
+	// init interswap info
+	err = interswap.InitSupportedMidTokens(network)
+	if err != nil {
+		panic(err)
+	}
 
 	go cacheVaultState()
 	go cacheSupportedPappsTokens()
@@ -82,14 +97,24 @@ func StartAPIservice(cfg common.Config) {
 	pAppsGroup := r.Group("/papps")
 
 	pAppsGroup.POST("/estimateswapfee", APIEstimateSwapFee)
-
 	pAppsGroup.POST("/submitswaptx", APISubmitSwapTx)
-
 	pAppsGroup.POST("/swapstatus", APIGetSwapTxStatus)
-
 	pAppsGroup.GET("/getvaultstate", APIGetVaultState)
-
 	pAppsGroup.GET("/getsupportedtokens", gincache.CachePage(store, 5*time.Second, APIGetSupportedToken))
+
+	// InterSwap
+	pAppsGroup.POST("/submitinterswaptx", APISubmitInterSwapTx)
+	pAppsGroup.POST("/interswapstatus", APIGetInterswapTxStatus)
+
+	pOpenSeaGroup := pAppsGroup.Group("/opensea")
+	pOpenSeaGroup.GET("/estimatebuyfee", APIEstimateBuyFee)
+	pOpenSeaGroup.POST("/submitbuytx", APISubmitBuyTx)
+	pOpenSeaGroup.POST("/buystatus", APIGetSwapTxStatus)
+	//opensea api
+	pOpenSeaGroup.GET("/collections", APIGetCollections)
+	pOpenSeaGroup.GET("/nft-detail", APINFTDetail)
+	pOpenSeaGroup.GET("/collection-assets", APICollectionAssets)
+	pOpenSeaGroup.GET("/collection-detail", APICollectionDetail)
 
 	unshieldGroup := r.Group("/unshield")
 	unshieldGroup.POST("/status", APIGetUnshieldTxStatus)
@@ -136,4 +161,26 @@ func loadOTAKey(key string) error {
 	}
 	incFeeKeySet = wl
 	return nil
+}
+
+func InitInterswapIncKeySet(keys map[string]string) error {
+	if len(keys) != 8 {
+		return errors.New("Invalid Interswap keys config")
+	}
+	interswap.InterswapIncKeySets = make(map[string]*wallet.KeyWallet)
+	for shardID, key := range keys {
+		wl, err := wallet.Base58CheckDeserialize(key)
+		if err != nil {
+			return err
+		}
+		if wl.KeySet.OTAKey.GetOTASecretKey() == nil {
+			return errors.New("Invalid Interswap OTA keys config")
+		}
+
+		interswap.InterswapIncKeySets[shardID] = wl
+		log.Println("InterswapIncKeySet ", interswap.InterswapIncKeySets)
+
+	}
+	return nil
+
 }

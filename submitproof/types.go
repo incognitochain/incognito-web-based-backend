@@ -30,6 +30,7 @@ type SubmitPappTxTask struct {
 	Networks         []string
 	Time             time.Time
 	UserAgent        string
+	TxType           int
 }
 
 type SubmitUnshieldTxTask struct {

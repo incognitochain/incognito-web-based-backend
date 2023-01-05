@@ -50,6 +50,9 @@ type EstimateSwapRequest struct {
 	MinSplit    int
 	FromToken   string // IncTokenID
 	ToToken     string // IncTokenID
+	ShardID     string
+
+	IsFromInterswap bool // dafault false
 }
 
 type EstimateSwapRespond struct {
@@ -385,6 +388,16 @@ type UnshieldNetworkFee struct {
 	PrivacyFee        uint64  `json:"privacyFee"`
 	ProtocolFee       uint64  `json:"protocolFee"`
 	FeeInUSD          float64 `json:"feeInUSD"`
+}
+
+type OpenSeaFee struct {
+	FeeAddress        string `json:"feeAddress"`
+	FeeAddressShardID int    `json:"feeAddressShardID"`
+	TokenID           string `json:"tokenid"`
+	Amount            uint64 `json:"feeAmount"`
+	PrivacyFee        uint64 `json:"privacyFee"`
+	// ProtocolFee       uint64  `json:"protocolFee"`
+	FeeInUSD float64 `json:"feeInUSD"`
 }
 
 type PancakeTokenMapItem struct {

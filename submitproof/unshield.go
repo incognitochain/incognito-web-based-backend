@@ -132,9 +132,6 @@ func processSubmitUnshieldRequest(ctx context.Context, m *pubsub.Message) {
 }
 
 func processSubmitUnshieldExtTask(ctx context.Context, m *pubsub.Message) {
-	//TODO
-
-	log.Println("processSubmitUnshieldExtTask", "sdfksjdfl")
 	task := SubmitProofOutChainTask{}
 	err := json.Unmarshal(m.Data, &task)
 	if err != nil {
@@ -322,7 +319,7 @@ retry:
 			continue
 		}
 
-		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(11))
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(12))
 		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
 
 		auth.GasPrice = gasPrice
@@ -338,6 +335,15 @@ retry:
 		result.Type = wcommon.ExternalTxTypeUnshield
 		result.Network = network
 		result.IncRequestTx = incTxHash
+
+		// address, err := wcommon.GetEVMAddress(config.EVMKey)
+		// if err != nil {
+		// 	log.Println(err)
+		// 	continue
+		// }
+		// account := common.HexToAddress(address)
+		// pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
+		// auth.Nonce = new(big.Int).SetUint64(pendingNonce)
 
 		if isPRV {
 			networkID := wcommon.GetNetworkID(network)
@@ -359,7 +365,6 @@ retry:
 				log.Println(err)
 				continue
 			}
-
 			tx, err := evmproof.SubmitMintPRVProof(c, auth, proof)
 			if err != nil {
 				log.Println(err)

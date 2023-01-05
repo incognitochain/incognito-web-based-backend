@@ -35,12 +35,6 @@ func CreateGovernanceOutChainTx(network string, incTxHash string, payload []byte
 		return nil, err
 	}
 
-	// todo thachtb: update query governance contract address
-	// pappAddress, err := database.DBGetPappVaultData(network, wcommon.ExternalTxTypeSwap)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	papps, err := database.DBRetrievePAppsByNetwork(network)
 	if err != nil {
 		return nil, err
@@ -82,7 +76,7 @@ retry:
 			continue
 		}
 
-		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(11))
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(12))
 		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
 
 		auth.GasPrice = gasPrice
@@ -90,6 +84,15 @@ retry:
 		result.Type = pappType
 		result.Network = network
 		result.IncRequestTx = incTxHash
+
+		// address, err := wcommon.GetEVMAddress(config.EVMKey)
+		// if err != nil {
+		// 	log.Println(err)
+		// 	continue
+		// }
+		// account := common.HexToAddress(address)
+		// pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
+		// auth.Nonce = new(big.Int).SetUint64(pendingNonce)
 
 		tx, err := submitTxOutChain(auth, requestType, payload, gv)
 		if err != nil {

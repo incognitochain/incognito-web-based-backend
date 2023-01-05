@@ -16,12 +16,14 @@ const (
 	MODE_API             = "api"
 	MODE_FEEESTIMATOR    = "feeestimator"
 	MODE_UNSHIELDWATCHER = "unshieldwatcher"
+	MODE_INTERSWAP       = "interswap"
 )
 
 const (
 	EVMGasLimit        = 1500000
 	EVMGasLimitETH     = 800000
 	EVMGasLimitPancake = 600000
+	EVMGasLimitOpensea = 600000
 	MinEVMTxs          = uint64(10)
 	PRV_TOKENID        = "0000000000000000000000000000000000000000000000000000000000000004"
 )
@@ -31,15 +33,17 @@ const (
 )
 
 const (
-	StatusSubmitting   = "submitting"
-	StatusSubmitFailed = "submit_failed"
+	StatusSubmitting   = "submitting"    // broadcast inc chain
+	StatusSubmitFailed = "submit_failed" //
 	StatusPending      = "pending"
 	StatusExecuting    = "executing"
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
-	StatusSuccess      = "success"
-	StatusFailed       = "failed"
+
+	// for ui
+	StatusSuccess = "success"
+	StatusFailed  = "failed"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"
@@ -56,6 +60,7 @@ const (
 
 const (
 	NETWORK_INC    = "inc"
+	NETWORK_PDEX   = "pdex" // for Interswap
 	NETWORK_ETH    = "eth"
 	NETWORK_BSC    = "bsc"
 	NETWORK_PLG    = "plg"
@@ -133,6 +138,23 @@ const (
 	AURORA_ERC20 //31
 )
 
+var OnlyPDexTokenCurrency = []int{
+	BTC,
+	BNB,
+	BNB_BEP2,
+	TOMO,
+	ZIL,
+	XMR,
+	NEO,
+	DASH,
+	LTC,
+	DOGE,
+	ZEC,
+	DOT,
+	NEAR,
+	NEAR_TOKEN,
+}
+
 var (
 	NetworkCurrencyMap = map[int]int{
 		Unknown:       NETWORK_INC_ID,
@@ -182,6 +204,7 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
+	ExternalTxTypeOpensea         = 96
 	ExternalTxTypePdaoProposal    = 69
 	ExternalTxTypePdaoVote        = 70
 	ExternalTxTypePdaoCancel      = 71
@@ -324,7 +347,7 @@ const (
 	ETH_UT_TOKEN_MAINNET = "3ee31eba6376fc16cadb52c8765f20b6ebff92c0b1c5ab5fc78c8c25703bb19e"
 	ETH_UT_TOKEN_TESTNET = "b366fa400c36e6bbcf24ac3e99c90406ddc64346ab0b7ba21e159b83d938812d"
 
-	GOVERNANCE_CONTRACT_ADDRESS = "0x01f6549BeF494C8b0B00C2790577AcC1A3Fa0Bd0"
-	PRV_VOTE                    = "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"
-	PRV_THRESHOLD               = "10000000000"
+	// GOVERNANCE_CONTRACT_ADDRESS = "0x01f6549BeF494C8b0B00C2790577AcC1A3Fa0Bd0"
+	// PRV_VOTE                    = "0x4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae"
+	PRV_THRESHOLD = "10000000000"
 )

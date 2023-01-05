@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -54,6 +55,8 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go forwardCollectedFee()
 	go watchVaultState()
 	go trackDexSwap()
+	go updateOpenSeaCollectionAssets()
+	go updateOpenSeaCollectionDetail()
 
 	go watchPendingProposal()
 	go watchPendingVoting()
@@ -153,6 +156,16 @@ func forwardCollectedFee() {
 		if err != nil {
 			log.Println("getPendingPappsFee", err)
 			continue
+		}
+
+		pendingTokenUnshield, err := getPendingUnshieldsFee(-1)
+		if err != nil {
+			log.Println("getPendingUnshieldsFee", err)
+			continue
+		}
+
+		for token, amount := range pendingTokenUnshield {
+			pendingToken[token] += amount
 		}
 
 		coins, _, err := incClient.GetAllUTXOsV2(config.IncKey)
@@ -434,12 +447,23 @@ func watchPendingPappTx() {
 	for {
 		txList, err := database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeSwap, 0, 0)
 		if err != nil {
-			log.Println("DBRetrievePendingPappTxs err:", err)
+			log.Println("DBRetrievePendingPappTxs Swap err:", err)
 		}
 		for _, txdata := range txList {
 			err := processPendingSwapTx(txdata)
 			if err != nil {
-				log.Println("processPendingShieldTxs err:", txdata.IncTx)
+				log.Println("processPendingShieldTxs Swap err:", txdata.IncTx)
+			}
+		}
+
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpensea, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingOpenseaTx(txdata)
+			if err != nil {
+				log.Println("processPendingOpenseaTx OpenSea err:", txdata.IncTx)
 			}
 		}
 
@@ -528,7 +552,6 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				return err
 			}
 		case 2:
-			//TODO: @phuong update mint tx with txdata.IncTx success
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusAccepted, "")
 			if err != nil {
 				log.Println("DBUpdateShieldTxStatus err:", err)
@@ -538,7 +561,6 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have accepted 👌, exttx `%v`, inctx `%v`\n", txdata.ExternalTx, txdata.IncTx))
 			return nil
 		case 3:
-			//TODO: @phuong update mint tx with txdata.IncTx failed
 			err = database.DBUpdateShieldTxStatus(txdata.ExternalTx, txdata.NetworkID, wcommon.StatusRejected, "rejected by chain")
 			if err != nil {
 				log.Println("DBUpdateShieldTxStatus err:", err)
@@ -560,10 +582,56 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 		if err != nil {
 			return err
 		}
-		txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
+
+		address, err := wcommon.GetEVMAddress(config.EVMKey)
 		if err != nil {
 			return err
 		}
+		account := common.HexToAddress(address)
+		pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
+
+		if pendingNonce <= tx.Nonce {
+			return nil
+		}
+
+		txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
+		if err != nil {
+			if err == ethereum.NotFound {
+				switch tx.Type {
+				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpensea:
+					err = database.DBUpdatePappTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")
+					if err != nil {
+						return err
+					}
+				case wcommon.ExternalTxTypeUnshield:
+					err = database.DBUpdateUnshieldTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")
+					if err != nil {
+						return err
+					}
+				case wcommon.ExternalTxTypePdaoProposal:
+					inctx := strings.Split(tx.IncRequestTx, "_")
+					err = database.DBUpdatePdaoProposalStatus(inctx[0], wcommon.StatusSubmitting)
+					if err != nil {
+						return err
+					}
+				case wcommon.ExternalTxTypePdaoReShieldPRV:
+					// inctx := strings.Split(tx.IncRequestTx, "_")
+				case wcommon.ExternalTxTypePdaoVote:
+					// inctx := strings.Split(tx.IncRequestTx, "_")
+				case wcommon.ExternalTxTypePdaoCancel:
+					// inctx := strings.Split(tx.IncRequestTx, "_")
+				}
+
+				err = database.DBDeleteExternalTxStatus(tx.Txhash)
+				if err != nil {
+					return err
+				}
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[externaltx]` retry outchain for tx %v type %v, tx nonce %v, account nonce %v", tx.IncRequestTx, tx.Type, tx.Nonce, pendingNonce))
+				return nil
+			}
+			return err
+		}
+
 		var logResult string
 		if currentEVMHeight >= txReceipt.BlockNumber.Uint64()+finalizeRange {
 			valueBuf := encodeBufferPool.Get().(*bytes.Buffer)
@@ -1036,7 +1104,6 @@ func getPendingPappsFee(shardID int) (map[string]uint64, error) {
 }
 
 func getPendingUnshieldsFee(shardID int) (map[string]uint64, error) {
-	//TODO
 	result := make(map[string]uint64)
 	var txList []wcommon.UnshieldTxData
 	var err error

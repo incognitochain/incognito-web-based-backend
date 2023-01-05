@@ -90,17 +90,19 @@ type PappTxData struct {
 	PFeeAmount       uint64   `json:"pfeeamount" bson:"pfeeamount"`
 	BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
 	BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
-	PappSwapInfo     string   `json:"pappswapinfo" bson:"pappswapinfo"`
-	Status           string   `json:"status" bson:"status"`
-	IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
-	RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
-	RefundPrivacyFee bool     `json:"refundpfee" bson:"refundpfee"`
-	FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
-	FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
-	ShardID          int      `json:"shardid" bson:"shardid"`
-	OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
-	UserAgent        string   `json:"useragent" bson:"useragent"`
-	Error            string   `json:"error" bson:"error"`
+	// decode call data => bytes => encode to string
+	PappSwapInfo string `json:"pappswapinfo" bson:"pappswapinfo"`
+	//
+	Status           string `json:"status" bson:"status"`
+	IsUnifiedToken   bool   `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	RefundSubmitted  bool   `json:"refundsubmitted" bson:"refundsubmitted"`
+	RefundPrivacyFee bool   `json:"refundpfee" bson:"refundpfee"`
+	FeeRefundOTA     string `json:"fee_refundota" bson:"fee_refundota"`
+	FeeRefundAddress string `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	ShardID          int    `json:"shardid" bson:"shardid"`
+	OutchainStatus   string `json:"outchain_status" bson:"outchain_status"`
+	UserAgent        string `json:"useragent" bson:"useragent"`
+	Error            string `json:"error" bson:"error"`
 }
 
 type PappVaultData struct {
@@ -147,4 +149,73 @@ type DexSwapTrackData struct {
 	AmountIn         string `json:"amount_in" bson:"amount_in"`
 	MinAmountOut     string `json:"amount_out" bson:"amount_out"`
 	UserAgent        string `json:"useragent" bson:"useragent"`
+}
+
+type PAppAPIKeyData struct {
+	mgm.DefaultModel `bson:",inline"`
+	App              string `json:"app" bson:"app"`
+	Key              string `json:"key" bson:"key"`
+}
+
+
+// DATA MODELS FOR INTERSWAP
+type InterSwapTxData struct {
+	mgm.DefaultModel `bson:",inline"`
+	// txID of the first tx, index for one interswap request
+	TxID                string `json:"txid" bson:"txid"`
+	TxRaw               string `json:"txraw" bson:"txraw"`
+	FromAmount          uint64 `json:"fromamount" bson:"fromamount"`
+	FromToken           string `json:"fromtoken" bson:"fromtoken"`
+	ToToken             string `json:"totoken" bson:"totoken"`
+	MidToken            string `json:"midtoken" bson:"midtoken"`
+	PathType            int    `json:"pathtype" bson:"pathtype"`
+	FinalMinExpectedAmt uint64 `json:"final_minacceptedamount" bson:"final_minacceptedamount"`
+	Slippage            string `json:"slippage" bson:"slippage"`
+
+	OTARefundFee    string `json:"ota_refundfee" bson:"ota_refundfee"`
+	OTARefund       string `json:"ota_refund" bson:"ota_refund"`
+	OTAFromToken    string `json:"ota_fromtoken" bson:"ota_fromtoken"`
+	OTAToToken      string `json:"ota_totoken" bson:"ota_totoken"`
+	WithdrawAddress string `json:"withdrawaddress" bson:"withdrawaddress"`
+
+	AddOnTxID    string `json:"addon_txid" bson:"addon_txid"`
+	PAppName     string `json:"papp_name" bson:"papp_name"`
+	PAppNetwork  string `json:"papp_network" bson:"papp_network"`
+	PAppContract string `json:"papp_contract" bson:"papp_contract"`
+
+	// for Interswap service refund
+	TxIDRefund string `json:"txidrefund" bson:"txidrefund"`
+	// for chain response (sucess / refund)
+	TxIDResponse   string `json:"txidresponse" bson:"txidresponse"`
+	AmountResponse uint64 `json:"amountresponse" bson:"amountresponse"`
+	TokenResponse  string `json:"tokenresponse" bson:"tokenresponse"`
+	ShardID        byte   `json:"shardid" bson:"shardid"`
+
+	TxIDOutchain string `json:"txidoutchain" bson:"txidoutchain"`
+
+	Status    int    `json:"status" bson:"status"`
+	StatusStr string `json:"statusstr" bson:"statusstr"`
+	UserAgent string `json:"useragent" bson:"useragent"`
+	Error     string `json:"error" bson:"error"`
+
+	// IncTx            string   `json:"inctx" bson:"inctx"`
+	// Networks         []string `json:"networks" bson:"networks"`
+	// Type             int      `json:"type" bson:"type"`
+	// IncTxData        string   `json:"inctxdata" bson:"inctxdata"`
+	// FeeToken         string   `json:"feetoken" bson:"feetoken"`
+	// FeeAmount        uint64   `json:"feeamount" bson:"feeamount"`
+	// PFeeAmount       uint64   `json:"pfeeamount" bson:"pfeeamount"`
+	// BurntAmount      uint64   `json:"burntamount" bson:"burntamount"`
+	// BurntToken       string   `json:"burnttoken" bson:"burnttoken"`
+	// PappSwapInfo     string   `json:"pappswapinfo" bson:"pappswapinfo"`
+	// Status           string   `json:"status" bson:"status"`
+	// IsUnifiedToken   bool     `json:"isunifiedtoken" bson:"isunifiedtoken"`
+	// RefundSubmitted  bool     `json:"refundsubmitted" bson:"refundsubmitted"`
+	// RefundPrivacyFee bool     `json:"refundpfee" bson:"refundpfee"`
+	// FeeRefundOTA     string   `json:"fee_refundota" bson:"fee_refundota"`
+	// FeeRefundAddress string   `json:"fee_refundaddress" bson:"fee_refundaddress"`
+	// ShardID          int      `json:"shardid" bson:"shardid"`
+	// OutchainStatus   string   `json:"outchain_status" bson:"outchain_status"`
+	// UserAgent        string   `json:"useragent" bson:"useragent"`
+	// Error            string   `json:"error" bson:"error"`
 }

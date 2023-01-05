@@ -610,7 +610,7 @@ func estimatePDaoFee(feeType int) (*PDaoNetworkFeeResp, error) {
 	privacyFee := uint64(float64(feeAmountEth) * ethTokenInfo.PricePrv)
 	fmt.Println("PRV Fee =================> ", privacyFee)
 
-	feeToken := wcommon.PRV_TOKEN
+	feeToken := wcommon.PRV_TOKENID
 	feeAmount := privacyFee
 
 	return &PDaoNetworkFeeResp{

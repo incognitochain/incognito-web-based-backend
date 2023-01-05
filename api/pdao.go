@@ -115,13 +115,38 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		return
 	}
 
+	// convert Targets address to hex address:
+	var targetsArr []common.Address
+	for _, address := range req.Targets {
+		//convert
+		targetsArr = append(targetsArr, common.HexToAddress(address))
+	}
+
+	var valuesArr []*big.Int
+	for _, value := range req.Values {
+		//convert
+		valueBigInt := big.NewInt(0)
+		valueBigInt, ok := valueBigInt.SetString(value, 10)
+
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not convert values to bigInt")})
+			return
+		}
+		valuesArr = append(valuesArr, valueBigInt)
+	}
+
+	var calldataArr [][]byte
+	for _, calldata := range req.Calldatas {
+		calldataArr = append(calldataArr, []byte(calldata))
+	}
+
 	// recover address from user's signature
 	gvHelperAbi, err := abi.JSON(strings.NewReader(governance.GovernanceHelperMetaData.ABI))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), req.Targets, req.Values, req.Calldatas, req.Title)
+	propEncode, err := gvHelperAbi.Pack("_buildSignProposalEncodeAbi", keccak256([]byte("proposal")), targetsArr, valuesArr, calldataArr, req.Title)
 	if err != nil || len(propEncode) < 4 {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prop encode abi"})
 		return
@@ -148,31 +173,6 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 	if !isOk {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "invalid prv thresh hold value"})
 		return
-	}
-
-	// convert Targets address to hex address:
-	var targetsArr []common.Address
-	for _, address := range req.Targets {
-		//convert
-		targetsArr = append(targetsArr, common.HexToAddress(address))
-	}
-
-	var valuesArr []*big.Int
-	for _, value := range req.Values {
-		//convert
-		valueBigInt := big.NewInt(0)
-		valueBigInt, ok := valueBigInt.SetString(value, 10)
-
-		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("can not convert values to bigInt")})
-			return
-		}
-		valuesArr = append(valuesArr, valueBigInt)
-	}
-
-	var calldataArr [][]byte
-	for _, calldata := range req.Calldatas {
-		calldataArr = append(calldataArr, []byte(calldata))
 	}
 
 	// check proposal existed
@@ -311,7 +311,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		SubmitProposalTx:    "",
 		Status:              wcommon.StatusSubmitting,
 		ProposalID:          req.ProposalID,
-		Proposer:            "",
+		Proposer:            rcAddr.String(),
 		Targets:             strings.Join(req.Targets, ","),
 		Values:              strings.Join(req.Values, ","),
 		Signatures:          strings.Join(req.Signatures, ","),

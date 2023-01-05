@@ -220,6 +220,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 		}
 	}
 	fmt.Println("Finish estimate interswap")
+	interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate interswap result %+v\n", len(result.Networks)))
 
 	tkFromInfo, err := getTokenInfo(req.FromToken)
 	if err != nil {
@@ -264,6 +265,8 @@ func APIEstimateSwapFee(c *gin.Context) {
 			pdexEstimate = append(pdexEstimate, *pdexresult)
 		}
 	}
+
+	interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate pdex result %+v\n", len(pdexEstimate)))
 
 	var resultLock sync.Mutex
 	var wg sync.WaitGroup
@@ -327,6 +330,9 @@ func APIEstimateSwapFee(c *gin.Context) {
 				}
 			}
 		}
+
+		interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate supportedNetworks %+v\n", supportedNetworks))
+
 	} else {
 		tkFromNetworkID, _ := getNetworkIDFromCurrencyType(tkFromInfo.CurrencyType)
 		if tkFromNetworkID > 0 {
@@ -356,6 +362,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 				}
 			}
 		}
+		interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate supportedNetworks %+v\n", supportedNetworks))
 	}
 	if len(supportedNetworks) == 0 {
 		for net, v := range networkErr {
@@ -364,6 +371,8 @@ func APIEstimateSwapFee(c *gin.Context) {
 		if req.Network == "inc" && len(pdexEstimate) != 0 {
 			result.Networks["inc"] = pdexEstimate
 		}
+		interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate supportedNetworks = 0 %+v\n", len(result.Networks)))
+
 		if len(result.Networks) > 0 {
 			response.Result = result
 			c.JSON(200, response)
@@ -413,6 +422,8 @@ func APIEstimateSwapFee(c *gin.Context) {
 	}
 	wg.Wait()
 
+	interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate 2 \n"))
+
 	for net, v := range networkErr {
 		result.NetworksError[net] = v
 	}
@@ -423,6 +434,7 @@ func APIEstimateSwapFee(c *gin.Context) {
 	if len(result.Networks) == 0 && len(pdexEstimate) == 0 {
 		response.Error = NotTradeable.Error()
 	}
+	interswap.SendSlackAlert(fmt.Sprintf("[debug] Finish estimate 3\n"))
 
 	response.Result = result
 

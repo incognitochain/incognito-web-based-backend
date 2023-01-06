@@ -191,10 +191,6 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		}
 	}
 
-	if true {
-		c.JSON(200, gin.H{"Result": "xxx"})
-	}
-
 	// check valid info:
 	var feeAmount uint64
 	var pfeeAmount uint64 // 0.3% no care

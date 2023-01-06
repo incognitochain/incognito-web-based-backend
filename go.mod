@@ -7,7 +7,7 @@ require (
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221221035741-c16407cf7bfc
+	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221230121213-27eae06a17ed
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 
@@ -19,6 +19,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/incognitochain/bridge-eth v0.0.0-20220923060843-965bd65e8622
 	github.com/kamva/mgm/v3 v3.1.0
+	github.com/mileusna/useragent v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
 	go.mongodb.org/mongo-driver v1.9.0
@@ -69,7 +70,6 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/memcachier/mc/v3 v3.0.3 // indirect
-	github.com/mileusna/useragent v1.2.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
@@ -110,3 +110,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// replace github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221229031737-3f952692d247 => /Users/autonomous/go/src/github.com/incognitochain/go-incognito-sdk-v2

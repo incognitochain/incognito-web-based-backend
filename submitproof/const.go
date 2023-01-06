@@ -17,6 +17,8 @@ const (
 	SHIELD_TX_TOPIC   = "shieldtx_topic"
 	UNSHIELD_TX_TOPIC = "unshieldtx_topic"
 	PAPP_TX_TOPIC     = "papptx_topic"
+
+	INTERSWAP_TX_TOPIC = "interswaptx_topic"
 )
 
 const (

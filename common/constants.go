@@ -16,6 +16,7 @@ const (
 	MODE_API             = "api"
 	MODE_FEEESTIMATOR    = "feeestimator"
 	MODE_UNSHIELDWATCHER = "unshieldwatcher"
+	MODE_INTERSWAP       = "interswap"
 )
 
 const (
@@ -32,15 +33,17 @@ const (
 )
 
 const (
-	StatusSubmitting   = "submitting"
-	StatusSubmitFailed = "submit_failed"
+	StatusSubmitting   = "submitting"    // broadcast inc chain
+	StatusSubmitFailed = "submit_failed" //
 	StatusPending      = "pending"
 	StatusExecuting    = "executing"
 	StatusRejected     = "rejected"
 	StatusAccepted     = "accepted"
 	StatusWaiting      = "waiting"
-	StatusSuccess      = "success"
-	StatusFailed       = "failed"
+
+	// for ui
+	StatusSuccess = "success"
+	StatusFailed  = "failed"
 	// StatusSubmittingOutchain    = "outchain_submitting"
 	// StatusPendingOutchain       = "outchain_pending"
 	// StatusSubmitOutchainFailed  = "outchain_submit_failed"
@@ -49,6 +52,7 @@ const (
 
 const (
 	NETWORK_INC    = "inc"
+	NETWORK_PDEX   = "pdex" // for Interswap
 	NETWORK_ETH    = "eth"
 	NETWORK_BSC    = "bsc"
 	NETWORK_PLG    = "plg"
@@ -125,6 +129,23 @@ const (
 	AURORA_ETH   //30
 	AURORA_ERC20 //31
 )
+
+var OnlyPDexTokenCurrency = []int{
+	BTC,
+	BNB,
+	BNB_BEP2,
+	TOMO,
+	ZIL,
+	XMR,
+	NEO,
+	DASH,
+	LTC,
+	DOGE,
+	ZEC,
+	DOT,
+	NEAR,
+	NEAR_TOKEN,
+}
 
 var (
 	NetworkCurrencyMap = map[int]int{

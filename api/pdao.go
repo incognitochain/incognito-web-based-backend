@@ -137,7 +137,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	var calldataArr [][]byte
 	for _, calldata := range req.Calldatas {
-		calldataArr = append(calldataArr, []byte(calldata))
+		calldataArr = append(calldataArr, common.Hex2Bytes(calldata))
 	}
 
 	// recover address from user's signature
@@ -177,13 +177,22 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	// check proposal existed
 	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Title)))
-	log.Println("propId:::::::: ", propId)
+
+	// log.Println("propId:::::::: ", propId)
+	// log.Println("ReqPropId:::::::: ", req.ProposalID)
+	// log.Println("targetsArr, valuesArr, calldataArr, req.Title", targetsArr, valuesArr, calldataArr, req.Title)
+
 	prop, err := gv.Proposals(nil, propId)
+
 	if err == nil {
 		if prop.StartBlock.Uint64() != 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
 			return
 		}
+	}
+
+	if true {
+		c.JSON(200, gin.H{"Result": "xxx"})
 	}
 
 	// check valid info:

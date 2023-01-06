@@ -114,14 +114,21 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	log.Printf("Estimate path type: %v\n", estPathType)
 	estParamNetwork1 := IncNetworkStr
 	estParamNetwork2 := params.Network
+	var expectedPath1 int
+	var expectedPath2 int
+
 	switch estPathType {
 	case PdexToPApp:
 		{
 			estParamNetwork1 = common.NETWORK_PDEX
+			expectedPath1 = pDEXType
+			expectedPath2 = pAppType
 		}
 	case PAppToPdex:
 		{
 			estParamNetwork2 = common.NETWORK_PDEX
+			expectedPath1 = pAppType
+			expectedPath2 = pDEXType
 		}
 	case -1:
 		{
@@ -130,6 +137,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	}
 	log.Printf("HHH Time2: %v", time.Since(time1).Seconds())
 
+	// available trade paths for Interswap
 	paths := []InterSwapPath{}
 	for _, midToken := range SupportedMidTokens {
 		// estimate fromToken => midToken
@@ -153,7 +161,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 
 		log.Printf("HHH Time3: %v", time.Since(time1).Seconds())
 
-		bestPath1 := GetBestRoute(est1.Networks)
+		bestPath1 := GetBestRoute(est1.Networks, expectedPath1)
 		bytes, _ = json.Marshal(bestPath1)
 		fmt.Printf("bestPath1: %+v\n", string(bytes))
 		log.Printf("HHH Time4: %v", time.Since(time1).Seconds())
@@ -176,6 +184,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			p2Bytes, _ := json.Marshal(p2)
 			fmt.Printf("Param 2: %s\n", string(p2Bytes))
 
+			// Estimate for addon swap tx
 			est2, err := CallEstimateSwap(p2, config, "")
 			if err != nil {
 				continue
@@ -185,52 +194,41 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 			bytes, _ := json.Marshal(est2)
 			fmt.Printf("Est 2: %+v\n", bytes)
 
-			bestPath2 := GetBestRoute(est2.Networks)
+			bestPath2 := GetBestRoute(est2.Networks, expectedPath2)
 			bytes, _ = json.Marshal(bestPath2)
 			fmt.Printf("bestPath2: %+v\n", bytes)
 			log.Printf("HHH Time6: %v", time.Since(time1).Seconds())
 
+			swapInfo2 := new(QuoteData)
 			switch network1 {
 			case IncNetworkStr:
 				{
-					swapInfo2 := bestPath2[PAppStr]
-					if swapInfo2 == nil {
-						continue
-					}
-					if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
-						continue
-					}
-
-					path := InterSwapPath{
-						Paths:     []*QuoteData{swapInfo1, swapInfo2},
-						MidToken:  midToken,
-						FromToken: params.FromToken,
-						ToToken:   params.ToToken,
-					}
-					paths = append(paths, path)
+					swapInfo2 = bestPath2[PAppStr]
 				}
 			default:
 				{
 					if params.Network != IncNetworkStr {
 						continue
 					}
-					swapInfo2 := bestPath2[IncNetworkStr]
-					if swapInfo2 == nil {
-						continue
-					}
-					if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
-						continue
-					}
-
-					path := InterSwapPath{
-						Paths:     []*QuoteData{swapInfo1, swapInfo2},
-						MidToken:  midToken,
-						FromToken: params.FromToken,
-						ToToken:   params.ToToken,
-					}
-					paths = append(paths, path)
+					swapInfo2 = bestPath2[IncNetworkStr]
 				}
 			}
+
+			if swapInfo2 == nil {
+				continue
+			}
+			// the addon swap must pay fee in midToken
+			if len(swapInfo2.Fee) == 0 || swapInfo2.Fee[0].TokenID != midToken {
+				continue
+			}
+
+			path := InterSwapPath{
+				Paths:     []*QuoteData{swapInfo1, swapInfo2},
+				MidToken:  midToken,
+				FromToken: params.FromToken,
+				ToToken:   params.ToToken,
+			}
+			paths = append(paths, path)
 			log.Printf("HHH Time7: %v", time.Since(time1).Seconds())
 		}
 	}
@@ -248,7 +246,7 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 
 		totalFee, tokenInfos, err = calTotalFee(path, config, tokenInfos)
 		if err != nil {
-			fmt.Printf("Error cal fee: %v\n", err)
+			log.Printf("Error calculate total fee: %v\n", err)
 			continue
 		}
 		path.TotalFee = *totalFee
@@ -272,21 +270,15 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	feeAddon := bestPath.Paths[1].Fee[0]
 	feeAmountInBuyToken := feeAddon.AmountInBuyToken
 	if feeAmountInBuyToken == "" {
-
 		feeAddonTokenInfo, tokenInfos, err := getTokenInfoWithCache(feeAddon.TokenID, tokenInfos, config)
 		if err != nil {
 			return nil, err
 		}
-		// tmp, err := convertAmountUint64(feeAddon.Amount, feeAddon.TokenID, bestPath.ToToken, config)
 		tmp, err := convertAmountFromToTokenInfo(feeAddon.Amount, *feeAddonTokenInfo, *tokenInfos[bestPath.ToToken])
 		if err != nil {
 			return nil, err
 		}
-		// feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
-		feeAmountInBuyTokenFloat64, err := ConvertAmountToWithoutDec(tmp, uint64(tokenInfos[bestPath.ToToken].PDecimals))
-		if err != nil {
-			return nil, err
-		}
+		feeAmountInBuyTokenFloat64 := divDec(tmp, uint64(tokenInfos[bestPath.ToToken].PDecimals))
 		feeAmountInBuyToken = float64ToStr(feeAmountInBuyTokenFloat64)
 
 	}
@@ -299,7 +291,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	if err != nil {
 		return nil, err
 	}
-	// amountOutRaw, err := convertToDecAmtStr(amountOut, bestPath.ToToken, config)
 	amountOutFloat64, err := strToFloat64(amountOut)
 	if err != nil {
 		return nil, err
@@ -332,23 +323,16 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	log.Printf("HHH Time9: %v", time.Since(time1).Seconds())
 
 	// convert AmountInBuyToken
-	// feeFloat64 := bestPath.Paths[0].Amou
-	// tmp := convertAmountFromToTokenInfo()
 	feeRes := bestPath.Paths[0].Fee[0]
 	feeResTokenInfo, tokenInfos, err := getTokenInfoWithCache(feeRes.TokenID, tokenInfos, config)
 	if err != nil {
 		return nil, err
 	}
-	// tmp, err := convertAmountUint64(feeAddon.Amount, feeAddon.TokenID, bestPath.ToToken, config)
 	tmp2, err := convertAmountFromToTokenInfo(feeRes.Amount, *feeResTokenInfo, *tokenInfos[bestPath.ToToken])
 	if err != nil {
 		return nil, err
 	}
-	// feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
-	feeAmountInBuyTokenFloat64, err := ConvertAmountToWithoutDec(tmp2, uint64(tokenInfos[bestPath.ToToken].PDecimals))
-	if err != nil {
-		return nil, err
-	}
+	feeAmountInBuyTokenFloat64 := divDec(tmp2, uint64(tokenInfos[bestPath.ToToken].PDecimals))
 	feeAmountInBuyTokenRes := float64ToStr(feeAmountInBuyTokenFloat64)
 
 	bestPath.Paths[0].Fee[0].AmountInBuyToken = feeAmountInBuyTokenRes

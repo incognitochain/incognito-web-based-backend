@@ -596,6 +596,10 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 
 		txReceipt, err := evmClient.TransactionReceipt(context.Background(), txHash)
 		if err != nil {
+			_, isPending, err := evmClient.TransactionByHash(context.Background(), txHash)
+			if isPending {
+				continue
+			}
 			if err == ethereum.NotFound {
 				switch tx.Type {
 				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpensea:

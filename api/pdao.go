@@ -177,6 +177,7 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	// check proposal existed
 	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Title)))
+	log.Println("propId:::::::: ", propId)
 	prop, err := gv.Proposals(nil, propId)
 	if err == nil {
 		if prop.StartBlock.Uint64() != 0 {

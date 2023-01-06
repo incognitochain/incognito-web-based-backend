@@ -1,5 +1,8 @@
 package interswap
 
+const MainnetStr = "mainnet"
+const TestnetStr = "testnet"
+
 const IncNetworkStr = "inc"
 const PAppStr = "papp"
 const InterSwapStr = "interswap"

@@ -41,6 +41,9 @@ type AddOnSwapInfo struct {
 }
 
 func IsOnlySwappablePDexToken(tokenInfo common.TokenInfo) bool {
+	if tokenInfo.TokenID == common.PRV_TOKENID {
+		return true
+	}
 	for _, currencyType := range common.OnlyPDexTokenCurrency {
 		if tokenInfo.CurrencyType == currencyType {
 			return true
@@ -50,34 +53,35 @@ func IsOnlySwappablePDexToken(tokenInfo common.TokenInfo) bool {
 	return false
 }
 
-func heuristicPathType(params *EstimateSwapParam, config common.Config, tokenInfos map[string]*beCommon.TokenInfo) (bool, int, map[string]*beCommon.TokenInfo) {
-	// tokenInfos, err := getTokensInfo([]string{params.FromToken, params.ToToken}, config)
-	// if err != nil || len(tokenInfos) != 2 {
-	// 	return false, -1
-	// }
-	// fromTokenInfo := tokenInfos[0]
-	// toTokenInfo := tokenInfos[1]
-
+func heuristicPathType(params *EstimateSwapParam, config common.Config, tokenInfos map[string]*beCommon.TokenInfo) (int, map[string]*beCommon.TokenInfo) {
 	fromTokenInfo, tokenInfos, err := getTokenInfoWithCache(params.FromToken, tokenInfos, config)
 	toTokenInfo, tokenInfos, err2 := getTokenInfoWithCache(params.ToToken, tokenInfos, config)
 	if err != nil || err2 != nil {
-		return false, -1, tokenInfos
+		return -1, tokenInfos
+	}
+
+	// both fromToken & toToken can only trade on pDEX => can't estimate with Interswap
+	if IsOnlySwappablePDexToken(*toTokenInfo) && IsOnlySwappablePDexToken(*fromTokenInfo) {
+		return -1, tokenInfos
 	}
 
 	if params.Network != IncNetworkStr {
-		return true, PdexToPApp, tokenInfos
+		if IsOnlySwappablePDexToken(*toTokenInfo) {
+			return -1, tokenInfos
+		}
+		return PdexToPApp, tokenInfos
 	}
 
 	// fromToken: PRV, centralized token,
-	if fromTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(*fromTokenInfo) {
-		return true, PdexToPApp, tokenInfos
+	if IsOnlySwappablePDexToken(*fromTokenInfo) {
+		return PdexToPApp, tokenInfos
 	}
 
-	if toTokenInfo.TokenID == common.PRV_TOKENID || IsOnlySwappablePDexToken(*toTokenInfo) {
-		return true, PAppToPdex, tokenInfos
+	if IsOnlySwappablePDexToken(*toTokenInfo) {
+		return PAppToPdex, tokenInfos
 	}
 
-	return true, PdexToPApp, tokenInfos
+	return PdexToPApp, tokenInfos
 }
 
 // InterSwap estimate swap
@@ -87,7 +91,6 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	time1 := time.Now()
 	// * don't estimate inter swap if:
 	//    there is one of tokens is mid tokens
-	//    network is different to "inc"
 	if IsMidTokens(params.FromToken) || IsMidTokens(params.ToToken) {
 		return nil, nil
 	}
@@ -106,12 +109,8 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	}
 	log.Printf("HHH Time1: %v", time.Since(time1).Seconds())
 
-	// if params.Network != IncNetworkStr {
-	// 	return nil, nil
-	// }
-
 	// optimize
-	_, estPathType, tokenInfos := heuristicPathType(params, config, tokenInfos)
+	estPathType, tokenInfos := heuristicPathType(params, config, tokenInfos)
 	log.Printf("Estimate path type: %v\n", estPathType)
 	estParamNetwork1 := IncNetworkStr
 	estParamNetwork2 := params.Network
@@ -123,6 +122,10 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 	case PAppToPdex:
 		{
 			estParamNetwork2 = common.NETWORK_PDEX
+		}
+	case -1:
+		{
+			return nil, nil
 		}
 	}
 	log.Printf("HHH Time2: %v", time.Since(time1).Seconds())
@@ -328,6 +331,28 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 
 	log.Printf("HHH Time9: %v", time.Since(time1).Seconds())
 
+	// convert AmountInBuyToken
+	// feeFloat64 := bestPath.Paths[0].Amou
+	// tmp := convertAmountFromToTokenInfo()
+	feeRes := bestPath.Paths[0].Fee[0]
+	feeResTokenInfo, tokenInfos, err := getTokenInfoWithCache(feeRes.TokenID, tokenInfos, config)
+	if err != nil {
+		return nil, err
+	}
+	// tmp, err := convertAmountUint64(feeAddon.Amount, feeAddon.TokenID, bestPath.ToToken, config)
+	tmp2, err := convertAmountFromToTokenInfo(feeRes.Amount, *feeResTokenInfo, *tokenInfos[bestPath.ToToken])
+	if err != nil {
+		return nil, err
+	}
+	// feeAmountInBuyToken, err = ConvertUint64ToWithoutDecStr(tmp, bestPath.ToToken, config)
+	feeAmountInBuyTokenFloat64, err := ConvertAmountToWithoutDec(tmp2, uint64(tokenInfos[bestPath.ToToken].PDecimals))
+	if err != nil {
+		return nil, err
+	}
+	feeAmountInBuyTokenRes := float64ToStr(feeAmountInBuyTokenFloat64)
+
+	bestPath.Paths[0].Fee[0].AmountInBuyToken = feeAmountInBuyTokenRes
+
 	swapInfo := InterSwapEstRes{
 		// this object to get info to show on UI
 		QuoteData: QuoteData{
@@ -357,4 +382,5 @@ func EstimateSwap(params *EstimateSwapParam, config common.Config) (map[string][
 		InterSwapStr: []InterSwapEstRes{swapInfo},
 	}
 	return res, nil
+
 }

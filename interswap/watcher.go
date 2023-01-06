@@ -562,7 +562,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 
 			return nil
 
-		} else if pdexStatus.Status == "refund" {
+		} else if pdexStatus.Status == "rejected" {
 			err = SendSlackSwapInfo(interswapTxID, txData.UserAgent, "was refunded (first tx)",
 				txData.FromAmount, txData.FromToken,
 				txData.FinalMinExpectedAmt, txData.ToToken,
@@ -875,7 +875,7 @@ func CheckStatusAndHandlePdexTxSecond(txData *beCommon.InterSwapTxData, config b
 			}
 			return nil
 
-		} else if pdexStatus.Status == "refund" {
+		} else if pdexStatus.Status == "rejected" {
 			// parse tx response to get received UTXO
 			if len(pdexStatus.RespondTxs) != 1 {
 				log.Printf("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)

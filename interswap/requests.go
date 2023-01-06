@@ -463,19 +463,6 @@ func CallGetTxsByCoinPubKeys2(coinPubKeys []string, config beCommon.Config, incC
 	}
 
 	return resMap, nil
-
-	// for pubKey, txs := range resMap {
-	// 	for txID, tx := range txs {
-	// 		txDetail, err := incClient.GetTxDetail(tx)
-	// 		if err != nil || txDetail == nil {
-	// 			continue
-	// 		}
-
-	// 		response[pubKey] = append(response[pubKey], txDetail)
-	// 	}
-	// }
-
-	// return response, nil
 }
 
 // isBetterQuoteData returns true if d1 is better than d2
@@ -508,7 +495,6 @@ func isBetterQuoteData(d1 QuoteData, d2 QuoteData) (bool, error) {
 
 // isBetterQuoteData returns true if d1 is better than d2
 func isBetterInterSwapPath(path1 InterSwapPath, path2 InterSwapPath) (bool, error) {
-
 	if len(path1.Paths) != 2 || len(path2.Paths) != 2 {
 		return false, errors.New("Invalid format interswap path")
 	}
@@ -534,11 +520,17 @@ func isBetterInterSwapPath(path1 InterSwapPath, path2 InterSwapPath) (bool, erro
 }
 
 // GetBestRoute return the best one for each network (pdex & papps), and the best one for all pApps
-func GetBestRoute(paths map[string][]QuoteData) map[string]*QuoteData {
+func GetBestRoute(paths map[string][]QuoteData, expectedPathType int) map[string]*QuoteData {
 	res := map[string]*QuoteData{}
 	bestPAppPath := QuoteData{}
 
 	for network, datas := range paths {
+		if network == IncNetworkStr && expectedPathType == pAppType {
+			continue
+		}
+		if network != IncNetworkStr && expectedPathType == pDEXType {
+			continue
+		}
 		// find the best one for each network
 		tmpBestPath := QuoteData{}
 		for _, d := range datas {
@@ -580,27 +572,30 @@ func calTotalFee(interswapPath InterSwapPath, config beCommon.Config, tokenInfos
 	// total fee paid in the token fee of the first swap info
 	feeToken := fee1.TokenID
 
+	// get token infos
 	feeTokenInfo, tokenInfos, err := getTokenInfoWithCache(feeToken, tokenInfos, config)
 	if err != nil {
 		return nil, tokenInfos, err
 	}
-
 	feeTokenInfo2, tokenInfos, err := getTokenInfoWithCache(fee2.TokenID, tokenInfos, config)
 	if err != nil {
 		return nil, tokenInfos, err
 	}
-
 	toTokenInfo, tokenInfos, err := getTokenInfoWithCache(interswapPath.ToToken, tokenInfos, config)
 	if err != nil {
 		return nil, tokenInfos, err
 	}
-	// feeAmt2, err := convertAmountUint64(fee2.Amount, fee2.TokenID, feeToken, config)
+
+	// convert fee2 to feeToken
 	feeAmt2, err := convertAmountFromToTokenInfo(fee2.Amount, *feeTokenInfo2, *feeTokenInfo)
 	if err != nil {
 		return nil, tokenInfos, err
 	}
+
+	// total fee = fee1 + fee2 (in feeToken)
 	amount := fee1.Amount + feeAmt2
-	// amountInBuyToken, err := convertAmountUint64(amount, feeToken, interswapPath.ToToken, config)
+
+	// convert totalFee to toToken
 	amountInBuyToken, err := convertAmountFromToTokenInfo(amount, *feeTokenInfo, *toTokenInfo)
 	if err != nil {
 		return nil, tokenInfos, err
@@ -614,11 +609,7 @@ func calTotalFee(interswapPath InterSwapPath, config beCommon.Config, tokenInfos
 		TokenID:          feeToken,
 		Amount:           amount,
 		AmountInBuyToken: amountInBuyTokenStr,
-		// PrivacyFee: ,
-		// FeeInUSD:
 	}
-
-	fmt.Printf("Calculate total fee : %+v\n", res)
 
 	return res, tokenInfos, nil
 }

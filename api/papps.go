@@ -460,6 +460,11 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 	pdexResult := PdexEstimateRespond{}
 	v, ok := responseBodyData.Result["FeeToken"]
 	if !ok {
+		log.Println("estimateSwapFeeWithPdex", errors.New("no FeeToken for pdex"))
+		return nil
+	}
+	if v.MaxGet == 0 {
+		log.Println("estimateSwapFeeWithPdex", errors.New("pdex maxget is 0"))
 		return nil
 	}
 
@@ -485,6 +490,11 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 
 	amountInFloat, _ := new(big.Float).SetString(amount)
 	rate := new(big.Float).Quo(amountOutBigFloatPreSlippage, new(big.Float).Set(amountInFloat))
+	amountInBuyToken := new(big.Float).SetUint64(pdexResult.Fee)
+	amountInBuyToken = amountInBuyToken.Mul(amountInBuyToken, new(big.Float).SetFloat64(math.Pow10(-tkFromInfo.PDecimals)))
+	amountInBuyToken = amountInBuyToken.Mul(amountInBuyToken, rate)
+	amountInBuyToken = amountInBuyToken.Mul(amountInBuyToken, new(big.Float).SetFloat64(math.Pow10(-tkFromInfo.PDecimals+tkToInfo.PDecimals)))
+	amountInBuyTokenStr := amountInBuyToken.String()
 
 	result := QuoteDataResp{
 		AppName:              "pdex",
@@ -497,7 +507,7 @@ func estimateSwapFeeWithPdex(fromToken, toToken, amount string, slippage *big.Fl
 		Paths:                pdexResult.TokenRoute,
 		PoolPairs:            pdexResult.Route,
 		ImpactAmount:         fmt.Sprintf("%f", pdexResult.ImpactAmount),
-		Fee:                  []PappNetworkFee{{TokenID: fromToken, Amount: pdexResult.Fee}},
+		Fee:                  []PappNetworkFee{{TokenID: fromToken, Amount: pdexResult.Fee, AmountInBuyToken: amountInBuyTokenStr}},
 	}
 
 	return &result

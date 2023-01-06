@@ -177,10 +177,12 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 
 	// check proposal existed
 	propId, _ := gv.HashProposal(nil, targetsArr, valuesArr, calldataArr, keccak256([]byte(req.Title)))
-	prop, _ := gv.Proposals(nil, propId)
-	if prop.StartBlock.Uint64() != 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
-		return
+	prop, err := gv.Proposals(nil, propId)
+	if err == nil {
+		if prop.StartBlock.Uint64() != 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "prop id has created"})
+			return
+		}
 	}
 
 	// check valid info:

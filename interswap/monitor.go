@@ -7,7 +7,7 @@ import (
 	beCommon "github.com/incognitochain/incognito-web-based-backend/common"
 )
 
-const MinBalance = 400000000
+const MinBalance = 500000000
 
 func monitorBalanceISIncKeys(config beCommon.Config) {
 	privKeys := config.ISIncPrivKeys

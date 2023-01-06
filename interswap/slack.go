@@ -11,9 +11,6 @@ import (
 var SlackInfo = os.Getenv("INTERSWAP_SLACK_INFO")
 var SlackAlert = os.Getenv("INTERSWAP_SLACK_ALERT")
 
-// var SlackInfo = ""
-// var SlackAlert = ""
-
 func SendSlackInfo(msg string) {
 	slacknoti.SendWithCustomChannel(msg, SlackInfo)
 }

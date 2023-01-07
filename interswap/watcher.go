@@ -510,6 +510,10 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 			}
 
 			receiveTokenContract := Remove0xPrefix(childToTokenInfo.ContractID)
+			if beCommon.IsNativeCurrency(childToTokenInfo.CurrencyType) {
+				receiveTokenContract = "0000000000000000000000000000000000000000"
+			}
+
 			withdrawAddr := txData.WithdrawAddress
 			if withdrawAddr == "" {
 				withdrawAddr = "0000000000000000000000000000000000000000"

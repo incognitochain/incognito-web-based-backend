@@ -1415,14 +1415,14 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 		burnAmountFloat := float64(v.BurningAmount) / math.Pow10(tokenInfo.PDecimals)
 		burnAmountStr := fmt.Sprintf("%f", burnAmountFloat)
 		var quoteDatas []QuoteDataResp
-		if pappType == wcommon.ExternalTxTypeSwap {
+		switch pappType {
+		case wcommon.ExternalTxTypeSwap:
 			quoteDatas, err = estimateSwapFee(md.BurnTokenID.String(), receiveToken, burnAmountStr, int(v.ExternalNetworkID), spTkList, networkInfo, networkFees, tokenInfo, nil)
 			if err != nil {
 				log.Println("estimateSwapFee error", err)
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 			}
-		} else {
-			//TODO: opensea
+		case wcommon.ExternalTxTypeOpenseaBuy:
 			openseaFee, err := estimateOpenSeaFee(v.BurningAmount, tokenInfo, callNetworkList[0], networkFees, spTkList)
 			if err != nil {
 				log.Println("estimateSwapFee error", err)
@@ -1446,6 +1446,31 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					Amount:  openseaFee.Amount,
 				}},
 			})
+		case wcommon.ExternalTxTypeOpenseaOffer, wcommon.ExternalTxTypeOpenseaOfferCancel:
+			//TODO: popensea
+			openseaFee, err := estimateOpenSeaFee(v.BurningAmount, tokenInfo, callNetworkList[0], networkFees, spTkList)
+			if err != nil {
+				log.Println("estimateSwapFee error", err)
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+			}
+			pappList, err := database.DBRetrievePAppsByNetwork(callNetworkList[0])
+			if err != nil {
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+
+			}
+			contract, exist := pappList.AppContracts["opensea-offer"]
+			if !exist {
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+
+			}
+			quoteDatas = append(quoteDatas, QuoteDataResp{
+				AppName:      "opensea-offer",
+				CallContract: contract,
+				Fee: []PappNetworkFee{{
+					TokenID: openseaFee.TokenID,
+					Amount:  openseaFee.Amount,
+				}},
+			})
 		}
 
 		for _, quote := range quoteDatas {
@@ -1458,6 +1483,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					TokenOut: receiveToken,
 				}
 				switch quote.AppName {
+				case "opensea-offer":
 				case "opensea":
 					//TODO: opensea
 				case "curve":

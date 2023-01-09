@@ -179,6 +179,14 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		}
 	}
 
+	//TODO: popensea parse calldata
+	switch task.TxType {
+	case wcommon.ExternalTxTypeOpenseaOffer:
+
+	case wcommon.ExternalTxTypeOpenseaOfferCancel:
+
+	}
+
 	txDetail, err := incClient.GetTxDetail(task.TxHash)
 	if err != nil {
 		log.Println("GetTxDetail err", err)
@@ -272,7 +280,8 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			}
 		}()
 	case wcommon.ExternalTxTypeOpenseaBuy:
-
+	case wcommon.ExternalTxTypeOpenseaOffer:
+	case wcommon.ExternalTxTypeOpenseaOfferCancel:
 	}
 
 	m.Ack()

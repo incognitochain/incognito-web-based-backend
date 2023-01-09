@@ -555,7 +555,7 @@ func APIOpenSeaSubmitOffer(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList, wcommon.ExternalTxTypeOpenseaBuy)
+	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList, wcommon.ExternalTxTypeOpenseaOffer)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -648,7 +648,7 @@ func APIOpenSeaCancelOffer(c *gin.Context) {
 		isUnifiedToken = true
 	}
 
-	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList, wcommon.ExternalTxTypeOpenseaBuy)
+	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList, wcommon.ExternalTxTypeOpenseaOfferCancel)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
 		return
@@ -665,4 +665,9 @@ func APIOpenSeaCancelOffer(c *gin.Context) {
 		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
 		return
 	}
+}
+
+func checkOpenseaOfferStatus(txhash string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	return result, nil
 }

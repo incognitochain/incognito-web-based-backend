@@ -115,7 +115,7 @@ func StartAPIservice(cfg common.Config) {
 	pOpenSeaGroup.GET("/collection-detail", APICollectionDetail)
 	pOpenSeaGroup.GET("/listoffer", APIOpenSeaListOffer)
 	pOpenSeaGroup.POST("/offerstatus", APIOpenSeaOfferStatus)
-	pOpenSeaGroup.POST("/submitbuytx", APIOpenSeaSubmitOffer)
+	pOpenSeaGroup.POST("/submitoffertx", APIOpenSeaSubmitOffer)
 	pOpenSeaGroup.POST("/submitcanceltx", APIOpenSeaCancelOffer)
 
 	unshieldGroup := r.Group("/unshield")

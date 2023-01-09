@@ -22,7 +22,7 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` submit opensea failed 😵 `%v` \n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea-offer]` submit opensea failed 😵 `%v` \n", tx.IncTx))
 			return nil
 		}
 		return err
@@ -39,9 +39,9 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea-offer]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
 		case 1:
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea-offer]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
 			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
 			if err != nil {
 				return err

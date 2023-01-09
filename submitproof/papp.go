@@ -271,7 +271,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 				}
 			}
 		}()
-	case wcommon.ExternalTxTypeOpensea:
+	case wcommon.ExternalTxTypeOpenseaBuy:
 
 	}
 

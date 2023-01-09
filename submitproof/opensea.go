@@ -51,7 +51,7 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 				return err
 			}
 			for _, network := range tx.Networks {
-				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeOpensea)
+				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeOpenseaBuy)
 				if err != nil {
 					return err
 				}

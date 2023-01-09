@@ -452,7 +452,30 @@ func watchPendingPappTx() {
 			}
 		}
 
-		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpensea, 0, 0)
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpenseaBuy, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingOpenseaTx(txdata)
+			if err != nil {
+				log.Println("processPendingOpenseaTx OpenSea err:", txdata.IncTx)
+			}
+		}
+		//TODO: opensea
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpenseaOffer, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingOpenseaTx(txdata)
+			if err != nil {
+				log.Println("processPendingOpenseaTx OpenSea err:", txdata.IncTx)
+			}
+		}
+
+		//TODO: opensea
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypeOpenseaOfferCancel, 0, 0)
 		if err != nil {
 			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
 		}
@@ -483,6 +506,7 @@ func watchPendingPappTx() {
 				}
 			}
 		}
+
 		time.Sleep(10 * time.Second)
 	}
 }
@@ -598,7 +622,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			}
 			if err == ethereum.NotFound {
 				switch tx.Type {
-				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpensea:
+				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpenseaBuy:
 					err = database.DBUpdatePappTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")
 					if err != nil {
 						return err

@@ -104,15 +104,19 @@ func StartAPIservice(cfg common.Config) {
 	pAppsGroup.POST("/submitinterswaptx", APISubmitInterSwapTx)
 	pAppsGroup.POST("/interswapstatus", APIGetInterswapTxStatus)
 
+	//opensea
 	pOpenSeaGroup := pAppsGroup.Group("/opensea")
 	pOpenSeaGroup.GET("/estimatebuyfee", APIEstimateBuyFee)
 	pOpenSeaGroup.POST("/submitbuytx", APISubmitBuyTx)
 	pOpenSeaGroup.POST("/buystatus", APIGetSwapTxStatus)
-	//opensea api
 	pOpenSeaGroup.GET("/collections", APIGetCollections)
 	pOpenSeaGroup.GET("/nft-detail", APINFTDetail)
 	pOpenSeaGroup.GET("/collection-assets", APICollectionAssets)
 	pOpenSeaGroup.GET("/collection-detail", APICollectionDetail)
+	pOpenSeaGroup.GET("/listoffer", APIOpenSeaListOffer)
+	pOpenSeaGroup.POST("/offerstatus", APIOpenSeaOfferStatus)
+	pOpenSeaGroup.POST("/submitbuytx", APIOpenSeaSubmitOffer)
+	pOpenSeaGroup.POST("/submitcanceltx", APIOpenSeaCancelOffer)
 
 	unshieldGroup := r.Group("/unshield")
 	unshieldGroup.POST("/status", APIGetUnshieldTxStatus)

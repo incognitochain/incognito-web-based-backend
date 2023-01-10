@@ -97,8 +97,13 @@ func getETHDepositProof(
 	receipts := make([]*types.Receipt, 0)
 
 	for i, siblingTx := range siblingTxs {
+		//NOTE: skip tx that doesn't exist
 		siblingReceipt, err := evmClient.TransactionReceipt(context.Background(), siblingTx.Hash())
 		if err != nil {
+			if siblingTx.To().String() == ADDRESS_0 {
+				log.Println("evmClient.TransactionReceipt error:", err)
+				continue
+			}
 			return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
 		}
 		if i == len(siblingTxs)-1 {

@@ -87,9 +87,9 @@ func TestSubmitProof(t *testing.T) {
 
 func TestRedpositEvent(t *testing.T) {
 
-	endpoint := "https://api.avax-test.network/ext/bc/C/rpc"
+	endpoint := "https://rpc-mainnet.maticvigil.com"
 	// endpoint := "https://data-seed-prebsc-1-s1.binance.org:8545"
-	txStr := "0x5d5a1a7a13167ee16ce7d56d2110a770a9002cb6f452ef8350c596b77380a4f0"
+	txStr := "0x7a3da6667b6d7cae6be82e5420edabed51b15a87cbb19f5fcebc748c0466387a"
 	evmClient, _ := ethclient.Dial(endpoint)
 
 	blockNumber, blockHash, txIdx, proof, contractID, paymentAddr, isRedeposit, otaStr, shieldAmount, logResult, status, err := getETHDepositProof(evmClient, txStr)

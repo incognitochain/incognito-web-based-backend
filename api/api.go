@@ -32,7 +32,6 @@ func StartAPIservice(cfg common.Config) {
 			log.Println("err loadOTAKey: ", err)
 		}
 	}
-	log.Println("cfg.ISIncPrivKey", cfg.ISIncPrivKeys)
 	if len(cfg.ISIncPrivKeys) > 0 {
 		err := InitInterswapIncKeySet(cfg.ISIncPrivKeys)
 		if err != nil {

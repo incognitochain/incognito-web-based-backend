@@ -24,6 +24,11 @@ var SkipTxs = []string{
 	"82a30987e144aed3f3a3c56c0f1209477fe1c0444d8c38643989674ed24bf339",
 	"b8d289152ca4e8819a2cc81cc5cff59ca999a71d80b34c2160df320936cbe669",
 	"1cd9e638e1a10182348dae56ca974356c5ee2d876b7ba0fedcb44594a08c8711",
+
+	// mainnet
+	"22afead70a3e2a6a05110e38c828582fe821ad14e8abca8c892e016b4ef6a5aa",
+	"d5d32617f5418020e0237d8645961cee70fde3ba19be600865094b39ca40c168",
+	"5ab8cbd67e5d17c8dbc392323dd74635e2aba2af0e609bbc4620ebac22e8d6e3",
 }
 
 // watchInterswapPendingTx listen status of interswap and handle the next step
@@ -72,27 +77,29 @@ func watchInterswapPendingTx(config beCommon.Config) {
 // TODO: check Lam's BE and watcher use the same IncFullnode or not
 func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
-	if IsExist(SkipTxs, interswapTxID) {
+	if StrContain(SkipTxs, interswapTxID) {
 		return nil
 	}
 
 	// check tx by hash
-	txDetail, err := incClient.GetTxDetail(interswapTxID)
+	isConfirm, isMaxReCheck, _, updatedNumRecheck, err := CheckIncTxIsConfirmed(interswapTxID, txData.NumRecheck)
+	// log.Printf("interswapTxID %v isConfirm %v, isMaxReCheck %v , updatedNumRecheck %v, err %v: ", interswapTxID, isConfirm, isMaxReCheck, updatedNumRecheck, err)
+	database.DBUpdateInterswapTxNumRecheck(interswapTxID, updatedNumRecheck)
 	if err != nil {
-		SendSlackAlert(fmt.Sprintf("`InterswapID %v get tx detail first swaptx failed 😵 `%v` \n", interswapTxID, err.Error()))
-		// TOD0: improve
-		// if strings.Contains(err.Error(), "RPC returns an error:") {
-		// 	err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], err.Error())
-		// 	if err != nil {
-		// 		SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error()))
-		// 		log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error())
-		// 		return err
-		// 	}
-		// 	return nil
-		// }
+		if isMaxReCheck {
+			SendSlackAlert(fmt.Sprintf("InterswapID %v First tx is rejected by chain. Update status Failed 😵 `%v` \n", interswapTxID, err.Error()))
+			err = database.DBUpdateInterswapTxStatus(interswapTxID, SubmitFailed, StatusStr[SubmitFailed], err.Error())
+			if err != nil {
+				SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error()))
+				log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, SubmitFailed, err.Error())
+				return err
+			}
+			SendSlackSwapInfo(interswapTxID, txData.UserAgent, "failed",
+				txData.FromAmount, txData.FromToken, txData.FinalMinExpectedAmt, txData.ToToken, txData.FromAmount, txData.FromToken, config)
+		}
 		return err
 	}
-	if !txDetail.IsInBlock {
+	if !isConfirm {
 		return nil
 	}
 
@@ -209,6 +216,26 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 
 }
 
+func MarshalCoin(utxos []coin.PlainCoin) []string {
+	res := []string{}
+	for _, coin := range utxos {
+		res = append(res, string(coin.Bytes()))
+	}
+	return res
+}
+
+func UnmarshalCoin(utxoStrs []string) ([]coin.PlainCoin, error) {
+	res := []coin.PlainCoin{}
+	for _, str := range utxoStrs {
+		coin, err := coin.NewPlainCoinFromByte([]byte(str))
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, coin)
+	}
+	return res, nil
+}
+
 func createTxRefundAndUpdateStatus(
 	privateKey string,
 	txData *beCommon.InterSwapTxData,
@@ -230,6 +257,8 @@ func createTxRefundAndUpdateStatus(
 		"tokenresponse":  tokenRefund,
 		"status":         updateStatus,
 		"statusstr":      StatusStr[updateStatus],
+		"coin_info":      MarshalCoin(tokenUtxos),
+		"coin_index":     tokenUtxoIndices,
 	}
 	err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
 	if err != nil {
@@ -239,6 +268,51 @@ func createTxRefundAndUpdateStatus(
 	return nil
 }
 
+func retryCreateTxRefund(
+	privateKey string,
+	txData *beCommon.InterSwapTxData,
+) (string, error) {
+	interswapTxID := txData.TxID
+
+	if len(txData.CoinInfo) == 0 || len(txData.CoinIndex) == 0 || len(txData.CoinInfo) != len(txData.CoinIndex) {
+		log.Printf("InterswapID %v retry create tx refund - Invalid list token coins\n", interswapTxID)
+		return "", fmt.Errorf("InterswapID %v retry create tx refund - Invalid list token coins\n", interswapTxID)
+	}
+
+	tokenUtxos, err := UnmarshalCoin(txData.CoinInfo)
+	if err != nil {
+		log.Printf("InterswapID %v retry create tx refund error %v\n", interswapTxID, err)
+		return "", fmt.Errorf("InterswapID %v retry create tx refund error %v\n", interswapTxID, err)
+	}
+	tokenUtxoIndices := txData.CoinIndex
+
+	amountRefund := txData.AmountResponse
+	tokenRefund := txData.TokenResponse
+
+	refundTxID, _, err := createTxTokenWithInputCoins(privateKey, txData.OTARefund, tokenRefund, amountRefund,
+		tokenUtxos, tokenUtxoIndices, nil, true)
+	if err != nil {
+		log.Printf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
+		return "", fmt.Errorf("InterswapID %v create tx refund error %v\n", interswapTxID, err)
+	}
+	log.Printf("InterswapID %v Retry Create refund txID %v\n", interswapTxID, refundTxID)
+
+	updateInfo := map[string]interface{}{
+		"txidrefund": refundTxID,
+		// "amountresponse": amountRefund,
+		// "tokenresponse":  tokenRefund,
+		// "status":         newStatus,
+		// "statusstr":      StatusStr[newStatus],
+	}
+	err = database.DBUpdateInterswapTxInfo(interswapTxID, updateInfo)
+	if err != nil {
+		log.Printf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
+		return refundTxID, fmt.Errorf("InterswapID %v Update info %+v error %v\n", interswapTxID, updateInfo, err)
+	}
+	return refundTxID, nil
+}
+
+// AmountOutRaw is ext decimal of child token
 func callEstimateSwapAndValidation(
 	params *EstimateSwapParam,
 	expectedMinAmount uint64,
@@ -436,6 +510,10 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 			}
 
 			receiveTokenContract := Remove0xPrefix(childToTokenInfo.ContractID)
+			if beCommon.IsNativeCurrency(childToTokenInfo.CurrencyType) {
+				receiveTokenContract = "0000000000000000000000000000000000000000"
+			}
+
 			withdrawAddr := txData.WithdrawAddress
 			if withdrawAddr == "" {
 				withdrawAddr = "0000000000000000000000000000000000000000"
@@ -450,7 +528,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 				ExternalCallAddress: Remove0xPrefix(txData.PAppContract),
 				ReceiveToken:        receiveTokenContract,
 				RedepositReceiver:   *redepositAddress, // user OTA
-				WithdrawAddress:     txData.WithdrawAddress,
+				WithdrawAddress:     withdrawAddr,
 			}
 
 			addOnTxID, txBytes, err := createTxBurnForCallWithInputCoins(config.ISIncPrivKeys[shardID], burnTokenID, data,
@@ -488,7 +566,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 
 			return nil
 
-		} else if pdexStatus.Status == "refund" {
+		} else if pdexStatus.Status == "rejected" {
 			err = SendSlackSwapInfo(interswapTxID, txData.UserAgent, "was refunded (first tx)",
 				txData.FromAmount, txData.FromToken,
 				txData.FinalMinExpectedAmt, txData.ToToken,
@@ -704,30 +782,33 @@ func CheckStatusAndHandlePappTx(txData *beCommon.InterSwapTxData, config beCommo
 	return nil
 }
 
-var IsUpdate = false
-
 func processInterswapPendingSecondTx(txData beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
 	addOnTxID := txData.AddOnTxID
-	fmt.Printf("InterswapID %v Start processing addOnTxID %v\n", interswapTxID, addOnTxID)
-	if IsExist(SkipTxs, interswapTxID) {
+	if StrContain(SkipTxs, interswapTxID) {
 		return nil
 	}
 
+	fmt.Printf("InterswapID %v Start processing addOnTxID %v\n", interswapTxID, addOnTxID)
+
 	// check tx by hash
-	txDetail, err := incClient.GetTxDetail(addOnTxID)
+	isConfirm, isMaxReCheck, shouldRefund, updatedNumRecheck, err := CheckIncTxIsConfirmed(addOnTxID, txData.NumRecheck)
+	database.DBUpdateInterswapTxNumRecheck(interswapTxID, updatedNumRecheck)
 	if err != nil {
-		if strings.Contains(err.Error(), "RPC returns an error:") {
-			msg := fmt.Sprintf("InterswapID %v. Please check @hiennguyen. Check addon tx %v error 😵 %v \n", interswapTxID, addOnTxID, err.Error())
-			log.Printf(msg)
-			SendSlackAlert(msg)
-			// TODO: need to retry
+		if isMaxReCheck && shouldRefund {
+			SendSlackAlert(fmt.Sprintf("InterswapID %v AddonTxID %v Second tx is rejected by chain. Need to retry 😵 `%v` \n", interswapTxID, addOnTxID, err.Error()))
+
+			status := FirstPending
+			err = database.DBUpdateInterswapTxStatus(interswapTxID, status, StatusStr[status], err.Error())
+			if err != nil {
+				SendSlackAlert(fmt.Sprintf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, status, err.Error()))
+				log.Printf("`InterswapID %v update status `%v` error 😵 `%v` \n", interswapTxID, status, err.Error())
+				return err
+			}
 		}
 		return err
 	}
-	fmt.Printf("InterswapID %v processing addOnTxID %v\n", interswapTxID, addOnTxID)
-	if !txDetail.IsInBlock {
-		fmt.Printf("InterswapID %v processing addOnTxID %v is not in block\n", interswapTxID, addOnTxID)
+	if !isConfirm {
 		return nil
 	}
 
@@ -795,7 +876,7 @@ func CheckStatusAndHandlePdexTxSecond(txData *beCommon.InterSwapTxData, config b
 			}
 			return nil
 
-		} else if pdexStatus.Status == "refund" {
+		} else if pdexStatus.Status == "rejected" {
 			// parse tx response to get received UTXO
 			if len(pdexStatus.RespondTxs) != 1 {
 				log.Printf("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)
@@ -951,11 +1032,25 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 					txIDReqRedeposit := redepositInfo.IncTx
 
 					// update database
-					amtResponse, err := convertAmtExtDecToAmtPDec(outchainTxResult.Amount, redepositInfo.TokenID, config)
+					log.Printf("InterswapID %v Response amount: redepositInfo.TokenID %v, redepositInfo.UTokenID %v, outchainTxResult.Amount %v",
+						interswapTxID, redepositInfo.TokenID, redepositInfo.UTokenID, outchainTxResult.Amount.Uint64())
+
+					tokenTmp, err := getTokenInfo(redepositInfo.TokenID, config)
 					if err != nil {
-						log.Printf("InterswapID %v Calculate the final response amount error %v\n", interswapTxID, err)
-						return fmt.Errorf("InterswapID %v Calculate the final response amount error %v\n", interswapTxID, err)
+						log.Printf("InterswapID %v Calculate the final response amount - Get token info error %v\n", interswapTxID, err)
+						return fmt.Errorf("InterswapID %v Calculate the final response amount - Get token info error %v\n", interswapTxID, err)
 					}
+					fromDec := tokenTmp.Decimals
+					toDec := tokenTmp.PDecimals
+					if redepositInfo.UTokenID != redepositInfo.TokenID {
+						tokenTmp, err := getTokenInfo(redepositInfo.UTokenID, config)
+						if err != nil {
+							log.Printf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err)
+							return fmt.Errorf("InterswapID %v Calculate the final response amount - Get unified token info error %v\n", interswapTxID, err)
+						}
+						toDec = tokenTmp.PDecimals
+					}
+					amtResponse := convertAmtByDec(outchainTxResult.Amount, int(fromDec), toDec)
 
 					err = SendSlackSwapInfo(interswapTxID, txData.UserAgent, "was success",
 						txData.FromAmount, txData.FromToken,
@@ -1014,44 +1109,80 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 
 func processInterswapRefundingTx(txData beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
-	// addOnTxID := txData.AddOnTxID
 	refundTxID := txData.TxIDRefund
+	shardID := fmt.Sprint(txData.ShardID)
+
+	if StrContain(SkipTxs, interswapTxID) {
+		return nil
+	}
 	fmt.Printf("InterswapID %v Start processing refundTxID %v\n", interswapTxID, refundTxID)
 
 	// check tx by hash
-	txDetail, err := incClient.GetTxDetail(refundTxID)
+	isConfirm, isMaxReCheck, shouldRefund, updatedNumRecheck, err := CheckIncTxIsConfirmed(refundTxID, txData.NumRecheck)
 	if err != nil {
-		if strings.Contains(err.Error(), "RPC returns an error:") {
-			// TODO: 0xkraken recheck tx detail 3 times
-			// if still error, retry to create refund tx
-			SendSlackAlert(fmt.Sprintf("InterswapID %v RefundTxID %v check tx is in block error 😵 `%v` \n", interswapTxID, refundTxID, err.Error()))
+		if isMaxReCheck && shouldRefund {
+			retryRefundTxID, err := retryCreateTxRefund(config.ISIncPrivKeys[shardID], &txData)
+			if err != nil {
+				SendSlackAlert(fmt.Sprintf("InterswapID %v retry refundTxID %v error `%v` \n", interswapTxID, retryRefundTxID, err.Error()))
+				log.Printf("InterswapID %v retry refundTxID %v error `%v` \n", interswapTxID, retryRefundTxID, err.Error())
+				return err
+			}
 		}
+		database.DBUpdateInterswapTxNumRecheck(interswapTxID, updatedNumRecheck)
 		return err
+	} else {
+		database.DBUpdateInterswapTxNumRecheck(interswapTxID, updatedNumRecheck)
 	}
-	if txDetail.IsInBlock {
-		curStatus := txData.Status
-		newStatus := MidRefunded
-		statusMsg := "was refunded (from mid)"
-		if curStatus == FirstRefunding {
-			newStatus = FirstRefunded
-			statusMsg = "was refunded (first tx)"
-		}
+	if !isConfirm {
+		return nil
+	}
 
-		err := database.DBUpdateInterswapTxStatus(interswapTxID, newStatus, StatusStr[newStatus], "")
-		err2 := SendSlackSwapInfo(interswapTxID, txData.UserAgent, statusMsg,
-			txData.FromAmount, txData.FromToken,
-			txData.FinalMinExpectedAmt, txData.ToToken,
-			txData.AmountResponse, txData.TokenResponse, config)
-		if err2 != nil {
-			log.Printf("InterswapID %v SendSlackSwapInfo err %v\n", interswapTxID, err)
-		}
-		if err != nil {
-			msg := fmt.Sprintf("InterswapID %v Update status %+v error %v\n", interswapTxID, newStatus, err)
-			log.Printf(msg)
-			SendSlackAlert(fmt.Sprintf(msg))
-			return errors.New(msg)
-		}
+	curStatus := txData.Status
+	newStatus := MidRefunded
+	statusMsg := "was refunded (from mid)"
+	if curStatus == FirstRefunding {
+		newStatus = FirstRefunded
+		statusMsg = "was refunded (first tx)"
+	}
+
+	err = database.DBUpdateInterswapTxStatus(interswapTxID, newStatus, StatusStr[newStatus], "")
+	err2 := SendSlackSwapInfo(interswapTxID, txData.UserAgent, statusMsg,
+		txData.FromAmount, txData.FromToken,
+		txData.FinalMinExpectedAmt, txData.ToToken,
+		txData.AmountResponse, txData.TokenResponse, config)
+	if err2 != nil {
+		log.Printf("InterswapID %v SendSlackSwapInfo err %v\n", interswapTxID, err)
+	}
+	if err != nil {
+		msg := fmt.Sprintf("InterswapID %v Update status %+v error %v\n", interswapTxID, newStatus, err)
+		log.Printf(msg)
+		SendSlackAlert(fmt.Sprintf(msg))
+		return errors.New(msg)
 	}
 
 	return nil
+}
+
+func CheckIncTxIsConfirmed(txID string, numRecheck uint) (isConfirm bool, isMaxRecheck bool, shouldRefund bool, numRecheckRes uint, err error) {
+	isConfirm = false
+	isMaxRecheck = false
+	shouldRefund = false
+	numRecheckRes = numRecheck
+	// check tx by hash
+	txDetail, err := incClient.GetTxDetail(txID)
+	if err != nil {
+		if strings.Contains(err.Error(), "RPC returns an error:") {
+			numRecheckRes++
+			if numRecheckRes >= MaxNumRecheck {
+				isMaxRecheck = true
+				shouldRefund = true
+				numRecheckRes = 0 // reset num recheck
+			}
+		}
+		return
+	}
+
+	isConfirm = txDetail.IsInBlock
+	numRecheckRes = 0 // reset num recheck
+	return
 }

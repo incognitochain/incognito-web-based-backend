@@ -1,5 +1,8 @@
 package interswap
 
+const MainnetStr = "mainnet"
+const TestnetStr = "testnet"
+
 const IncNetworkStr = "inc"
 const PAppStr = "papp"
 const InterSwapStr = "interswap"
@@ -50,3 +53,6 @@ const INTERSWAP_TX_TOPIC = "interswaptx_topic"
 // task by swap path
 const InterswapPdexPappTxTask = "interswaptx_pathtype1" // Path 1: pDEX => pApp
 const InterswapPappPdexTask = "interswaptx_pathtype2"   // Path 2: pApp => pDEX
+
+const MaxNumRecheck = 5
+const MaxNumRetry = 1

@@ -67,5 +67,16 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 
 	DBCreateDefaultNetworkInfo(network)
 
+	// pdao:
+	err = DBCreateProposalIndex()
+	if err != nil {
+		return err
+	}
+
+	err = DBCreateVoteIndex()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

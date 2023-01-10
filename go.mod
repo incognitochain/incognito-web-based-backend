@@ -7,7 +7,7 @@ require (
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221230121213-27eae06a17ed
+	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20230103102606-17ef3c2b75af
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 
@@ -16,7 +16,7 @@ require (
 	github.com/adjust/rmq/v4 v4.0.5
 	github.com/gin-contrib/cache v1.2.0
 	github.com/gin-contrib/cors v1.4.0
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/incognitochain/bridge-eth v0.0.0-20220923060843-965bd65e8622
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/mileusna/useragent v1.2.1

@@ -478,8 +478,12 @@ func watchVotedToReshield() {
 		log.Println("watchVotedToReshield there are ", len(votedRequests), "records!")
 
 		networkInfo, err := database.DBGetBridgeNetworkInfo(wcommon.NETWORK_ETH)
+		if err != nil {
+			log.Println("watchVotedToReshield DBGetBridgeNetworkInfo err:" + err.Error())
+			continue
+		}
 
-		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
+		evmClient, err := ethclient.Dial(networkInfo.Endpoints[0])
 		if err != nil {
 			log.Println("watchVotedToReshield DBGetVoteSuccess err:" + err.Error())
 			continue

@@ -105,7 +105,7 @@ func DBGetDefaultCollectionList() ([]common.OpenseaDefaultCollectionData, error)
 func DBGetPendingOpenseaOffer() ([]common.OpenseaOfferData, error) {
 	var result []common.OpenseaOfferData
 	limit := int64(1000)
-	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}}
+	filter := bson.M{"status": bson.M{operator.Eq: popensea.OfferStatusPending}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
 	err := mgm.Coll(&common.OpenseaOfferData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
 		Limit: &limit,
@@ -114,4 +114,39 @@ func DBGetPendingOpenseaOffer() ([]common.OpenseaOfferData, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func DBGetOpenseaOfferByOfferTx(txhash string) (*common.OpenseaOfferData, error) {
+	var result common.OpenseaOfferData
+	filter := bson.M{"offer_tx_inc": bson.M{operator.Eq: txhash}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(DB_OPERATION_TIMEOUT)*time.Second)
+
+	dbresult := mgm.Coll(&common.OpenseaOfferData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func DBInsertOpenseaOfferData(data *common.OpenseaOfferData) error {
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(DB_OPERATION_TIMEOUT)*time.Second)
+	_, err := mgm.Coll(&common.OpenseaOfferData{}).InsertOne(ctx, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBUpdateOpenseaOfferStatus(incTx string, status string) error {
+	filter := bson.M{"offer_tx_inc": bson.M{operator.Eq: incTx}}
+	update := bson.M{"$set": bson.M{"status": status}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.OpenseaOfferData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
+	if err != nil {
+		return err
+	}
+	return nil
 }

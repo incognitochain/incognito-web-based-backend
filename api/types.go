@@ -299,6 +299,10 @@ type SubmitSwapTxRequest struct {
 	FeeRefundOTA     string
 	FeeRefundAddress string
 }
+type SubmitOpenseaOfferTxRequest struct {
+	SubmitSwapTxRequest
+	Offer string
+}
 
 type TxStatusRespond struct {
 	TxHash string
@@ -458,4 +462,20 @@ type DexSwap struct {
 
 type TokenStruct struct {
 	ID string `json:"id"`
+}
+
+type OpenSeaGenOfferRequest struct {
+	Amount            string `json:"amount"`
+	Recipient         string `json:"recipient"`
+	NFTID             string `json:"nftid"`
+	CollectionAddress string `json:"contract"`
+	EndTime           int64  `json:"endtime"`
+	StartTime         int64  `json:"starttime"`
+}
+
+type OpenSeaOfferFeeEstimateRequest struct {
+	Offer     string `json:"offer"`
+	Signature string `json:"signature"`
+	BurnToken string `json:"burntoken"`
+	Ota       string `json:"ota"`
 }

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,6 +13,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
@@ -77,7 +82,7 @@ func APIEstimateBuyFee(c *gin.Context) {
 		burnAmountInc = amountUint64
 	}
 
-	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
+	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid, false)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -267,7 +272,7 @@ func APINFTDetail(c *gin.Context) {
 		}
 		nftDetail = &nftDetailDB.Detail
 	} else {
-		nftDetail, err = popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
+		nftDetail, err = popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid, false)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
@@ -280,9 +285,9 @@ func APICollectionAssets(c *gin.Context) {
 	contract := c.Query("contract")
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	offset, _ := strconv.Atoi(c.Query("offset"))
-	limit = 9999
 	var result []popensea.NFTDetail
 	if config.NetworkID == "mainnet" {
+		limit = 9999
 		assetList, err := database.DBGetCollectionNFTs(contract, int64(limit), int64(offset))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -300,6 +305,10 @@ func APICollectionAssets(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"Result": result})
 		return
 	}
+	if limit > 200 {
+		limit = 200
+	}
+
 	assetList, err := popensea.RetrieveCollectionAssets(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
@@ -307,9 +316,9 @@ func APICollectionAssets(c *gin.Context) {
 	}
 	//force only return buy-able assets
 	for _, asset := range assetList {
-		if len(asset.SeaportSellOrders) > 0 {
-			result = append(result, asset)
-		}
+		// if len(asset.SeaportSellOrders) > 0 {
+		result = append(result, asset)
+		// }
 	}
 	c.JSON(http.StatusOK, gin.H{"Result": result})
 }
@@ -397,28 +406,6 @@ func estimateOpenSeaFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network
 	if len(fees) == 0 {
 		return nil, errors.New("can't get fee")
 	}
-	// burntAmount := uint64(0)
-	// protocolFee := uint64(0)
-	// if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
-	// 	var tokenID string
-
-	// 	for _, childToken := range burnTokenInfo.ListUnifiedToken {
-	// 		childNetID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		if childNetID == networkID {
-	// 			tokenID = childToken.TokenID
-	// 			break
-	// 		}
-	// 	}
-	// 	burntAmount, protocolFee, err = getUnifiedUnshieldFee(tokenID, burnTokenInfo.TokenID, amount)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// } else {
-	// 	burntAmount = amount
-	// }
 
 	feeAddress := ""
 	feeAddressShardID := byte(0)
@@ -478,7 +465,7 @@ func APIOpenSeaOfferStatus(c *gin.Context) {
 }
 
 func APIOpenSeaSubmitOffer(c *gin.Context) {
-	var req SubmitSwapTxRequest
+	var req SubmitOpenseaOfferTxRequest
 	userAgent := c.Request.UserAgent()
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -560,7 +547,8 @@ func APIOpenSeaSubmitOffer(c *gin.Context) {
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent, wcommon.ExternalTxTypeOpenseaBuy)
+		swapInfo.AdditionalData = req.Offer
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent, wcommon.ExternalTxTypeOpenseaOffer)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
@@ -653,7 +641,7 @@ func APIOpenSeaCancelOffer(c *gin.Context) {
 
 	burntAmount, _ := md.TotalBurningAmount()
 	if valid {
-		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent, wcommon.ExternalTxTypeOpenseaBuy)
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent, wcommon.ExternalTxTypeOpenseaOfferCancel)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
@@ -663,13 +651,145 @@ func APIOpenSeaCancelOffer(c *gin.Context) {
 	}
 }
 
+func APIOpenSeaGenOffer(c *gin.Context) {
+	var req OpenSeaGenOfferRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	var nftDetail *popensea.NFTDetail
+	if config.NetworkID == "mainnet" {
+		nftDetailDB, err := database.DBGetNFTDetail(req.CollectionAddress, req.NFTID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		nftDetail = &nftDetailDB.Detail
+	} else {
+		nftDetail, err = popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, req.CollectionAddress, req.NFTID, true)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+	}
+
+	papps, err := database.DBRetrievePAppsByNetwork("eth")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	offerAdapterAddr, exist := papps.AppContracts["opensea-offer"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea offer adapter not found"})
+		return
+	}
+	seaportAddress, exist := papps.AppContracts["seaport"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea seaport not found"})
+		return
+	}
+
+	offer, err := popensea.GenOfferOrder("0x0000000000000000000000000000000000000000", req.Recipient, offerAdapterAddr, req.Amount, req.StartTime, req.EndTime, *nftDetail)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	offerJson, err := json.Marshal(offer)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	networknInfo, err := database.DBGetBridgeNetworkInfo("eth")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	offerSignData := ""
+	for _, endpoint := range networknInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Println("ethclient.Dial err:", err)
+			continue
+		}
+
+		seaport, err := popensea.NewIopensea(ethcommon.HexToAddress(seaportAddress), evmClient)
+		if err != nil {
+			log.Println("popensea.NewIopensea err:", err)
+			continue
+		}
+		orderHash, err := seaport.GetOrderHash(nil, *offer)
+		if err != nil {
+			log.Println("seaport.GetOrderHash err:", err)
+			continue
+		}
+
+		openseaOfferAddr := ethcommon.HexToAddress(offerAdapterAddr)
+		offerAdapter, err := popensea.NewOpenseaOffer(openseaOfferAddr, evmClient)
+		if err != nil {
+			log.Println("popensea.NewOpenseaOffer err:", err)
+			continue
+		}
+		domainSeparator, _ := offerAdapter.DomainSeparator(nil)
+		signData, _ := offerAdapter.ToTypedDataHash(nil, domainSeparator, orderHash)
+
+		offerSignData = hex.EncodeToString(signData[:])
+		break
+	}
+	if offerSignData == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "can't get offer hash"})
+		return
+	}
+
+	result := struct {
+		Offer         string `json:"offer"`
+		OfferSignData string `json:"offer_sign_data"`
+	}{
+		OfferSignData: offerSignData,
+		Offer:         hex.EncodeToString(offerJson),
+	}
+	c.JSON(200, gin.H{"Result": result})
+}
+
 // TODO: opensea
 func APIEstimateOfferFee(c *gin.Context) {
-	contract := c.Query("contract")
-	nftid := c.Query("nftid")
-	burnToken := c.Query("burntoken")
-	burnAmount := c.Query("burnamount")
-	recipient := c.Query("recipient")
+	var req OpenSeaOfferFeeEstimateRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	offer := popensea.OrderComponents{}
+	offerBytes, err := hex.DecodeString(req.Offer)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "offerBytes, err := hex.DecodeString(req.Offer) " + err.Error()})
+		return
+	}
+
+	err = json.Unmarshal(offerBytes, &offer)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "err = json.Unmarshal(offerBytes, &offer) " + err.Error()})
+		return
+	}
+
+	contract := offer.Consideration[0].Token.Hex()
+	// nftid := offer.Consideration[0].IdentifierOrCriteria.String()
+	burnToken := req.BurnToken
+
+	burnAmountBig := new(big.Int).SetInt64(0)
+
+	burnAmountBig.Add(offer.Offer[0].StartAmount, burnAmountBig)
+	for idx, cn := range offer.Consideration {
+		if idx == 0 { // 1st consideration is nft
+			continue
+		}
+		burnAmountBig.Add(cn.StartAmount, burnAmountBig)
+	}
+	burnAmountBig.Div(burnAmountBig, new(big.Int).SetInt64(int64(math.Pow10(9))))
+	burnAmount := burnAmountBig.String()
 
 	_ = contract
 	// currently only supports eth
@@ -716,16 +836,16 @@ func APIEstimateOfferFee(c *gin.Context) {
 		burnAmountInc = amountUint64
 	}
 
-	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
+	// nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+	// 	return
+	// }
 
-	if len(nftDetail.SeaportSellOrders) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "this NFT is not available for sell"})
-		return
-	}
+	// if len(nftDetail.SeaportSellOrders) == 0 {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": "this NFT is not available for sell"})
+	// 	return
+	// }
 
 	feeAmount, err := estimateOpenSeaFee(burnAmountInc, burnTokenInfo, network, networkFees, spTkList)
 	if err != nil {
@@ -748,13 +868,29 @@ func APIEstimateOfferFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-offer contract not found"})
 		return
 	}
-	callData, err := papps.BuildOpenSeaCalldata(nftDetail, recipient)
+	proxyAddress := ethcommon.HexToAddress(contract)
+	openseaProxyAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaMetaData.ABI))
+	openseaOfferAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaOfferMetaData.ABI))
+	ota := req.Ota
+	signBytes, err := hex.DecodeString(req.Signature)
 	if err != nil {
-		fmt.Println("estimateOpenSeaFee", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	conduit := ethcommon.BytesToAddress(offer.ConduitKey[:])
 
+	tempData, err := openseaOfferAbi.Pack("offer", offer, ota, signBytes, conduit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "openseaOfferAbi.Pack" + err.Error()})
+		return
+	}
+	callData, err := openseaProxyAbi.Pack("forward", proxyAddress, tempData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "openseaProxyAbi.Pack" + err.Error()})
+		return
+	}
+
+	callDataHex := hex.EncodeToString(callData)
 	receiveToken := strings.ToLower("6722ec501bE09fb221bCC8a46F9660868d0a6c63")
 	if config.NetworkID == "testnet" {
 		receiveToken = strings.ToLower("4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae")
@@ -767,7 +903,7 @@ func APIEstimateOfferFee(c *gin.Context) {
 		ReceiveToken string
 	}{
 		Fee:          feeAmount,
-		Calldata:     callData,
+		Calldata:     callDataHex,
 		CallContract: contract[2:],
 		ReceiveToken: receiveToken,
 	}
@@ -826,7 +962,7 @@ func APIEstimateCancelFee(c *gin.Context) {
 		burnAmountInc = amountUint64
 	}
 
-	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
+	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid, false)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -886,5 +1022,44 @@ func APIEstimateCancelFee(c *gin.Context) {
 
 func checkOpenseaOfferStatus(txhash string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
+	offerData, err := database.DBGetOpenseaOfferByOfferTx(txhash)
+	if err != nil {
+		return nil, err
+	}
+	result["offer_inc_tx"] = txhash
+	offerTx, err := database.DBGetPappTxData(txhash)
+	if err != nil {
+		return nil, err
+	}
+
+	result["offer_inc_tx_status"] = offerTx.Status
+	if offerTx.Status == wcommon.StatusAccepted {
+
+		offerExtTx, err := database.DBGetExternalTxByIncTx(txhash, "eth")
+		if err != nil {
+			return nil, err
+		}
+		result["offer_external_tx"] = offerExtTx.Txhash
+		result["offer_external_tx_status"] = offerExtTx.Status
+
+		if offerData.CancelTxInc != "" {
+			result["cancel_inc_tx"] = offerData.CancelTxInc
+			result["cancel_external_tx"] = offerData.CancelAdapterTx
+			// result["cancel_seaport_tx"] = offerData.CancelOpenseaTx
+			result["cancel_inc_tx_status"] = offerData.CancelTxInc
+			result["cancel_external_tx_status"] = offerData.CancelAdapterTx
+			result["reshield_tx"] = ""
+			result["reshield_tx_status"] = ""
+			// result["cancel_seaport_tx_status"] = offerData.CancelOpenseaTx
+		}
+
+	}
+
+	result["timeout_at"] = offerData.TimeoutAt
+	result["nftid"] = offerData.NFTID
+	result["collection"] = offerData.NFTCollection
+	result["receiver"] = offerData.Receiver
+
+	result["status"] = offerData.Status
 	return result, nil
 }

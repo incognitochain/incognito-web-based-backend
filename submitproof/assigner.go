@@ -143,6 +143,10 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		txTypeStr = "txswap"
 	case common.ExternalTxTypeOpenseaBuy:
 		txTypeStr = "opensea"
+	case common.ExternalTxTypeOpenseaOffer:
+		txTypeStr = "opensea-offer"
+	case common.ExternalTxTypeOpenseaOfferCancel:
+		txTypeStr = "opensea-cancel"
 	}
 	go func() {
 		tkInfo, _ := getTokenInfo(feeToken)

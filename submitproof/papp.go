@@ -2,6 +2,7 @@ package submitproof
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +23,7 @@ import (
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/evmproof"
+	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -182,7 +184,82 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 	//TODO: popensea parse calldata
 	switch task.TxType {
 	case wcommon.ExternalTxTypeOpenseaOffer:
+		offerStr := task.PappSwapInfo.AdditionalData
+		networknInfo, err := database.DBGetBridgeNetworkInfo("eth")
+		if err != nil {
+			log.Println("DBGetBridgeNetworkInfo err", err)
+			m.Nack()
+			return
+		}
+		offer := popensea.OrderComponents{}
+		offerBytes, err := hex.DecodeString(offerStr)
+		if err != nil {
+			log.Println(" hex.DecodeString(offerStr) err", err)
+			m.Nack()
+			return
+		}
 
+		err = json.Unmarshal(offerBytes, &offer)
+		if err != nil {
+			log.Println("json.Unmarshal(offerBytes, &offer) err", err)
+			m.Nack()
+			return
+		}
+		papps, err := database.DBRetrievePAppsByNetwork("eth")
+		if err != nil {
+			log.Println("json.Unmarshal(offerBytes, &offer) err", err)
+			m.Nack()
+			return
+		}
+
+		seaportAddress, exist := papps.AppContracts["seaport"]
+		if !exist {
+			log.Println("opensea seaport not found")
+			m.Nack()
+			return
+		}
+
+		offerHash := ""
+		for _, endpoint := range networknInfo.Endpoints {
+			evmClient, err := ethclient.Dial(endpoint)
+			if err != nil {
+				log.Println("ethclient.Dial err:", err)
+				continue
+			}
+
+			seaport, err := popensea.NewIopensea(common.HexToAddress(seaportAddress), evmClient)
+			if err != nil {
+				log.Println("popensea.NewIopensea err:", err)
+				continue
+			}
+			orderHash, err := seaport.GetOrderHash(nil, offer)
+			if err != nil {
+				log.Println("seaport.GetOrderHash err:", err)
+				continue
+			}
+			offerHash = hex.EncodeToString(orderHash[:])
+			break
+		}
+
+		timeoutAt := time.Unix(offer.EndTime.Int64(), 0)
+		nftID := offer.Consideration[0].IdentifierOrCriteria.String()
+		nftCollection := offer.Consideration[0].Token.Hex()
+		receiver := offer.Consideration[0].Recipient.Hex()
+		offerInfo := wcommon.OpenseaOfferData{
+			Receiver:      receiver,
+			Status:        popensea.OfferStatusSubmitting,
+			NFTCollection: nftCollection,
+			NFTID:         nftID,
+			TimeoutAt:     timeoutAt,
+			OfferTxInc:    task.TxHash,
+			OfferHash:     offerHash,
+		}
+		err = database.DBInsertOpenseaOfferData(&offerInfo)
+		if err != nil {
+			log.Println("seaport.GetOrderHash err:", err)
+			m.Nack()
+			return
+		}
 	case wcommon.ExternalTxTypeOpenseaOfferCancel:
 
 	}

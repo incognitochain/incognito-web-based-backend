@@ -33,24 +33,22 @@ type OpenseaDefaultCollectionData struct {
 // TODO: opensea
 type OpenseaOfferData struct {
 	mgm.DefaultModel `bson:",inline"`
-	Receiver         string             `bson:"receiver"`
-	NFTID            string             `bson:"nft_id"`
-	NFTCollection    string             `bson:"collection_id"`
-	OfferHash        string             `bson:"offer_hash"`
-	OfferDetail      OpenseaOfferDetail `bson:"offer_detail"`
-	OfferSignature   string             `bson:"offer_signature"`
-	TimeoutAt        time.Time          `bson:"timeout_at"`
-	Status           string             `bson:"status"`
-	CustodialWallet  string             `bson:"custodial_wallet"`
-	OfferTxInc       string             `bson:"offer_tx_inc"`
-	OfferTxExternal  string             `bson:"offer_tx_external"`
-	CancelTxInc      string             `bson:"cancel_tx_inc"`
-	CancelAdapterTx  string             `bson:"cancel_apdapter_tx"`
-	CancelOpenseaTx  string             `bson:"cancel_opensea_tx"`
+	Receiver         string    `bson:"receiver"`
+	NFTID            string    `bson:"nft_id"`
+	NFTCollection    string    `bson:"collection_id"`
+	OfferHash        string    `bson:"offer_hash"`
+	TimeoutAt        time.Time `bson:"timeout_at"`
+	Status           string    `bson:"status"`
+	OfferTxInc       string    `bson:"offer_tx_inc"`
+	OfferTxExternal  string    `bson:"offer_tx_external"`
+	CancelTxInc      string    `bson:"cancel_tx_inc"`
+	CancelAdapterTx  string    `bson:"cancel_apdapter_tx"`
+	CancelOpenseaTx  string    `bson:"cancel_opensea_tx"` //not used yet
+	ReshieldTx       string    `bson:"reshield_tx_inc"`
 }
 
 type OpenseaOfferDetail struct {
-	OfferToken  string `bson:"offer_token"`
-	OfferAmount string `bson:"offer_amount"`
-	Offer       string `bson:"offer"`
+	OfferToken  string `bson:"offer_token" json:"offer_token"`
+	OfferAmount string `bson:"offer_amount" json:"offer_amount"`
+	Offer       string `bson:"offer" json:"offer"`
 }

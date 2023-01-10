@@ -83,7 +83,7 @@ func RetrieveCollectionAssets(OSEndpoint string, apiKey string, collectionContra
 	var respond struct {
 		Assets []NFTDetail `json:"assets"`
 	}
-	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&order_direction=asc&include_orders=true&offset=%v&limit=%v", OSEndpoint, collectionContract, offset, limit)
+	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&order_direction=asc&include_orders=false&offset=%v&limit=%v", OSEndpoint, collectionContract, offset, limit)
 
 	req, _ := http.NewRequest("GET", url, nil)
 
@@ -179,11 +179,11 @@ func RetrieveCollectionListing(apiKey string, collectionSlug string, next string
 	return respond.Listings, respond.Next, nil
 }
 
-func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID string) (*NFTDetail, error) {
+func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID string, includeOrder bool) (*NFTDetail, error) {
 	var respond struct {
 		Assets []NFTDetail `json:"assets"`
 	}
-	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&token_ids=%v&order_direction=asc&include_orders=true&offset=0&limit=1", OSEndpoint, collectionContract, tokenID)
+	url := fmt.Sprintf("%v/api/v1/assets?asset_contract_address=%v&token_ids=%v&order_direction=asc&include_orders=%v&offset=0&limit=1", OSEndpoint, collectionContract, tokenID, includeOrder)
 
 	req, _ := http.NewRequest("GET", url, nil)
 

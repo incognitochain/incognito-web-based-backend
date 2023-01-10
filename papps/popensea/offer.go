@@ -4,27 +4,21 @@ import (
 	"errors"
 	"math/big"
 	"math/rand"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // TODO: opensea
-func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAddress string, amount string, endTime int64, item NFTDetail) (*OrderComponents, error) {
+func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAddress string, amount string, startTime, endTime int64, item NFTDetail) (*OrderComponents, error) {
 	var order OrderComponents
 	if len(item.SeaportSellOrders) == 0 {
 		return nil, errors.New("can't create offer order without SeaportSellOrders")
 	}
 	sellOrderParam := item.SeaportSellOrders[0].ProtocolData.Parameters
-	currentTime := time.Now().Unix()
 	order.OrderType = 0
 	order.Counter = big.NewInt(0) // ? always 0
-	order.StartTime = new(big.Int).SetInt64(currentTime)
-	if endTime > currentTime {
-		order.EndTime = new(big.Int).SetInt64(endTime)
-	} else {
-		order.EndTime = new(big.Int).SetInt64(currentTime + 100)
-	}
+	order.StartTime = new(big.Int).SetInt64(startTime)
+	order.EndTime = new(big.Int).SetInt64(endTime)
 	order.Offerer = common.HexToAddress(offerAdapterAddress)
 	order.ConduitKey = common.HexToHash(sellOrderParam.ConduitKey)
 	order.Zone = common.HexToAddress(sellOrderParam.Zone)
@@ -42,7 +36,7 @@ func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAdd
 	tokenId, _ := new(big.Int).SetString(sellOrderParam.Offer[0].IdentifierOrCriteria, 10)
 	offerAmount, _ := new(big.Int).SetString(amount, 10)
 	nftOffer := OfferItem{
-		ItemType:             1,
+		ItemType:             uint8(sellOrderParam.Offer[0].ItemType),
 		Token:                common.HexToAddress(tokenContract),
 		IdentifierOrCriteria: big.NewInt(0),
 		StartAmount:          offerAmount,
@@ -71,7 +65,7 @@ func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAdd
 		EndAmount:            big.NewInt(1),
 	}
 	considerationOpenseaFee := ConsiderationItem{
-		ItemType:             1,
+		ItemType:             uint8(sellOrderParam.Offer[0].ItemType),
 		Token:                common.HexToAddress(tokenContract),
 		IdentifierOrCriteria: big.NewInt(0),
 		StartAmount:          openseaFee,
@@ -79,7 +73,7 @@ func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAdd
 	}
 
 	considerationCollectionFee := ConsiderationItem{
-		ItemType:             1,
+		ItemType:             uint8(sellOrderParam.Offer[0].ItemType),
 		Token:                common.HexToAddress(tokenContract),
 		IdentifierOrCriteria: big.NewInt(0),
 		StartAmount:          collectionFee,

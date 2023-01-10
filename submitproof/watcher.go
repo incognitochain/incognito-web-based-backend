@@ -22,6 +22,7 @@ import (
 	inccommon "github.com/incognitochain/go-incognito-sdk-v2/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	"github.com/incognitochain/incognito-web-based-backend/slacknoti"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -737,11 +738,21 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 
 			txtype := ""
 			switch tx.Type {
-			case wcommon.ExternalTxTypeSwap:
+			case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpenseaBuy, wcommon.ExternalTxTypeOpenseaOffer:
 				txtype = "swaptx"
 				err = database.DBUpdatePappTxSubmitOutchainStatus(tx.IncRequestTx, wcommon.StatusAccepted)
 				if err != nil {
 					return err
+				}
+				if tx.Type == wcommon.ExternalTxTypeOpenseaOffer {
+					txtype = "opensea-offer"
+					err = database.DBUpdateOpenseaOfferStatus(tx.IncRequestTx, popensea.OfferStatusPending)
+					if err != nil {
+						return err
+					}
+				}
+				if tx.Type == wcommon.ExternalTxTypeOpenseaBuy {
+					txtype = "opensea"
 				}
 				break
 			case wcommon.ExternalTxTypeUnshield:
@@ -751,6 +762,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					return err
 				}
 				break
+
 			default:
 				txtype = "unknown"
 			}

@@ -1,6 +1,7 @@
 package submitproof
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -224,37 +225,62 @@ func watchPendingOpenseaOffer() {
 			continue
 		}
 		for _, offer := range offerList {
-
+			isTimedOut := false
 			if time.Since(offer.TimeoutAt) < time.Second {
+				isTimedOut = true
+			}
+
+			status, err := checkOpenseaOfferFilled(offer.OfferHash, nil)
+			if err != nil {
+				log.Println("checkOpenseaOfferFilled err:", err)
 				continue
 			}
-			//offer timed out
+			//TODO: next
+			switch status {
+			case popensea.OfferStatusPending:
+				if isTimedOut {
+					//send tx cancel to opensea adapter as shield tx
+				}
+			case popensea.OfferStatusFilled:
+				err = database.DBUpdateOpenseaOfferStatus(offer.OfferTxInc, popensea.OfferStatusFilled)
+				if err != nil {
+					log.Println("DBUpdateOpenseaOfferStatus err:", err)
+					continue
+				}
+			case popensea.OfferStatusCancelled:
+				err = database.DBUpdateOpenseaOfferStatus(offer.OfferTxInc, popensea.OfferStatusCancelled)
+				if err != nil {
+					log.Println("DBUpdateOpenseaOfferStatus err:", err)
+					continue
+				}
+			}
 		}
 	}
 }
 
-func checkOpenseaOfferFilled(order popensea.OrderComponents) (bool, error) {
+func checkOpenseaOfferFilled(orderHash string, order *popensea.OrderComponents) (string, error) {
+	status := "unknown"
 	papps, err := database.DBRetrievePAppsByNetwork("eth")
 	if err != nil {
-		return false, err
+		return status, err
 	}
 	if len(papps.AppContracts) == 0 {
-		return false, errors.New("papps is empty")
+		return status, errors.New("papps is empty")
 	}
 
 	seaportAddress, exist := papps.AppContracts["seaport"]
 	if !exist {
-		return false, errors.New("seaport isn't exist")
+		return status, errors.New("seaport isn't exist")
 	}
 
 	openseaOfferer, exist := papps.AppContracts["opensea-offer"]
 	if !exist {
-		return false, errors.New("seaport isn't exist")
+		return status, errors.New("seaport isn't exist")
 	}
 
 	networkInfo, err := database.DBGetBridgeNetworkInfo("eth")
 	if err != nil {
-		return false, err
+		return status, err
 	}
 
 	for _, endpoint := range networkInfo.Endpoints {
@@ -267,17 +293,42 @@ func checkOpenseaOfferFilled(order popensea.OrderComponents) (bool, error) {
 		seaport, err := popensea.NewIopensea(common.HexToAddress(seaportAddress), evmClient)
 		if err != nil {
 			log.Println("NewIopensea err:", err)
-			return false, err
+			return status, err
 		}
 
 		openseaOfferAddr := common.HexToAddress(openseaOfferer)
 		offerAdapter, err := popensea.NewOpenseaOffer(openseaOfferAddr, evmClient)
 		if err != nil {
 			log.Println("NewOpenseaOffer err:", err)
-			return false, err
+			return status, err
 		}
-		seaport.GetOrderHash(nil, order)
-
+		if orderHash != "" {
+			orderHashBytes, err := hex.DecodeString(orderHash)
+			if err != nil {
+				log.Println("hex.DecodeString(orderHash) err:", err)
+				return status, err
+			}
+			orderStatus, err := seaport.GetOrderStatus(nil, toByte32(orderHashBytes))
+			if err != nil {
+				log.Println("seaport.GetOrderStatus err:", err)
+				return status, err
+			}
+			if orderStatus.IsCancelled {
+				status = popensea.OfferStatusCancelled
+				return status, nil
+			} else {
+				if orderStatus.TotalFilled.Int64() > 0 {
+					status = popensea.OfferStatusFilled
+					return status, nil
+				}
+				status = popensea.OfferStatusPending
+				return status, nil
+			}
+		} else {
+			//TODO: opensea ?
+			seaport.GetOrderHash(nil, *order)
+			_ = offerAdapter
+		}
 	}
-	return false, nil
+	return status, nil
 }

@@ -86,11 +86,12 @@ type ExternalTxSwapResult struct {
 }
 
 type PappSwapInfo struct {
-	DappName      string
-	TokenIn       string
-	TokenOut      string
-	TokenInAmount *big.Int
-	MinOutAmount  *big.Int
+	DappName       string
+	TokenIn        string
+	TokenOut       string
+	TokenInAmount  *big.Int
+	MinOutAmount   *big.Int
+	AdditionalData string
 }
 
 type TradeDataRespond struct {

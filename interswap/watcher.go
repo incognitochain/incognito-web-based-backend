@@ -77,7 +77,7 @@ func watchInterswapPendingTx(config beCommon.Config) {
 // TODO: check Lam's BE and watcher use the same IncFullnode or not
 func processInterswapPendingFirstTx(txData beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
-	if IsExist(SkipTxs, interswapTxID) {
+	if StrContain(SkipTxs, interswapTxID) {
 		return nil
 	}
 
@@ -510,6 +510,10 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 			}
 
 			receiveTokenContract := Remove0xPrefix(childToTokenInfo.ContractID)
+			if beCommon.IsNativeCurrency(childToTokenInfo.CurrencyType) {
+				receiveTokenContract = "0000000000000000000000000000000000000000"
+			}
+
 			withdrawAddr := txData.WithdrawAddress
 			if withdrawAddr == "" {
 				withdrawAddr = "0000000000000000000000000000000000000000"
@@ -562,7 +566,7 @@ func CheckStatusAndHandlePdexTx(txData *beCommon.InterSwapTxData, config beCommo
 
 			return nil
 
-		} else if pdexStatus.Status == "refund" {
+		} else if pdexStatus.Status == "rejected" {
 			err = SendSlackSwapInfo(interswapTxID, txData.UserAgent, "was refunded (first tx)",
 				txData.FromAmount, txData.FromToken,
 				txData.FinalMinExpectedAmt, txData.ToToken,
@@ -778,12 +782,10 @@ func CheckStatusAndHandlePappTx(txData *beCommon.InterSwapTxData, config beCommo
 	return nil
 }
 
-var IsUpdate = false
-
 func processInterswapPendingSecondTx(txData beCommon.InterSwapTxData, config beCommon.Config) error {
 	interswapTxID := txData.TxID
 	addOnTxID := txData.AddOnTxID
-	if IsExist(SkipTxs, interswapTxID) {
+	if StrContain(SkipTxs, interswapTxID) {
 		return nil
 	}
 
@@ -796,7 +798,6 @@ func processInterswapPendingSecondTx(txData beCommon.InterSwapTxData, config beC
 		if isMaxReCheck && shouldRefund {
 			SendSlackAlert(fmt.Sprintf("InterswapID %v AddonTxID %v Second tx is rejected by chain. Need to retry 😵 `%v` \n", interswapTxID, addOnTxID, err.Error()))
 
-			// createTxRefundAndUpdateStatus()
 			status := FirstPending
 			err = database.DBUpdateInterswapTxStatus(interswapTxID, status, StatusStr[status], err.Error())
 			if err != nil {
@@ -875,7 +876,7 @@ func CheckStatusAndHandlePdexTxSecond(txData *beCommon.InterSwapTxData, config b
 			}
 			return nil
 
-		} else if pdexStatus.Status == "refund" {
+		} else if pdexStatus.Status == "rejected" {
 			// parse tx response to get received UTXO
 			if len(pdexStatus.RespondTxs) != 1 {
 				log.Printf("InterswapID %v CallGetPdexSwapTxStatus error %v", interswapTxID, err)
@@ -1051,23 +1052,6 @@ func CheckStatusAndHandlePappTxSecond(txData *beCommon.InterSwapTxData, config b
 					}
 					amtResponse := convertAmtByDec(outchainTxResult.Amount, int(fromDec), toDec)
 
-					// amtResponse, err := convertAmtExtDecToAmtPDec(outchainTxResult.Amount, redepositInfo.TokenID, config)
-					// if err != nil {
-					// 	log.Printf("InterswapID %v Calculate the final response amount error %v\n", interswapTxID, err)
-					// 	return fmt.Errorf("InterswapID %v Calculate the final response amount error %v\n", interswapTxID, err)
-					// }
-					// if redepositInfo.UTokenID != redepositInfo.TokenID {
-					// 	// unified token
-					// 	amtResponseTmp, err := convertAmountDec(amtResponse, redepositInfo.TokenID, redepositInfo.UTokenID, config)
-					// 	if err != nil {
-					// 		log.Printf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err)
-					// 		SendSlackAlert(fmt.Sprintf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err))
-					// 		// return fmt.Errorf("InterswapID %v Calculate the final response amount with unified token error %v\n", interswapTxID, err)
-					// 	} else {
-					// 		amtResponse = amtResponseTmp
-					// 	}
-					// }
-
 					err = SendSlackSwapInfo(interswapTxID, txData.UserAgent, "was success",
 						txData.FromAmount, txData.FromToken,
 						txData.FinalMinExpectedAmt, txData.ToToken,
@@ -1128,7 +1112,7 @@ func processInterswapRefundingTx(txData beCommon.InterSwapTxData, config beCommo
 	refundTxID := txData.TxIDRefund
 	shardID := fmt.Sprint(txData.ShardID)
 
-	if IsExist(SkipTxs, interswapTxID) {
+	if StrContain(SkipTxs, interswapTxID) {
 		return nil
 	}
 	fmt.Printf("InterswapID %v Start processing refundTxID %v\n", interswapTxID, refundTxID)

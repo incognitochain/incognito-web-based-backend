@@ -423,3 +423,84 @@ func DBCreateInterSwapDataIndex() error {
 	}
 	return nil
 }
+
+// pdao:
+func DBCreateProposalIndex() error {
+	startTime := time.Now()
+	proposalTxModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "pid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "submit_burn_tx", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}, {Key: "submit_burn_tx", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+
+		{
+			Keys: bsonx.Doc{{Key: "created_at", Value: bsonx.Int32(1)}},
+		},
+
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}, {Key: "status", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "submit_proposal_tx", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.Proposal{}).Indexes().CreateMany(context.Background(), proposalTxModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}
+
+func DBCreateVoteIndex() error {
+	startTime := time.Now()
+	voteTxModel := []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "submit_burn_tx", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}, {Key: "submit_burn_tx", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+
+		{
+			Keys: bsonx.Doc{{Key: "created_at", Value: bsonx.Int32(1)}},
+		},
+
+		{
+			Keys: bsonx.Doc{{Key: "status", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "proposal_id", Value: bsonx.Int32(1)}, {Key: "status", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "submit_vote_tx", Value: bsonx.Int32(1)}},
+		},
+	}
+	_, err := mgm.Coll(&common.Vote{}).Indexes().CreateMany(context.Background(), voteTxModel)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}

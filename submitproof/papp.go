@@ -38,6 +38,12 @@ func ProcessPappTxRequest(ctx context.Context, m *pubsub.Message) {
 		processSubmitPappExtTask(ctx, m)
 	case PappSubmitFeeRefundTask:
 		processSubmitRefundFeeTask(ctx, m)
+	case PdaoSubmitProposalExtTask:
+		processSubmitPdaoRequest(ctx, m)
+	case PdaoSubmitVoteExtTask:
+		processSubmitVoteRequest(ctx, m)
+	case PdaoSubmitReShieldPRVExtTask:
+		processSubmitReShieldPRVRequest(ctx, m)
 	}
 }
 
@@ -431,7 +437,7 @@ retry:
 			continue
 		}
 
-		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(11))
+		gasPrice = gasPrice.Mul(gasPrice, big.NewInt(12))
 		gasPrice = gasPrice.Div(gasPrice, big.NewInt(10))
 
 		auth.GasPrice = gasPrice
@@ -447,6 +453,15 @@ retry:
 		result.Type = txType
 		result.Network = network
 		result.IncRequestTx = incTxHash
+
+		// address, err := wcommon.GetEVMAddress(config.EVMKey)
+		// if err != nil {
+		// 	log.Println(err)
+		// 	continue
+		// }
+		// account := common.HexToAddress(address)
+		// pendingNonce, _ := evmClient.PendingNonceAt(context.Background(), account)
+		// auth.Nonce = new(big.Int).SetUint64(pendingNonce)
 
 		tx, err := evmproof.ExecuteWithBurnProof(c, auth, proof)
 		if err != nil {
@@ -560,6 +575,5 @@ retry:
 
 }
 func speedupOutChainSwapTx(network int, evmTxHash string) error {
-	//TODO
 	return nil
 }

@@ -464,6 +464,56 @@ type TokenStruct struct {
 	ID string `json:"id"`
 }
 
+// Pdao request
+type CreatProposalReq struct {
+	Txhash string `json:"Txhash" binding:"required"`
+	TxRaw  string `json:"TxRaw" binding:"required"`
+
+	ProposalID string `json:"ProposalID" binding:"required"`
+
+	Targets    []string `json:"Targets" binding:"required"`
+	Values     []string `json:"Values" binding:"required"`
+	Signatures []string `json:"Signatures"`
+	Calldatas  []string `json:"Calldatas"  binding:"required"`
+
+	Description         string `json:"Description"  binding:"required"`
+	Title               string `json:"Title"  binding:"required"`
+	ReShieldSignature   string `json:"ReShieldSignature"  binding:"required"`
+	CreatePropSignature string `json:"CreatePropSignature" binding:"required"`
+	PropVoteSignature   string `json:"PropVoteSignature" binding:"required"`
+}
+
+type SubmitVoteReq struct {
+	Txhash            string `json:"Txhash" binding:"required"`
+	TxRaw             string
+	ProposalID        string `json:"ProposalID" binding:"required"`
+	Vote              uint8  `json:"Vote" binding:"required"`
+	PropVoteSignature string `json:"PropVoteSignature" binding:"required"`
+	ReShieldSignature string `json:"ReShieldSignature" binding:"required"`
+}
+
+type SubmitCancelReq struct {
+	Txhash            string `json:"Txhash" binding:"required"`
+	TxRaw             string `json:"TxRaw" binding:"required"`
+	ProposalID        string `json:"ProposalID" binding:"required"`
+	Signature         string `json:"Signature" binding:"required"`
+	ReShieldSignature bool   `json:"ReShieldSignature" binding:"required"`
+}
+
+type ReShieldSignatureReq struct {
+	Signature        string
+	IncognitoAddress string
+	Amount           string
+	Timestamp        string
+}
+
+type PDaoNetworkFeeResp struct {
+	FeeAddress        string `json:"feeAddress"`
+	FeeAddressShardID int    `json:"feeAddressShardID"`
+	TokenID           string `json:"tokenid"`
+	FeeAmount         uint64 `json:"feeAmount"`
+}
+
 type OpenSeaGenOfferRequest struct {
 	Amount            string `json:"amount"`
 	Recipient         string `json:"recipient"`

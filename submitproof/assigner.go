@@ -213,7 +213,7 @@ func SubmitOutChainTx(incTxHash string, network string, isUnifiedToken bool, ret
 
 	ctx := context.Background()
 	switch txType {
-	case common.ExternalTxTypeSwap, common.ExternalTxTypeOpenseaBuy:
+	case common.ExternalTxTypeSwap, common.ExternalTxTypeOpenseaBuy, common.ExternalTxTypeOpenseaOffer, common.ExternalTxTypeOpenseaOfferCancel:
 		msg := &pubsub.Message{
 			Attributes: map[string]string{
 				"txhash": incTxHash,

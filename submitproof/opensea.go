@@ -18,6 +18,16 @@ import (
 )
 
 func processPendingOpenseaTx(tx wcommon.PappTxData) error {
+
+	txTypeStr := ""
+	switch tx.Type {
+	case wcommon.ExternalTxTypeOpenseaBuy:
+		txTypeStr = "opensea"
+	case wcommon.ExternalTxTypeOpenseaOffer:
+		txTypeStr = "opensea-offer"
+	case wcommon.ExternalTxTypeOpenseaOfferCancel:
+		txTypeStr = "opensea-cancel"
+	}
 	txDetail, err := incClient.GetTxDetail(tx.IncTx)
 	if err != nil {
 		if strings.Contains(err.Error(), "RPC returns an error:") {
@@ -26,7 +36,7 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea-offer]` submit opensea failed 😵 `%v` \n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submit opensea failed 😵 `%v` \n", txTypeStr, tx.IncTx))
 			return nil
 		}
 		return err
@@ -43,9 +53,9 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea-offer]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` inctx `%v` rejected by beacon 😢\n", txTypeStr, tx.IncTx))
 		case 1:
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea-offer]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` inctx `%v` accepted by beacon 👌\n", txTypeStr, tx.IncTx))
 			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
 			if err != nil {
 				return err
@@ -55,9 +65,22 @@ func processPendingOpenseaTx(tx wcommon.PappTxData) error {
 				return err
 			}
 			for _, network := range tx.Networks {
-				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeOpenseaBuy)
-				if err != nil {
-					return err
+				switch tx.Type {
+				case wcommon.ExternalTxTypeOpenseaBuy:
+					_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeOpenseaBuy)
+					if err != nil {
+						return err
+					}
+				case wcommon.ExternalTxTypeOpenseaOffer:
+					_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeOpenseaOffer)
+					if err != nil {
+						return err
+					}
+				case wcommon.ExternalTxTypeOpenseaOfferCancel:
+					_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeOpenseaOfferCancel)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		default:
@@ -240,6 +263,7 @@ func watchPendingOpenseaOffer() {
 			case popensea.OfferStatusPending:
 				if isTimedOut {
 					//send tx cancel to opensea adapter as shield tx
+
 				}
 			case popensea.OfferStatusFilled:
 				err = database.DBUpdateOpenseaOfferStatus(offer.OfferTxInc, popensea.OfferStatusFilled)

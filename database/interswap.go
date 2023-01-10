@@ -60,6 +60,10 @@ func DBSaveInterSwapTxData(txdata common.InterSwapTxData) (*primitive.ObjectID, 
 		"statusstr":               txdata.StatusStr,
 		"useragent":               txdata.UserAgent,
 		"error":                   txdata.Error,
+		"num_recheck":             txdata.NumRecheck,
+		"num_retry":               txdata.NumRetry,
+		"coin_info":               txdata.CoinInfo,
+		"coin_index":              txdata.CoinIndex,
 	}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	result, err := mgm.Coll(&common.InterSwapTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
@@ -152,3 +156,30 @@ func DBRetrieveInterswapTxByTxID(txID string) (*common.InterSwapTxData, error) {
 	}
 	return &result, nil
 }
+
+func DBUpdateInterswapTxNumRecheck(txID string, updatedNumRecheck uint) error {
+	filter := bson.M{"txid": bson.M{operator.Eq: txID}}
+	update := bson.M{"$set": bson.M{"num_recheck": updatedNumRecheck}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.InterSwapTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(false))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// func DBRetrieveInterswapTxByTxID(txID string) (*common.InterSwapTxData, error) {
+// 	result := common.InterSwapTxData{}
+
+// 	filter := bson.M{"txid": bson.M{operator.Eq: txID}}
+// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+// 	dbresult := mgm.Coll(&common.InterSwapTxData{}).FindOne(ctx, filter)
+// 	if dbresult.Err() != nil {
+// 		return nil, dbresult.Err()
+// 	}
+
+// 	if err := dbresult.Decode(&result); err != nil {
+// 		return nil, err
+// 	}
+// 	return &result, nil
+// }

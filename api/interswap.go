@@ -480,9 +480,11 @@ func getInterswapTxStatus(txID string) (*InterswapStatus, error) {
 
 	toAmt := uint64(0)
 	refundAmt := uint64(0)
+	tokenRefund := ""
 	if data.AmountResponse > 0 {
 		if data.StatusStr == interswap.InterswapRefundedStr || data.StatusStr == interswap.InterswapRefundingStr {
 			refundAmt = data.AmountResponse
+			tokenRefund = data.TokenResponse
 		} else {
 			toAmt = data.AmountResponse
 		}
@@ -498,7 +500,7 @@ func getInterswapTxStatus(txID string) (*InterswapStatus, error) {
 		ToToken:      data.ToToken,
 		ResponseTxID: data.TxIDResponse,
 		RefundAmount: refundAmt,
-		RefundToken:  data.TokenResponse,
+		RefundToken:  tokenRefund,
 		RefundTxID:   data.TxIDRefund,
 		TxIDOutchain: data.TxIDOutchain,
 	}

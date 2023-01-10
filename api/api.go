@@ -116,6 +116,7 @@ func StartAPIservice(cfg common.Config) {
 	pOpenSeaGroup.GET("/listoffer", APIOpenSeaListOffer)
 	pOpenSeaGroup.POST("/offerstatus", APIOpenSeaOfferStatus)
 	pOpenSeaGroup.GET("/estimateofferfee", APIEstimateOfferFee)
+	pOpenSeaGroup.GET("/estimatecancelfee", APIEstimateOfferFee)
 	pOpenSeaGroup.POST("/submitoffertx", APIOpenSeaSubmitOffer)
 	pOpenSeaGroup.POST("/submitcanceltx", APIOpenSeaCancelOffer)
 

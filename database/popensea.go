@@ -101,3 +101,17 @@ func DBGetDefaultCollectionList() ([]common.OpenseaDefaultCollectionData, error)
 	}
 	return result, nil
 }
+
+func DBGetPendingOpenseaOffer() ([]common.OpenseaOfferData, error) {
+	var result []common.OpenseaOfferData
+	limit := int64(1000)
+	filter := bson.M{"status": bson.M{operator.Eq: common.StatusPending}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(limit)*DB_OPERATION_TIMEOUT)
+	err := mgm.Coll(&common.OpenseaOfferData{}).SimpleFindWithCtx(ctx, &result, filter, &options.FindOptions{
+		Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}

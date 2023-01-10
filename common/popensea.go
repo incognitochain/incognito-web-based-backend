@@ -1,6 +1,8 @@
 package common
 
 import (
+	"time"
+
 	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	"github.com/kamva/mgm/v3"
 )
@@ -37,7 +39,8 @@ type OpenseaOfferData struct {
 	OfferHash        string             `bson:"offer_hash"`
 	OfferDetail      OpenseaOfferDetail `bson:"offer_detail"`
 	OfferSignature   string             `bson:"offer_signature"`
-	TimeoutAt        string             `bson:"timeout_at"`
+	TimeoutAt        time.Time          `bson:"timeout_at"`
+	Status           string             `bson:"status"`
 	CustodialWallet  string             `bson:"custodial_wallet"`
 	OfferTxInc       string             `bson:"offer_tx_inc"`
 	OfferTxExternal  string             `bson:"offer_tx_external"`

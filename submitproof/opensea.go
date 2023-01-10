@@ -1,12 +1,15 @@
 package submitproof
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
 	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
@@ -212,8 +215,69 @@ func loadOpenseaAPIKey() {
 }
 
 // TODO: opensea
-func watchOpenseaPendingOffer() {
+func watchPendingOpenseaOffer() {
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(15 * time.Second)
+		offerList, err := database.DBGetPendingOpenseaOffer()
+		if err != nil {
+			log.Println("DBGetPendingOpenseaOffer err:", err)
+			continue
+		}
+		for _, offer := range offerList {
+
+			if time.Since(offer.TimeoutAt) < time.Second {
+				continue
+			}
+			//offer timed out
+		}
 	}
+}
+
+func checkOpenseaOfferFilled(order popensea.OrderComponents) (bool, error) {
+	papps, err := database.DBRetrievePAppsByNetwork("eth")
+	if err != nil {
+		return false, err
+	}
+	if len(papps.AppContracts) == 0 {
+		return false, errors.New("papps is empty")
+	}
+
+	seaportAddress, exist := papps.AppContracts["seaport"]
+	if !exist {
+		return false, errors.New("seaport isn't exist")
+	}
+
+	openseaOfferer, exist := papps.AppContracts["opensea-offer"]
+	if !exist {
+		return false, errors.New("seaport isn't exist")
+	}
+
+	networkInfo, err := database.DBGetBridgeNetworkInfo("eth")
+	if err != nil {
+		return false, err
+	}
+
+	for _, endpoint := range networkInfo.Endpoints {
+		evmClient, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Println("ethclient.Dial err:", err)
+			continue
+		}
+
+		seaport, err := popensea.NewIopensea(common.HexToAddress(seaportAddress), evmClient)
+		if err != nil {
+			log.Println("NewIopensea err:", err)
+			return false, err
+		}
+
+		openseaOfferAddr := common.HexToAddress(openseaOfferer)
+		offerAdapter, err := popensea.NewOpenseaOffer(openseaOfferAddr, evmClient)
+		if err != nil {
+			log.Println("NewOpenseaOffer err:", err)
+			return false, err
+		}
+		seaport.GetOrderHash(nil, order)
+
+	}
+	return false, nil
 }

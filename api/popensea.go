@@ -774,6 +774,116 @@ func APIEstimateOfferFee(c *gin.Context) {
 	c.JSON(200, gin.H{"Result": result})
 }
 
+func APIEstimateCancelFee(c *gin.Context) {
+	contract := c.Query("contract")
+	nftid := c.Query("nftid")
+	burnToken := c.Query("burntoken")
+	burnAmount := c.Query("burnamount")
+	recipient := c.Query("recipient")
+
+	_ = contract
+	// currently only supports eth
+	network := "eth"
+	networkID := wcommon.GetNetworkID(network)
+	networkFees, err := database.DBRetrieveFeeTable()
+	if err != nil {
+		fmt.Println("DBRetrieveFeeTable", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	burnTokenInfo, err := getTokenInfo(burnToken)
+	if err != nil {
+		fmt.Println("getTokenInfo", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("not supported token")})
+		return
+	}
+	spTkList := getSupportedTokenList()
+	burnAmountInc := uint64(0)
+	amount := new(big.Int)
+	_, errBool := amount.SetString(burnAmount, 10)
+	if !errBool {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid amount")})
+		return
+	}
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, v := range burnTokenInfo.ListUnifiedToken {
+			if networkID == v.NetworkID {
+				amountUint64 := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(burnAmount, v.Decimals, int64(v.PDecimals))
+				burnAmountInc = amountUint64
+				isEnoughVault, err := checkEnoughVault(burnToken, v.TokenID, amountUint64)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+					return
+				}
+				if !isEnoughVault {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": "not enough token in vault"})
+					return
+				}
+			}
+		}
+	} else {
+		amountUint64 := ConvertNanoAmountOutChainToIncognitoNanoTokenAmountString(burnAmount, burnTokenInfo.Decimals, int64(burnTokenInfo.PDecimals))
+		burnAmountInc = amountUint64
+	}
+
+	nftDetail, err := popensea.RetrieveNFTDetail(config.OpenSeaAPI, config.OpenSeaAPIKey, contract, nftid)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	if len(nftDetail.SeaportSellOrders) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "this NFT is not available for sell"})
+		return
+	}
+
+	feeAmount, err := estimateOpenSeaFee(burnAmountInc, burnTokenInfo, network, networkFees, spTkList)
+	if err != nil {
+		fmt.Println("estimateOpenSeaFee", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	pappList, err := database.DBRetrievePAppsByNetwork(network)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("no supported papps found").Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	contract, exist := pappList.AppContracts["opensea-offer"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-offer contract not found"})
+		return
+	}
+	callData, err := papps.BuildOpenSeaCalldata(nftDetail, recipient)
+	if err != nil {
+		fmt.Println("estimateOpenSeaFee", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	receiveToken := strings.ToLower("6722ec501bE09fb221bCC8a46F9660868d0a6c63")
+	if config.NetworkID == "testnet" {
+		receiveToken = strings.ToLower("4cB607c24Ac252A0cE4b2e987eC4413dA0F1e3Ae")
+	}
+
+	result := struct {
+		Fee          *OpenSeaFee
+		Calldata     string
+		CallContract string
+		ReceiveToken string
+	}{
+		Fee:          feeAmount,
+		Calldata:     callData,
+		CallContract: contract[2:],
+		ReceiveToken: receiveToken,
+	}
+	c.JSON(200, gin.H{"Result": result})
+}
+
 func checkOpenseaOfferStatus(txhash string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	return result, nil

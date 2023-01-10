@@ -58,6 +58,8 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go updateOpenSeaCollectionAssets()
 	go updateOpenSeaCollectionDetail()
 
+	go watchPendingOpenseaOffer()
+
 	return nil
 }
 

@@ -61,6 +61,8 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 
 	go watchPendingOpenseaOffer()
 
+	go watchFilledOpenseaOffer()
+
 	go watchPendingProposal()
 	go watchPendingVoting()
 	go watchReadyToVote()     // for voting
@@ -629,7 +631,7 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 			}
 			if err == ethereum.NotFound {
 				switch tx.Type {
-				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpenseaBuy:
+				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpenseaBuy, wcommon.ExternalTxTypeOpenseaOffer, wcommon.ExternalTxTypeOpenseaOfferCancel:
 					err = database.DBUpdatePappTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")
 					if err != nil {
 						return err
@@ -779,10 +781,19 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				}
 				if tx.Type == wcommon.ExternalTxTypeOpenseaOffer {
 					txtype = "opensea-offer"
-					err = database.DBUpdateOpenseaOfferStatus(tx.IncRequestTx, popensea.OfferStatusPending)
-					if err != nil {
-						return err
+
+					if otherInfo.IsRedeposit {
+						err = database.DBUpdateOpenseaOfferStatus(tx.IncRequestTx, popensea.OfferStatusReverted)
+						if err != nil {
+							return err
+						}
+					} else {
+						err = database.DBUpdateOpenseaOfferStatus(tx.IncRequestTx, popensea.OfferStatusPending)
+						if err != nil {
+							return err
+						}
 					}
+
 				}
 				if tx.Type == wcommon.ExternalTxTypeOpenseaBuy {
 					txtype = "opensea"

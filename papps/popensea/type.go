@@ -378,33 +378,36 @@ type NFTOrder struct {
 	} `json:"protocol_data"`
 }
 
-// type OpenseaOfferData struct {
-// 	Parameters struct {
-// 		Offerer   string `json:"offerer"`
-// 		Zone      string `json:"zone"`
-// 		ZoneHash  string `json:"zoneHash"`
-// 		StartTime string `json:"startTime"`
-// 		EndTime   string `json:"endTime"`
-// 		OrderType int    `json:"orderType"`
-// 		Offer     []struct {
-// 			ItemType             int    `json:"itemType"`
-// 			Token                string `json:"token"`
-// 			IdentifierOrCriteria string `json:"identifierOrCriteria"`
-// 			StartAmount          string `json:"startAmount"`
-// 			EndAmount            string `json:"endAmount"`
-// 		} `json:"offer"`
-// 		Consideration []struct {
-// 			ItemType             int    `json:"itemType"`
-// 			Token                string `json:"token"`
-// 			IdentifierOrCriteria string `json:"identifierOrCriteria"`
-// 			StartAmount          string `json:"startAmount"`
-// 			EndAmount            string `json:"endAmount"`
-// 			Recipient            string `json:"recipient"`
-// 		} `json:"consideration"`
-// 		TotalOriginalConsiderationItems int    `json:"totalOriginalConsiderationItems"`
-// 		Salt                            int64  `json:"salt"`
-// 		ConduitKey                      string `json:"conduitKey"`
-// 		Nonce                           int    `json:"nonce"`
-// 	} `json:"parameters"`
-// 	Signature string `json:"signature"`
-// }
+type OrderComponentsParam struct {
+	Offerer   string `json:"offerer"`
+	Zone      string `json:"zone"`
+	ZoneHash  string `json:"zoneHash"`
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+	OrderType int    `json:"orderType"`
+	Offer     []struct {
+		ItemType             int    `json:"itemType"`
+		Token                string `json:"token"`
+		IdentifierOrCriteria string `json:"identifierOrCriteria"`
+		StartAmount          string `json:"startAmount"`
+		EndAmount            string `json:"endAmount"`
+	} `json:"offer"`
+	Consideration []struct {
+		ItemType             int    `json:"itemType"`
+		Token                string `json:"token"`
+		IdentifierOrCriteria string `json:"identifierOrCriteria"`
+		StartAmount          string `json:"startAmount"`
+		EndAmount            string `json:"endAmount"`
+		Recipient            string `json:"recipient"`
+	} `json:"consideration"`
+	TotalOriginalConsiderationItems int    `json:"totalOriginalConsiderationItems"`
+	Salt                            int64  `json:"salt"`
+	ConduitKey                      string `json:"conduitKey"`
+	Nonce                           int    `json:"nonce"`
+	Counter                         int    `json:"counter"`
+}
+
+type OrderComponentsWithSig struct {
+	Parameters OrderComponentsParam `json:"parameters"`
+	Signature  string               `json:"signature"`
+}

@@ -56,6 +56,20 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 		return
 	}
 
+	txType := ""
+	switch task.Type {
+	case wcommon.ExternalTxTypeSwap:
+		txType = "swaptx"
+	case wcommon.ExternalTxTypeOpenseaBuy:
+		txType = "opensea"
+	case wcommon.ExternalTxTypeOpenseaOffer:
+		txType = "opensea-offer"
+	case wcommon.ExternalTxTypeOpenseaOfferClaim:
+		txType = "opensea-claim"
+	case wcommon.ExternalTxTypeOpenseaOfferCancel:
+		txType = "opensea-cancel"
+	}
+
 	if time.Since(m.PublishTime) > time.Hour {
 		status := wcommon.ExternalTxStatus{
 			IncRequestTx: task.IncTxhash,
@@ -92,7 +106,7 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 				return
 			}
 		}
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx timeout 😵 inctx `%v` network `%v`\n", task.IncTxhash, task.Network))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` external tx timeout 😵 inctx `%v` network `%v`\n", txType, task.IncTxhash, task.Network))
 		return
 	}
 
@@ -103,22 +117,50 @@ func processSubmitPappExtTask(ctx context.Context, m *pubsub.Message) {
 			m.Nack()
 			return
 		}
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v`", task.IncTxhash, task.Network))
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` external tx `%v` for network `%v`", txType, task.IncTxhash, task.Network))
 	} else {
 		if task.IsRetry {
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` retry submitProofTx `%v` for network `%v` 🫡", task.IncTxhash, task.Network))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` retry external tx `%v` for network `%v` 🫡", txType, task.IncTxhash, task.Network))
 		}
 	}
-
-	status, err := createOutChainSwapTx(task.Network, task.IncTxhash, task.IsUnifiedToken, task.Type)
-	if err != nil {
-		log.Println("createOutChainSwapTx error", err)
-		time.Sleep(15 * time.Second)
-		go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` failed 😵 err: %v", task.IncTxhash, task.Network, err))
-		m.Ack()
-		return
+	var status *wcommon.ExternalTxStatus
+	switch task.Type {
+	case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpenseaBuy, wcommon.ExternalTxTypeOpenseaOffer:
+		status, err = createOutChainExecuteWithProofTx(task.Network, task.IncTxhash, task.IsUnifiedToken, task.Type)
+		if err != nil {
+			log.Println("createOutChainExecuteWithProofTx error", err)
+			time.Sleep(15 * time.Second)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submitProofTx `%v` for network `%v` failed 😵 err: %v", txType, task.IncTxhash, task.Network, err))
+			m.Ack()
+			return
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", txType, task.IncTxhash, task.Network, status.Txhash))
+	//TODO: opensea offer
+	case wcommon.ExternalTxTypeOpenseaOfferClaim:
+		txType = "opensea-claim"
+		sign := ""
+		status, err = createExternalOpenseaClaimTx(task.IncTxhash, sign, "eth", task.Type)
+		if err != nil {
+			log.Println("createOutChainExecuteWithProofTx error", err)
+			time.Sleep(15 * time.Second)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submit claim-tx `%v` for network `%v` failed 😵 err: %v", txType, task.IncTxhash, task.Network, err))
+			m.Ack()
+			return
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submit claim-tx `%v` for network `%v` success 👌 txhash `%v`", txType, task.IncTxhash, task.Network, status.Txhash))
+	case wcommon.ExternalTxTypeOpenseaOfferCancel:
+		txType = "opensea-cancel"
+		sign := ""
+		status, err = createExternalOpenseaCancelTx(task.IncTxhash, sign, "eth", task.Type)
+		if err != nil {
+			log.Println("createOutChainExecuteWithProofTx error", err)
+			time.Sleep(15 * time.Second)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submit cancel-tx `%v` for network `%v` failed 😵 err: %v", txType, task.IncTxhash, task.Network, err))
+			m.Ack()
+			return
+		}
+		go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submit cancel-tx `%v` for network `%v` success 👌 txhash `%v`", txType, task.IncTxhash, task.Network, status.Txhash))
 	}
-	go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submitProofTx `%v` for network `%v` success 👌 txhash `%v`", task.IncTxhash, task.Network, status.Txhash))
 
 	err = database.DBSaveExternalTxStatus(status)
 	if err != nil {
@@ -172,7 +214,8 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 		OutchainStatus:   wcommon.StatusWaiting,
 		UserAgent:        task.UserAgent,
 	}
-	docID, err := database.DBSavePappTxData(data)
+
+	err = database.DBSavePappTxData(data)
 	if err != nil {
 		writeErr, ok := err.(mongo.WriteException)
 		if !ok {
@@ -356,7 +399,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 
 					uaStr := parseUserAgent(task.UserAgent)
 
-					swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, pappTxData.Networks[0], uaStr, docID.Hex(), amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
+					swapAlert = fmt.Sprintf("`[%v(%v) | %v]` swap submitting 🛰\n SwapID: `%v`\n Requested: `%v %v` to `%v %v`\n--------------------------------------------------------", task.PappSwapInfo.DappName, pappTxData.Networks[0], uaStr, task.TxHash, amountInFloat, tokenInSymbol, amountOutFloat, tokenOutSymbol)
 					log.Println(swapAlert)
 					slacknoti.SendWithCustomChannel(swapAlert, slackep)
 				}
@@ -370,7 +413,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 	m.Ack()
 }
 
-func createOutChainSwapTx(network string, incTxHash string, isUnifiedToken bool, txType int) (*wcommon.ExternalTxStatus, error) {
+func createOutChainExecuteWithProofTx(network string, incTxHash string, isUnifiedToken bool, txType int) (*wcommon.ExternalTxStatus, error) {
 	var result wcommon.ExternalTxStatus
 
 	// networkID := wcommon.GetNetworkID(network)

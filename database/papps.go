@@ -9,7 +9,6 @@ import (
 	"github.com/kamva/mgm/v3"
 	"github.com/kamva/mgm/v3/operator"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -71,16 +70,15 @@ func DBGetPappWaitingSubmitOutchain(offset, limit int64) ([]common.PappTxData, e
 	return result, nil
 }
 
-func DBSavePappTxData(txdata common.PappTxData) (*primitive.ObjectID, error) {
+func DBSavePappTxData(txdata common.PappTxData) error {
 	filter := bson.M{"inctx": bson.M{operator.Eq: txdata.IncTx}}
 	update := bson.M{"$set": bson.M{"created_at": time.Now(), "status": txdata.Status, "networks": txdata.Networks, "type": txdata.Type, "inctxdata": txdata.IncTxData, "feetoken": txdata.FeeToken, "feeamount": txdata.FeeAmount, "burnttoken": txdata.BurntToken, "burntamount": txdata.BurntAmount, "pappswapinfo": txdata.PappSwapInfo, "isunifiedtoken": txdata.IsUnifiedToken, "fee_refundota": txdata.FeeRefundOTA, "fee_refundaddress": txdata.FeeRefundAddress, "refundsubmitted": txdata.RefundSubmitted, "refundpfee": txdata.RefundPrivacyFee, "pfeeamount": txdata.PFeeAmount, "outchain_status": txdata.OutchainStatus, "useragent": txdata.UserAgent}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	result, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	_, err := mgm.Coll(&common.PappTxData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	docID := result.UpsertedID.(primitive.ObjectID)
-	return &docID, nil
+	return nil
 }
 
 func DBUpdatePappRefundPFee(incTx string, refundpfee bool) error {

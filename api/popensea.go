@@ -442,13 +442,20 @@ func APIOpenSeaOfferStatus(c *gin.Context) {
 	}
 	result := make(map[string]interface{})
 
-	spTkList := getSupportedTokenList()
+	// spTkList := getSupportedTokenList()
 	var wg sync.WaitGroup
 	var lock sync.Mutex
 	for _, txHash := range req.TxList {
 		wg.Add(1)
 		go func(txh string) {
-			statusResult := checkPappTxSwapStatus(txh, spTkList)
+			statusResult, err := checkOpenseaOfferStatus(txh)
+			if err != nil {
+				statusResult = make(map[string]interface{})
+				statusResult["error"] = err.Error()
+				result[txh] = statusResult
+				wg.Done()
+				return
+			}
 			lock.Lock()
 			if len(statusResult) == 0 {
 				statusResult["error"] = "tx not found"
@@ -488,6 +495,10 @@ func APIOpenSeaSubmitOffer(c *gin.Context) {
 
 	if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
+		return
+	}
+	if req.Offer == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid offer"})
 		return
 	}
 
@@ -691,7 +702,7 @@ func APIOpenSeaGenOffer(c *gin.Context) {
 		return
 	}
 
-	offer, err := popensea.GenOfferOrder("0x0000000000000000000000000000000000000000", req.Recipient, offerAdapterAddr, req.Amount, req.StartTime, req.EndTime, *nftDetail)
+	offer, err := popensea.GenOfferOrder("0x0000000000000000000000000000000000000000", offerAdapterAddr, offerAdapterAddr, req.Amount, req.StartTime, req.EndTime, *nftDetail)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -775,7 +786,7 @@ func APIEstimateOfferFee(c *gin.Context) {
 		return
 	}
 
-	contract := offer.Consideration[0].Token.Hex()
+	// contract := offer.Consideration[0].Token.Hex()
 	// nftid := offer.Consideration[0].IdentifierOrCriteria.String()
 	burnToken := req.BurnToken
 
@@ -791,7 +802,6 @@ func APIEstimateOfferFee(c *gin.Context) {
 	burnAmountBig.Div(burnAmountBig, new(big.Int).SetInt64(int64(math.Pow10(9))))
 	burnAmount := burnAmountBig.String()
 
-	_ = contract
 	// currently only supports eth
 	network := "eth"
 	networkID := wcommon.GetNetworkID(network)
@@ -863,12 +873,19 @@ func APIEstimateOfferFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	callProxy, exist := pappList.AppContracts["opensea-proxy"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-proxy contract not found"})
+		return
+	}
+
 	contract, exist := pappList.AppContracts["opensea-offer"]
 	if !exist {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-offer contract not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-proxy contract not found"})
 		return
 	}
 	proxyAddress := ethcommon.HexToAddress(contract)
+	recipient := ethcommon.HexToAddress(req.Recipient)
 	openseaProxyAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaMetaData.ABI))
 	openseaOfferAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaOfferMetaData.ABI))
 	ota := req.Ota
@@ -877,13 +894,17 @@ func APIEstimateOfferFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	if signBytes[64] <= 1 {
+		signBytes[64] += 27
+	}
 	conduit := ethcommon.BytesToAddress(offer.ConduitKey[:])
 
-	tempData, err := openseaOfferAbi.Pack("offer", offer, ota, signBytes, conduit)
+	tempData, err := openseaOfferAbi.Pack("offer", offer, ota, signBytes, conduit, recipient)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "openseaOfferAbi.Pack" + err.Error()})
 		return
 	}
+	//TODO: opensea add recipient to calldata
 	callData, err := openseaProxyAbi.Pack("forward", proxyAddress, tempData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "openseaProxyAbi.Pack" + err.Error()})
@@ -904,7 +925,7 @@ func APIEstimateOfferFee(c *gin.Context) {
 	}{
 		Fee:          feeAmount,
 		Calldata:     callDataHex,
-		CallContract: contract[2:],
+		CallContract: callProxy[2:],
 		ReceiveToken: receiveToken,
 	}
 	c.JSON(200, gin.H{"Result": result})
@@ -1026,6 +1047,13 @@ func checkOpenseaOfferStatus(txhash string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	result["timeout_at"] = offerData.TimeoutAt
+	result["nftid"] = offerData.NFTID
+	result["collection"] = offerData.NFTCollection
+	result["receiver"] = offerData.Receiver
+	result["status"] = offerData.Status
+
 	result["offer_inc_tx"] = txhash
 	offerTx, err := database.DBGetPappTxData(txhash)
 	if err != nil {
@@ -1034,7 +1062,6 @@ func checkOpenseaOfferStatus(txhash string) (map[string]interface{}, error) {
 
 	result["offer_inc_tx_status"] = offerTx.Status
 	if offerTx.Status == wcommon.StatusAccepted {
-
 		offerExtTx, err := database.DBGetExternalTxByIncTx(txhash, "eth")
 		if err != nil {
 			return nil, err
@@ -1042,24 +1069,32 @@ func checkOpenseaOfferStatus(txhash string) (map[string]interface{}, error) {
 		result["offer_external_tx"] = offerExtTx.Txhash
 		result["offer_external_tx_status"] = offerExtTx.Status
 
-		if offerData.CancelTxInc != "" {
-			result["cancel_inc_tx"] = offerData.CancelTxInc
-			result["cancel_external_tx"] = offerData.CancelAdapterTx
-			// result["cancel_seaport_tx"] = offerData.CancelOpenseaTx
-			result["cancel_inc_tx_status"] = offerData.CancelTxInc
-			result["cancel_external_tx_status"] = offerData.CancelAdapterTx
-			result["reshield_tx"] = ""
-			result["reshield_tx_status"] = ""
-			// result["cancel_seaport_tx_status"] = offerData.CancelOpenseaTx
+		if offerExtTx.WillRedeposit {
+			result["reshield_tx_status"] = wcommon.StatusSubmitting
+			if offerExtTx.RedepositSubmitted {
+				reshieldData, err := database.DBGetShieldTxByExternalTx(offerExtTx.Txhash, 1)
+				if err != nil {
+					return nil, err
+				}
+				result["reshield_tx"] = reshieldData.IncTx
+				result["reshield_tx_status"] = reshieldData.Status
+			}
+		} else {
+			if offerData.CancelTxInc != "" {
+				result["cancel_inc_tx"] = offerData.CancelTxInc
+				result["cancel_external_tx"] = ""
+				// result["cancel_seaport_tx"] = offerData.CancelOpenseaTx
+				result["cancel_inc_tx_status"] = offerData.CancelTxInc
+				result["cancel_external_tx_status"] = ""
+				result["reshield_tx"] = ""
+				result["reshield_tx_status"] = ""
+				// result["cancel_seaport_tx_status"] = offerData.CancelOpenseaTx
+			}
+			if offerData.Status == popensea.OfferStatusFilled || offerData.Status == popensea.OfferStatusClaiming || offerData.Status == popensea.OfferStatusClaimed {
+				result["claim_tx"] = offerData.ClaimNFTTx
+			}
 		}
 
 	}
-
-	result["timeout_at"] = offerData.TimeoutAt
-	result["nftid"] = offerData.NFTID
-	result["collection"] = offerData.NFTCollection
-	result["receiver"] = offerData.Receiver
-
-	result["status"] = offerData.Status
 	return result, nil
 }

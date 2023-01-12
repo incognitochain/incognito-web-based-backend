@@ -515,8 +515,8 @@ type PDaoNetworkFeeResp struct {
 }
 
 type OpenSeaGenOfferRequest struct {
-	Amount            string `json:"amount"`
-	Recipient         string `json:"recipient"`
+	Amount string `json:"amount"`
+	// Recipient         string `json:"recipient"`
 	NFTID             string `json:"nftid"`
 	CollectionAddress string `json:"contract"`
 	EndTime           int64  `json:"endtime"`
@@ -525,6 +525,7 @@ type OpenSeaGenOfferRequest struct {
 
 type OpenSeaOfferFeeEstimateRequest struct {
 	Offer     string `json:"offer"`
+	Recipient string `json:"recipient"`
 	Signature string `json:"signature"`
 	BurnToken string `json:"burntoken"`
 	Ota       string `json:"ota"`

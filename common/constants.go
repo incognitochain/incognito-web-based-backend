@@ -208,10 +208,11 @@ const (
 	ExternalTxTypeOpenseaBuy         = 96
 	ExternalTxTypeOpenseaOffer       = 97
 	ExternalTxTypeOpenseaOfferCancel = 98
-	ExternalTxTypePdaoProposal    = 69
-	ExternalTxTypePdaoVote        = 70
-	ExternalTxTypePdaoCancel      = 71
-	ExternalTxTypePdaoReShieldPRV = 72
+	ExternalTxTypeOpenseaOfferClaim  = 99
+	ExternalTxTypePdaoProposal       = 69
+	ExternalTxTypePdaoVote           = 70
+	ExternalTxTypePdaoCancel         = 71
+	ExternalTxTypePdaoReShieldPRV    = 72
 )
 
 // Default param mainnet

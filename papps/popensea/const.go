@@ -7,8 +7,11 @@ const (
 
 const (
 	OfferStatusSubmitting = "submitting"
+	OfferStatusReverted   = "reverted"
 	OfferStatusPending    = "pending"
 	OfferStatusFilled     = "filled"
+	OfferStatusClaiming   = "claiming"
+	OfferStatusClaimed    = "claimed"
 	OfferStatusCancelled  = "cancelled"
 	OfferStatusCancelling = "cancelling"
 )

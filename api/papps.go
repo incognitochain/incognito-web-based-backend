@@ -1458,7 +1458,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 
 			}
-			contract, exist := pappList.AppContracts["opensea-offer"]
+			contract, exist := pappList.AppContracts["opensea-proxy"]
 			if !exist {
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 

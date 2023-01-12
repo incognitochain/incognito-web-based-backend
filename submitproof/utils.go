@@ -26,6 +26,8 @@ import (
 	"github.com/incognitochain/bridge-eth/bridge/vault"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/incclient"
+	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
+	"github.com/incognitochain/go-incognito-sdk-v2/transaction"
 	"github.com/incognitochain/go-incognito-sdk-v2/wallet"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/mileusna/useragent"
@@ -652,4 +654,32 @@ func toByte32(s []byte) [32]byte {
 	a := [32]byte{}
 	copy(a[:], s)
 	return a
+}
+
+func extractDataFromRawTx(txraw []byte) (metadataCommon.Metadata, bool, []coin.Coin, string, error) {
+	var mdRaw metadataCommon.Metadata
+	var isPRVTx bool
+	var outCoins []coin.Coin
+	var txHash string
+
+	// Unmarshal from json data to object tx))
+	tx, err := transaction.DeserializeTransactionJSON(txraw)
+	if err != nil {
+		return mdRaw, isPRVTx, outCoins, txHash, err
+	}
+	if tx.TokenVersion2 != nil {
+		isPRVTx = false
+		txHash = tx.TokenVersion2.Hash().String()
+		mdRaw = tx.TokenVersion2.GetMetadata()
+		outCoins = append(outCoins, tx.TokenVersion2.Tx.Proof.GetOutputCoins()...)
+		outCoins = append(outCoins, tx.TokenVersion2.TokenData.Proof.GetOutputCoins()...)
+	}
+	if tx.Version2 != nil {
+		isPRVTx = true
+		txHash = tx.Version2.Hash().String()
+		mdRaw = tx.Version2.GetMetadata()
+		outCoins = tx.Version2.GetProof().GetOutputCoins()
+	}
+
+	return mdRaw, isPRVTx, outCoins, txHash, nil
 }

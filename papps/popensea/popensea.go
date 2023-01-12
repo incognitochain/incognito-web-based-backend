@@ -1,6 +1,7 @@
 package popensea
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -205,4 +206,30 @@ func RetrieveNFTDetail(OSEndpoint string, apiKey, collectionContract, tokenID st
 		return nil, fmt.Errorf("failed to retrieve nft detail")
 	}
 	return &respond.Assets[0], nil
+}
+
+func SubmitOpenseaOffer(OSEndpoint, apiKey, network string, offer OrderComponentsWithSig) error {
+
+	url := fmt.Sprintf("%v/v2/orders/%v/seaport/offers", OSEndpoint, network)
+
+	contentBytes, err := json.Marshal(offer)
+	if err != nil {
+		return err
+	}
+
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(contentBytes))
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("X-API-KEY", apiKey)
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	fmt.Println(res)
+	fmt.Println("SubmitOpenseaOffer", string(body))
+	panic("SubmitOpenseaOffer")
+	return nil
 }

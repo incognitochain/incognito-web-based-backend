@@ -9,7 +9,7 @@ import (
 )
 
 // TODO: opensea
-func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAddress string, amount string, startTime, endTime int64, item NFTDetail) (*OrderComponents, error) {
+func GenOfferOrder(tokenContract string, receiver string, offerAdapterAddress string, amount string, startTime, endTime int64, item NFTDetail) (*OrderComponents, error) {
 	var order OrderComponents
 	if len(item.SeaportSellOrders) == 0 {
 		return nil, errors.New("can't create offer order without SeaportSellOrders")
@@ -33,10 +33,9 @@ func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAdd
 
 	order.Salt = common.BytesToHash(randSalt).Big()
 
-	tokenId, _ := new(big.Int).SetString(sellOrderParam.Offer[0].IdentifierOrCriteria, 10)
 	offerAmount, _ := new(big.Int).SetString(amount, 10)
 	nftOffer := OfferItem{
-		ItemType:             uint8(sellOrderParam.Offer[0].ItemType),
+		ItemType:             uint8(sellOrderParam.Consideration[0].ItemType),
 		Token:                common.HexToAddress(tokenContract),
 		IdentifierOrCriteria: big.NewInt(0),
 		StartAmount:          offerAmount,
@@ -48,36 +47,46 @@ func GenOfferOrder(tokenContract string, receiverAddress string, offerAdapterAdd
 	openseaFee := new(big.Int).SetInt64(0)
 	for _, v := range item.Collection.Fees.OpenseaFees {
 		percent := new(big.Int).SetUint64(v)
-		openseaFee = offerAmount.Div(feeD, offerAmount).Mul(percent, offerAmount)
+		openseaFee = openseaFee.Div(offerAmount, feeD).Mul(percent, offerAmount)
 	}
 
 	collectionFee := new(big.Int).SetInt64(0)
 	for _, v := range item.Collection.Fees.SellerFees {
 		percent := new(big.Int).SetUint64(v)
-		collectionFee = offerAmount.Div(feeD, offerAmount).Mul(percent, offerAmount)
+		collectionFee = collectionFee.Div(offerAmount, feeD).Mul(percent, offerAmount)
+	}
+	receiverAddress := common.HexToAddress(receiver)
+	openseaFeeAddress := common.HexToAddress(sellOrderParam.Consideration[1].Recipient)
+	var collectionFeeAddress common.Address
+	if len(sellOrderParam.Consideration) == 3 {
+		collectionFeeAddress = common.HexToAddress(sellOrderParam.Consideration[2].Recipient)
 	}
 
+	tokenId, _ := new(big.Int).SetString(sellOrderParam.Offer[0].IdentifierOrCriteria, 10)
 	considerationNFT := ConsiderationItem{
 		ItemType:             2,
 		Token:                common.HexToAddress(sellOrderParam.Offer[0].Token),
 		IdentifierOrCriteria: tokenId,
 		StartAmount:          big.NewInt(1),
 		EndAmount:            big.NewInt(1),
+		Recipient:            receiverAddress,
 	}
 	considerationOpenseaFee := ConsiderationItem{
-		ItemType:             uint8(sellOrderParam.Offer[0].ItemType),
+		ItemType:             uint8(sellOrderParam.Consideration[0].ItemType),
 		Token:                common.HexToAddress(tokenContract),
 		IdentifierOrCriteria: big.NewInt(0),
 		StartAmount:          openseaFee,
 		EndAmount:            openseaFee,
+		Recipient:            openseaFeeAddress,
 	}
 
 	considerationCollectionFee := ConsiderationItem{
-		ItemType:             uint8(sellOrderParam.Offer[0].ItemType),
+		ItemType:             uint8(sellOrderParam.Consideration[0].ItemType),
 		Token:                common.HexToAddress(tokenContract),
 		IdentifierOrCriteria: big.NewInt(0),
 		StartAmount:          collectionFee,
 		EndAmount:            collectionFee,
+		Recipient:            collectionFeeAddress,
 	}
 
 	order.Consideration = append(order.Consideration, considerationNFT)

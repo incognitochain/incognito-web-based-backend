@@ -40,11 +40,12 @@ type OpenseaOfferData struct {
 	TimeoutAt        time.Time `bson:"timeout_at"`
 	Status           string    `bson:"status"`
 	OfferTxInc       string    `bson:"offer_tx_inc"`
-	OfferTxExternal  string    `bson:"offer_tx_external"`
 	CancelTxInc      string    `bson:"cancel_tx_inc"`
-	CancelAdapterTx  string    `bson:"cancel_apdapter_tx"`
-	CancelOpenseaTx  string    `bson:"cancel_opensea_tx"` //not used yet
-	ReshieldTx       string    `bson:"reshield_tx_inc"`
+	// CancelAdapterTx  string    `bson:"cancel_apdapter_tx"`
+	CancelOpenseaTx string `bson:"cancel_opensea_tx"` //not used yet
+	ReshieldTx      string `bson:"reshield_tx_inc"`
+	OfferSubmitted  bool   `bson:"offer_submitted"`
+	ClaimNFTTx      string `bson:"claim_nft_tx"`
 }
 
 type OpenseaOfferDetail struct {

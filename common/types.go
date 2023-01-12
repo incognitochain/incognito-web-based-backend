@@ -30,6 +30,10 @@ type Config struct {
 
 	// Interswap
 	ISIncPrivKeys map[string]string
+
+	// pblur:
+	BlurAPI   string
+	BlurToken string
 }
 
 type TokenInfo struct {

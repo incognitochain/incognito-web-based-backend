@@ -54,7 +54,7 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	err = DBCreateInterSwapDataIndex()
 	if err != nil {
 		return err
@@ -69,6 +69,11 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 
 	// pdao:
 	err = DBCreateProposalIndex()
+	if err != nil {
+		return err
+	}
+	// pblur:
+	err = DBCreatePBlurIndex()
 	if err != nil {
 		return err
 	}

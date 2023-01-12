@@ -28,8 +28,12 @@ require (
 
 require (
 	cloud.google.com/go v0.76.0 // indirect
+	github.com/DaRealFreak/cloudflare-bp-go v1.0.4 // indirect
+	github.com/EDDYCJY/fake-useragent v0.2.0 // indirect
+	github.com/PuerkitoBio/goquery v1.7.1 // indirect
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
+	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect

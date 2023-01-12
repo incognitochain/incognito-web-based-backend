@@ -41,27 +41,30 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	if err != nil {
 		return err
 	}
+	/*
+		go watchPendingShieldTx()
+		go watchPendingUnshieldTx()
+		go watchPendingPappTx()
+		go watchPendingExternalTx()
+		go watchIncAccountBalance()
+		go watchEVMAccountBalance()
+		go watchRedepositExternalTx()
+		go watchUnshieldTxNeedFeeRefund()
+		go watchPappTxNeedFeeRefund()
+		go watchPendingFeeRefundTx()
+		go forwardCollectedFee()
+		go watchVaultState()
+		go trackDexSwap()
+		go updateOpenSeaCollectionAssets()
+		go updateOpenSeaCollectionDetail()
 
-	go watchPendingShieldTx()
-	go watchPendingUnshieldTx()
-	go watchPendingPappTx()
-	go watchPendingExternalTx()
-	go watchIncAccountBalance()
-	go watchEVMAccountBalance()
-	go watchRedepositExternalTx()
-	go watchUnshieldTxNeedFeeRefund()
-	go watchPappTxNeedFeeRefund()
-	go watchPendingFeeRefundTx()
-	go forwardCollectedFee()
-	go watchVaultState()
-	go trackDexSwap()
-	go updateOpenSeaCollectionAssets()
-	go updateOpenSeaCollectionDetail()
-
-	go watchPendingProposal()
-	go watchPendingVoting()
-	go watchReadyToVote()     // for voting
-	go watchVotedToReshield() // for reshielding
+		go watchPendingProposal()
+		go watchPendingVoting()
+		go watchReadyToVote()     // for voting
+		go watchVotedToReshield() // for reshielding
+	*/
+	// pBlur:
+	go updateBlurCollection()
 
 	return nil
 }

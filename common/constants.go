@@ -209,6 +209,8 @@ const (
 	ExternalTxTypePdaoVote        = 70
 	ExternalTxTypePdaoCancel      = 71
 	ExternalTxTypePdaoReShieldPRV = 72
+
+	ExternalTxTypeBlur = 88
 )
 
 // Default param mainnet

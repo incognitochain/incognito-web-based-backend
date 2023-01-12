@@ -143,6 +143,12 @@ func StartAPIservice(cfg common.Config) {
 
 	//end pdao router ==========================================
 
+	//begin pblur router ================================================
+	pBlur := pAppsGroup.Group("/pblur")
+	pBlur.GET("/collections", APIPBlurGetCollections)
+	pBlur.GET("/collections/:slug/tokens", APIPBlurGetCollectionDetail)
+	//end pblur router ================================================
+
 	go prefetchSupportedTokenList()
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))

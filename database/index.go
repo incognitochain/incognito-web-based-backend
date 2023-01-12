@@ -7,6 +7,7 @@ import (
 
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/kamva/mgm/v3"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
@@ -487,6 +488,56 @@ func DBCreateVoteIndex() error {
 	_, err := mgm.Coll(&common.Vote{}).Indexes().CreateMany(context.Background(), voteTxModel)
 	if err != nil {
 		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}
+
+// pblur:
+func DBCreatePBlurIndex() error {
+	startTime := time.Now()
+	collectionModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "contract_address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.M{"name": "text"},
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "collection_slug", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err := mgm.Coll(&common.BlurCollectionData{}).Indexes().CreateMany(context.Background(), collectionModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
+	// nft detail:
+	assetModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "uid", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{{Key: "contract_address", Value: bsonx.Int32(1)}},
+		},
+		{
+			Keys: bsonx.Doc{{Key: "updated_at", Value: bsonx.Int32(1)}},
+			// Options: options.Index().SetExpireAfterSeconds(7200),
+		},
+	}
+	// _, err = mgm.Coll(&common.BlurAssetData{}).Indexes().DropAll(context.Background())
+	// if err != nil {
+	// 	log.Printf("failed to index op-asset in %v", time.Since(startTime))
+	// 	return err
+	// }
+	_, err = mgm.Coll(&common.BlurAssetData{}).Indexes().CreateMany(context.Background(), assetModel)
+	if err != nil {
+		log.Printf("failed to index op-asset in %v", time.Since(startTime))
 		return err
 	}
 

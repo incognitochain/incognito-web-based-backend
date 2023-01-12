@@ -691,7 +691,7 @@ func APIOpenSeaGenOffer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	offerAdapterAddr, exist := papps.AppContracts["opensea-offer"]
+	offerAdapterAddr, exist := papps.AppContracts["opensea-offer-proxy"]
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea offer adapter not found"})
 		return
@@ -873,18 +873,18 @@ func APIEstimateOfferFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	callProxy, exist := pappList.AppContracts["opensea-proxy"]
+	callProxy, exist := pappList.AppContracts["opensea-offer-forward"]
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-proxy contract not found"})
 		return
 	}
 
-	contract, exist := pappList.AppContracts["opensea-offer"]
+	openseaOffer, exist := pappList.AppContracts["opensea-offer-proxy"]
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-proxy contract not found"})
 		return
 	}
-	proxyAddress := ethcommon.HexToAddress(contract)
+	proxyOfferAddress := ethcommon.HexToAddress(openseaOffer)
 	recipient := ethcommon.HexToAddress(req.Recipient)
 	openseaProxyAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaMetaData.ABI))
 	openseaOfferAbi, _ := abi.JSON(strings.NewReader(popensea.OpenseaOfferMetaData.ABI))
@@ -905,7 +905,7 @@ func APIEstimateOfferFee(c *gin.Context) {
 		return
 	}
 	//TODO: opensea add recipient to calldata
-	callData, err := openseaProxyAbi.Pack("forward", proxyAddress, tempData)
+	callData, err := openseaProxyAbi.Pack("forward", proxyOfferAddress, tempData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "openseaProxyAbi.Pack" + err.Error()})
 		return
@@ -1010,7 +1010,7 @@ func APIEstimateCancelFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	contract, exist := pappList.AppContracts["opensea-offer"]
+	contract, exist := pappList.AppContracts["opensea-offer-proxy"]
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "opensea-offer contract not found"})
 		return

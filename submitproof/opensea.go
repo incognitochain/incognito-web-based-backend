@@ -243,7 +243,7 @@ func createExternalOpenseaClaimTx(incTxHash, sign, network string, txType int) (
 	if err != nil {
 		return nil, err
 	}
-	offerAdapterAddr, exist := papps.AppContracts["opensea-offer"]
+	offerAdapterAddr, exist := papps.AppContracts["opensea-offer-proxy"]
 	if !exist {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func createExternalOpenseaCancelTx(incTxHash, sign, network string, txType int) 
 	if err != nil {
 		return nil, err
 	}
-	offerAdapterAddr, exist := papps.AppContracts["opensea-offer"]
+	offerAdapterAddr, exist := papps.AppContracts["opensea-offer-proxy"]
 	if !exist {
 		return nil, err
 	}
@@ -694,7 +694,7 @@ func checkOpenseaOfferFilled(orderHash string, order *popensea.OrderComponents) 
 		return status, errors.New("seaport isn't exist")
 	}
 
-	openseaOfferer, exist := papps.AppContracts["opensea-offer"]
+	openseaOfferer, exist := papps.AppContracts["opensea-offer-proxy"]
 	if !exist {
 		return status, errors.New("seaport isn't exist")
 	}

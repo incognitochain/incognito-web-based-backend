@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	pancakeproxy "github.com/incognitochain/incognito-web-based-backend/papps/pancake"
+	"github.com/incognitochain/incognito-web-based-backend/papps/pblur"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pcurve"
 	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
 	puniswap "github.com/incognitochain/incognito-web-based-backend/papps/puniswapproxy"
@@ -424,6 +425,11 @@ func BuildOpenSeaCalldata(nftDetal *popensea.NFTDetail, recipient string) (strin
 }
 
 func DecodeOpenSeaCalldata() {}
+
+func BuildBlurCalldata(buyDataResponse pblur.BuyDataResponse, recipient string) (string, error) {
+	// todo
+	return "", nil
+}
 
 func toByte32(s []byte) [32]byte {
 	a := [32]byte{}

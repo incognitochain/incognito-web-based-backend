@@ -145,8 +145,12 @@ func StartAPIservice(cfg common.Config) {
 
 	//begin pblur router ================================================
 	pBlur := pAppsGroup.Group("/pblur")
+	pBlur.POST("/auth/challenge", APIPBlurAuthChallenge)
+	pBlur.GET("/auth/login", APIPBlurAuthLogin)
+	pBlur.GET("/auth/gen-access-token", APIBlurGenAccessToken)
 	pBlur.GET("/collections", APIPBlurGetCollections)
 	pBlur.GET("/collections/:slug/tokens", APIPBlurGetCollectionDetail)
+	pBlur.GET("/estimatebuyfee", APIBlurEstimateBuyFee)
 	//end pblur router ================================================
 
 	go prefetchSupportedTokenList()

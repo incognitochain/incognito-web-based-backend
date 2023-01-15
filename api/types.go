@@ -509,3 +509,7 @@ type PDaoNetworkFeeResp struct {
 	TokenID           string `json:"tokenid"`
 	FeeAmount         uint64 `json:"feeAmount"`
 }
+
+type WalletAddress struct {
+	WalletAddress string `json:"walletAddress"`
+}

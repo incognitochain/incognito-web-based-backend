@@ -128,3 +128,47 @@ type NFTDetail struct {
 // 		Signature string `json:"signature"`
 // 	} `json:"protocol_data"`
 // }
+
+type BuyPayload struct {
+	TokenPrices []TokenPrice `json:"tokenPrices"`
+	UserAddress string       `json:"userAddress"`
+}
+
+type TokenPrice struct {
+	TokenID string `json:"tokenId"`
+	Price   Price  `json:"price"`
+}
+type Price struct {
+	Amount string `json:"amount"`
+	Unit   string `json:"unit"`
+}
+
+type BuyDataResponse struct {
+	Buys []struct {
+		TxnData struct {
+			To    string `json:"to"`
+			Data  string `json:"data"`
+			Value struct {
+				Type string `json:"type"`
+				Hex  string `json:"hex"`
+			} `json:"value"`
+		} `json:"txnData"`
+		GasEstimate    int    `json:"gasEstimate"`
+		AmountFromPool string `json:"amountFromPool"`
+		IncludedTokens []struct {
+			TokenID         string `json:"tokenId"`
+			ContractAddress string `json:"contractAddress"`
+		} `json:"includedTokens"`
+	} `json:"buys"`
+	CancelReasons []struct {
+		TokenID string `json:"tokenId"`
+		Reason  string `json:"reason"`
+	} `json:"cancelReasons"`
+}
+type LoginData struct {
+	Message       string    `json:"message"`
+	WalletAddress string    `json:"walletAddress"`
+	ExpiresOn     time.Time `json:"expiresOn"`
+	Hmac          string    `json:"hmac"`
+	Signature     string    `json:"signature"`
+}

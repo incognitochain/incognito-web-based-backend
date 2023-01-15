@@ -77,6 +77,20 @@ func DBBlurGetNFTDetail(address string, nftid string) (*common.BlurAssetData, er
 	return &result, nil
 }
 
+func DBBlurGetNFTDetailByIDs(address string, nftids []string) ([]common.BlurAssetData, error) {
+	var result []common.BlurAssetData
+
+	fmt.Println("address: ", address)
+	fmt.Println("nftids: ", nftids)
+
+	filter := bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.All: nftids}}
+	err := mgm.Coll(&common.BlurAssetData{}).SimpleFind(&result, filter, &options.FindOptions{})
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 // get by id
 func DBBlurGetCollectionDetail(slug string) (*common.BlurCollectionData, error) {
 
@@ -132,7 +146,7 @@ func DBBlurGetCollectionNFTs(address string, filterObj *common.Filter) ([]common
 	var filter interface{}
 
 	if len(filterObj.Query) > 2 {
-		filter = bson.M{"contract_address": bson.M{operator.Eq: address}, "name": bson.M{operator.Regex: query, "$options": "i"}}
+		filter = bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.Regex: query, "$options": "i"}}
 	} else {
 		filter = bson.M{"contract_address": bson.M{operator.Eq: address}}
 	}

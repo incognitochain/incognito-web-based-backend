@@ -32,8 +32,11 @@ type Config struct {
 	ISIncPrivKeys map[string]string
 
 	// pblur:
-	BlurAPI   string
-	BlurToken string
+	BlurAPI           string
+	BlurToken         string
+	BlurDecodeKey     string
+	BlurWalletAddress string
+	BlurPrivateKey    string
 }
 
 type TokenInfo struct {

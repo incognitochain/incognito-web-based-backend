@@ -596,7 +596,7 @@ func watchPendingOpenseaOffer() {
 								Offerer:                         offer.Offerer.Hex(),
 								OrderType:                       int(offer.OrderType),
 								Zone:                            offer.Zone.Hex(),
-								ZoneHash:                        "0x" + hex.EncodeToString(offer.ZoneHash[:]),
+								ZoneHash:                        hex.EncodeToString(offer.ZoneHash[:]),
 								EndTime:                         fmt.Sprintf("%v", offer.EndTime.Int64()),
 								StartTime:                       fmt.Sprintf("%v", offer.StartTime.Int64()),
 								Salt:                            offer.Salt.Int64(),

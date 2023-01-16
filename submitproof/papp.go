@@ -290,7 +290,7 @@ func processSubmitPappIncTask(ctx context.Context, m *pubsub.Message) {
 			break
 		}
 
-		timeoutAt := time.Unix(offer.EndTime.Int64(), 0)
+		timeoutAt := time.Unix(offer.EndTime.Int64()/1000, 0)
 		nftID := offer.Consideration[0].IdentifierOrCriteria.String()
 		nftCollection := offer.Consideration[0].Token.Hex()
 		receiver := offer.Consideration[0].Recipient.Hex()

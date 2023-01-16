@@ -14,7 +14,6 @@ import (
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
-	"github.com/incognitochain/incognito-web-based-backend/papps"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pblur"
 )
 
@@ -225,21 +224,23 @@ func APIBlurEstimateBuyFee(c *gin.Context) {
 		})
 	}
 
-	buyDataResponse, err := pblur.RetrieveBuyToken(config.BlurAPI, config.BlurToken, config.BlurDecodeKey, contract, payload)
-	if err != nil {
-		fmt.Println("RetrieveBuyToken", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
+	// buyDataResponse, err := pblur.RetrieveBuyToken(config.BlurAPI, config.BlurToken, config.BlurDecodeKey, contract, payload)
+	// if err != nil {
+	// 	fmt.Println("RetrieveBuyToken", err.Error())
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+	// 	return
+	// }
 
-	fmt.Println("buyDataResponse: ", buyDataResponse)
+	// fmt.Println("buyDataResponse: ", buyDataResponse)
 
-	callData, err := papps.BuildBlurCalldata(buyDataResponse, recipient)
-	if err != nil {
-		fmt.Println("estimateBlurFee", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
+	// callData, err := papps.BuildBlurCalldata(buyDataResponse, recipient)
+	// if err != nil {
+	// 	fmt.Println("estimateBlurFee", err.Error())
+	// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+	// 	return
+	// }
+
+	callData := ""
 
 	receiveToken := strings.ToLower("6722ec501bE09fb221bCC8a46F9660868d0a6c63")
 	if config.NetworkID == "testnet" {

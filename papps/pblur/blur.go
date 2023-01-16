@@ -128,7 +128,7 @@ func RetrieveBuyToken(OSEndpoint string, apiToken, blurDecodeKey, contractAddres
 
 	payloadJson := strings.NewReader(string(j))
 
-	payloadJson = strings.NewReader(`{"tokenPrices":[{"tokenId":"2996","price":{"amount":"0","unit":"ETH"}},{"tokenId":"3024","price":{"amount":"0.1","unit":"ETH"}}],"userAddress":"0x483d205d57f1fF227AF11232Be4acd34ab2C7914"}`)
+	payloadJson = strings.NewReader(`{"tokenPrices":[{"tokenId":"2995","price":{"amount":"0","unit":"ETH"},"isSuspicious":false}],"userAddress":"0x96216849c49358b10257cb55b28ea603c874b05e"}`)
 
 	req, _ := http.NewRequest("POST", url, payloadJson)
 

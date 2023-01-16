@@ -428,6 +428,9 @@ func DecodeOpenSeaCalldata() {}
 
 func BuildBlurCalldata(buyDataResponse pblur.BuyDataResponse, recipient string) (string, error) {
 	// todo
+	if len(buyDataResponse.Buys) > 0 {
+		return buyDataResponse.Buys[0].TxnData.Data, nil
+	}
 	return "", nil
 }
 

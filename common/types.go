@@ -28,6 +28,11 @@ type Config struct {
 	OpenSeaAPI    string
 	OpenSeaAPIKey string
 
+	DebankAPI   string
+	DebankToken string
+
+	QuickNodeAPI string
+
 	// Interswap
 	ISIncPrivKeys map[string]string
 }

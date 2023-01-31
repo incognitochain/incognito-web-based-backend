@@ -142,6 +142,17 @@ func StartAPIservice(cfg common.Config) {
 
 	//end pdao router ==========================================
 
+	//begin pblur router ================================================
+	pNft := pAppsGroup.Group("/pnft")
+	pNft.GET("/nft_list", APIPnftGetNftsFromAddress)
+	// pNft.POST("/auth/challenge", APIPNftAuthChallenge)
+	// pNft.GET("/auth/login", APIPNftAuthLogin)
+	// pNft.GET("/auth/gen-access-token", APIBlurGenAccessToken)
+	// pNft.GET("/collections", APIPNftGetCollections)
+	// pNft.GET("/collections/:slug/tokens", APIPNftGetCollectionDetail)
+	// pNft.GET("/estimatebuyfee", APIBlurEstimateBuyFee)
+	//end pblur router ================================================
+
 	go prefetchSupportedTokenList()
 
 	err = r.Run("0.0.0.0:" + strconv.Itoa(cfg.Port))

@@ -504,3 +504,22 @@ func DBCreateVoteIndex() error {
 
 	return nil
 }
+
+// ppNFT:
+func DBCreatePNftIndex() error {
+	startTime := time.Now()
+	listNftCache := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true), //.SetExpireAfterSeconds(5),
+		},
+	}
+
+	_, err := mgm.Coll(&common.ListNftCache{}).Indexes().CreateMany(context.Background(), listNftCache)
+	if err != nil {
+		log.Printf("failed to index coins in %v", time.Since(startTime))
+		return err
+	}
+
+	return nil
+}

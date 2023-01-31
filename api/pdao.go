@@ -422,7 +422,7 @@ func APIPDaoVoting(c *gin.Context) {
 
 	currentBlock := header.Number
 
-	if prop.StartBlock.Cmp(currentBlock) >= 0 {
+	if prop.StartBlock.Cmp(currentBlock) < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "can not vote this time"})
 		return
 	}

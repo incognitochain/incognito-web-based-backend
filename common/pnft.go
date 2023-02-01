@@ -11,7 +11,7 @@ type ListNftCache struct {
 	Data             string
 }
 
-type BlurCollectionData struct {
+type PNftCollectionData struct {
 	mgm.DefaultModel `bson:",inline"`
 	ContractAddress  string `bson:"contract_address"`
 	Name             string `bson:"name"`
@@ -39,7 +39,7 @@ type BlurCollectionData struct {
 	TraitFrequencies interface{} `bson:"trait_frequencies"`
 }
 
-type BlurAssetData struct {
+type PNftAssetData struct {
 	mgm.DefaultModel `bson:",inline"`
 	UID              string         `bson:"uid"`
 	ContractAddress  string         `bson:"contract_address"`

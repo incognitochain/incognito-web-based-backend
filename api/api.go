@@ -47,7 +47,7 @@ func StartAPIservice(cfg common.Config) {
 	}
 	err := initIncClient(network)
 	if err != nil {
-		panic(err)
+		// panic(err)
 	}
 	store := persistence.NewInMemoryStore(time.Second)
 

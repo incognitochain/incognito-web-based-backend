@@ -28,6 +28,7 @@ type NFTDetail struct {
 	} `json:"lastCostBasis"`
 }
 
+// just for crawl data from quicknode.
 type Asset struct {
 	Name              string `json:"name"`
 	CollectionTokenID string `json:"collectionTokenId"`

@@ -511,7 +511,7 @@ func DBCreatePNftIndex() error {
 	listNftCache := []mongo.IndexModel{
 		{
 			Keys:    bsonx.Doc{{Key: "address", Value: bsonx.Int32(1)}},
-			Options: options.Index().SetUnique(true), //.SetExpireAfterSeconds(5),
+			Options: options.Index().SetUnique(true).SetExpireAfterSeconds(5),
 		},
 	}
 

@@ -509,3 +509,26 @@ type PDaoNetworkFeeResp struct {
 	TokenID           string `json:"tokenid"`
 	FeeAmount         uint64 `json:"feeAmount"`
 }
+
+type PnftListingReq struct {
+	Items []PnftListingItem `json:"items"`
+}
+
+type PnftListingItem struct {
+	//TODO add more
+	Collection string `json:"collection"`
+	TokenID    string `json:"token_id"`
+	Amount     string `json:"amount"`
+	Signature  string `json:"signature"`
+}
+type PnftDelistingReq struct {
+	Items []PnftDelistingItem `json:"items"`
+}
+
+type PnftDelistingItem struct {
+	//TODO add more
+	Collection string `json:"collection"`
+	TokenID    string `json:"token_id"`
+	Amount     string `json:"amount"`
+	Signature  string `json:"signature"`
+}

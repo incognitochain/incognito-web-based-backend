@@ -122,11 +122,7 @@ func StartAPIservice(cfg common.Config) {
 
 	//admin
 	adminGroup := r.Group("/admin")
-	adminGroup.GET("/failedshieldtx", APIGetFailedShieldTx)
-	adminGroup.GET("/pendingshieldtx", APIGetPendingShieldTx)
-	adminGroup.GET("/pendingswaptx", APIGetPendingSwapTx)
 	adminGroup.POST("/retryshield", gincache.CachePage(store, 10*time.Second, APIRetryShieldTx))
-	adminGroup.POST("/retryswaptx", gincache.CachePage(store, 10*time.Second, APIRetrySwapTx))
 	adminGroup.GET("/retrievenetworksfee", APIGetNetworksFee)
 	adminGroup.GET("/getsupportedtokens", APIGetSupportedTokenInternal)
 
@@ -148,9 +144,10 @@ func StartAPIservice(cfg common.Config) {
 	pNft.GET("/collections", APIPNftGetCollections)
 	pNft.GET("/collections/:slug/tokens", APIPNftGetCollectionDetail)
 	pNft.GET("/estimatebuyfee", APIPNftEstimateBuyFee)
-	// list
-	// delist
-	// buy
+	pNft.POST("/listingnft", APIPNftListing)
+	pNft.GET("/estimate-delist-fee", APIPNftDelisting)
+	pNft.POST("/submitdelisttx", APIPNftSubmitDelist)
+	pNft.POST("/submitbuytx", APIPNftSubmitBuy)
 
 	//end pnft router ================================================
 

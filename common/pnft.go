@@ -57,3 +57,12 @@ type Filter struct {
 	Offset int
 	Limit  int `json:"limit"`
 }
+
+type PNftSellOrder struct {
+	mgm.DefaultModel `bson:",inline"`
+	ContractAddress  string `bson:"contract_address"`
+	TokenID          string `bson:"token_id"`
+	Amount           string `json:"amount"`
+	Currency         string `json:"currency"`
+	IsCanceling      bool   `bson:"is_canceling"`
+}

@@ -1,10 +1,15 @@
 package database
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/kamva/mgm/v3"
 	"github.com/kamva/mgm/v3/operator"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func DBPNftInsertListNftCacheTable(data *common.ListNftCache) error {
@@ -23,232 +28,164 @@ func DBPNftGetListNftCacheTableByAddress(address string) (*common.ListNftCache, 
 	}
 	return p, nil
 }
+func DBPNftGetNFTDetail(address string, nftid string) (*common.PNftAssetData, error) {
+	var result common.PNftAssetData
+	uid := address + "-" + nftid
+	filter := bson.M{"uid": bson.M{operator.Eq: uid}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	dbresult := mgm.Coll(&common.PNftAssetData{}).FindOne(ctx, filter)
+	if dbresult.Err() != nil {
+		return nil, dbresult.Err()
+	}
 
-// func DBNftSaveCollection(list []pnft.CollectionDetail) error {
-// 	for _, collection := range list {
-// 		filter := bson.M{"collection_slug": bson.M{operator.Eq: collection.CollectionSlug}}
-// 		update := bson.M{"$set": bson.M{
-// 			"collection_slug":  collection.CollectionSlug,
-// 			"contract_address": collection.ContractAddress,
-// 			"image_url":        collection.ImageUrl,
-// 			"name":             collection.Name,
-// 			"total_supply":     collection.TotalSupply,
-// 			"number_owners":    collection.NumberOwners,
-// 			"floor_price":      collection.FloorPrice.Amount,
+	if err := dbresult.Decode(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
 
-// 			"floor_price_one_day":    collection.FloorPriceOneDay.Amount,
-// 			"floor_price_one_week":   collection.FloorPriceOneWeek.Amount,
-// 			"volume_fifteen_minutes": collection.VolumeFifteenMinutes.Amount,
+func DBPNftGetNFTDetailByIDs(address string, nftids []string) ([]common.PNftAssetData, error) {
+	var result []common.PNftAssetData
 
-// 			"volume_one_day":  collection.VolumeOneDay.Amount,
-// 			"volume_one_week": collection.VolumeOneWeek.Amount,
+	fmt.Println("address: ", address)
+	fmt.Println("nftids: ", nftids)
 
-// 			"best_collection_bid":        collection.BestCollectionBid.Amount,
-// 			"total_collection_bid_value": collection.TotalCollectionBidValue.Amount,
-// 			"trait_frequencies":          collection.TraitFrequencies,
+	filter := bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.All: nftids}}
+	err := mgm.Coll(&common.PNftAssetData{}).SimpleFind(&result, filter, &options.FindOptions{})
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
 
-// 			"updated_at": time.Now()}}
+// get by id
+func DBPNftGetCollectionDetail(slug string) (*common.PNftCollectionData, error) {
 
-// 		ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 		_, err := mgm.Coll(&common.NftCollectionData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+	p := &common.PNftCollectionData{}
+	filter := bson.M{"collection_slug": bson.M{operator.Eq: slug}}
+	err := mgm.Coll(p).First(filter, p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
 
-// func DBNftSaveNFTDetail(contractAddress string, list []pnft.NFTDetail) error {
-// 	for _, nft := range list {
-// 		uid := contractAddress + "-" + nft.TokenID
-// 		filter := bson.M{"uid": bson.M{operator.Eq: uid}}
-// 		update := bson.M{"$set": bson.M{"uid": uid, "contract_address": contractAddress, "token_id": nft.TokenID, "name": nft.Name, "price": nft.Price.Amount, "detail": nft, "updated_at": time.Now()}}
-// 		ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 		_, err := mgm.Coll(&common.NftAssetData{}).UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+func DBPNftGetCollectionNFTs(address string, filterObj *common.Filter) ([]common.PNftAssetData, error) {
+	var result []common.PNftAssetData
 
-// func DBNftGetNFTDetail(address string, nftid string) (*common.NftAssetData, error) {
-// 	var result common.NftAssetData
-// 	uid := address + "-" + nftid
-// 	filter := bson.M{"uid": bson.M{operator.Eq: uid}}
-// 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-// 	dbresult := mgm.Coll(&common.NftAssetData{}).FindOne(ctx, filter)
-// 	if dbresult.Err() != nil {
-// 		return nil, dbresult.Err()
-// 	}
+	limit := int64(filterObj.Limit)
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	filterObj.Limit = int(limit)
 
-// 	if err := dbresult.Decode(&result); err != nil {
-// 		return nil, err
-// 	}
-// 	return &result, nil
-// }
+	page := int64(filterObj.Page)
 
-// func DBNftGetNFTDetailByIDs(address string, nftids []string) ([]common.NftAssetData, error) {
-// 	var result []common.NftAssetData
+	if page <= 0 {
+		page = 1
+	}
 
-// 	fmt.Println("address: ", address)
-// 	fmt.Println("nftids: ", nftids)
+	offset := page*limit - limit
+	filterObj.Offset = int(offset)
 
-// 	filter := bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.All: nftids}}
-// 	err := mgm.Coll(&common.NftAssetData{}).SimpleFind(&result, filter, &options.FindOptions{})
-// 	if err != nil {
-// 		return result, err
-// 	}
-// 	return result, nil
-// }
+	filterObj.Page = int(page)
 
-// // get by id
-// func DBNftGetCollectionDetail(slug string) (*common.NftCollectionData, error) {
+	sort := "rarity_rank"
+	order := -1
 
-// 	p := &common.NftCollectionData{}
-// 	filter := bson.M{"collection_slug": bson.M{operator.Eq: slug}}
-// 	err := mgm.Coll(p).First(filter, p)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return p, nil
-// }
+	if len(filterObj.Sort) > 0 {
+		sort = filterObj.Sort
+	}
 
-// func DBNftGetCollectionNFTs(address string, filterObj *common.Filter) ([]common.NftAssetData, error) {
-// 	var result []common.NftAssetData
+	if filterObj.Order == "asc" {
+		order = 1
+	}
+	query := filterObj.Query
 
-// 	limit := int64(filterObj.Limit)
-// 	if limit <= 0 || limit > 100 {
-// 		limit = 100
-// 	}
-// 	filterObj.Limit = int(limit)
+	fmt.Println("query: ", query)
+	fmt.Println("sort: ", sort)
+	fmt.Println("order: ", order)
+	fmt.Println("page: ", page)
+	fmt.Println("offset: ", offset)
+	fmt.Println("limit: ", limit)
 
-// 	page := int64(filterObj.Page)
+	var err error
+	var filter interface{}
 
-// 	if page <= 0 {
-// 		page = 1
-// 	}
+	if len(filterObj.Query) > 2 {
+		filter = bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.Regex: query, "$options": "i"}}
+	} else {
+		filter = bson.M{"contract_address": bson.M{operator.Eq: address}}
+	}
+	err = mgm.Coll(&common.PNftAssetData{}).SimpleFind(&result, filter, &options.FindOptions{
+		Limit: &limit,
+		Skip:  &offset,
+		Sort:  bson.D{{sort, order}},
+	})
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
 
-// 	offset := page*limit - limit
-// 	filterObj.Offset = int(offset)
+func DBPNftGetCollectionList(filterObj *common.Filter) ([]common.PNftCollectionData, error) {
+	var result []common.PNftCollectionData
 
-// 	filterObj.Page = int(page)
+	limit := int64(filterObj.Limit)
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	filterObj.Limit = int(limit)
 
-// 	sort := "rarity_rank"
-// 	order := -1
+	page := int64(filterObj.Page)
 
-// 	if len(filterObj.Sort) > 0 {
-// 		sort = filterObj.Sort
-// 	}
+	if page <= 0 {
+		page = 1
+	}
 
-// 	if filterObj.Order == "asc" {
-// 		order = 1
-// 	}
-// 	query := filterObj.Query
+	offset := page*limit - limit
+	filterObj.Offset = int(offset)
 
-// 	fmt.Println("query: ", query)
-// 	fmt.Println("sort: ", sort)
-// 	fmt.Println("order: ", order)
-// 	fmt.Println("page: ", page)
-// 	fmt.Println("offset: ", offset)
-// 	fmt.Println("limit: ", limit)
+	// page -= 1
 
-// 	var err error
-// 	var filter interface{}
+	filterObj.Page = int(page)
 
-// 	if len(filterObj.Query) > 2 {
-// 		filter = bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.Regex: query, "$options": "i"}}
-// 	} else {
-// 		filter = bson.M{"contract_address": bson.M{operator.Eq: address}}
-// 	}
-// 	err = mgm.Coll(&common.NftAssetData{}).SimpleFind(&result, filter, &options.FindOptions{
-// 		Limit: &limit,
-// 		Skip:  &offset,
-// 		Sort:  bson.D{{sort, order}},
-// 	})
-// 	if err != nil {
-// 		return result, err
-// 	}
-// 	return result, nil
-// }
+	sort := "volume_one_day"
+	order := -1
 
-// func DBNftGetCollectionList(filterObj *common.Filter) ([]common.NftCollectionData, error) {
-// 	var result []common.NftCollectionData
+	if len(filterObj.Sort) > 0 {
+		sort = filterObj.Sort
+	}
 
-// 	limit := int64(filterObj.Limit)
-// 	if limit <= 0 || limit > 100 {
-// 		limit = 100
-// 	}
-// 	filterObj.Limit = int(limit)
+	if filterObj.Order == "asc" {
+		order = 1
+	}
+	query := filterObj.Query
 
-// 	page := int64(filterObj.Page)
+	fmt.Println("query: ", query)
+	fmt.Println("sort: ", sort)
+	fmt.Println("order: ", order)
+	fmt.Println("page: ", page)
+	fmt.Println("offset: ", offset)
+	fmt.Println("limit: ", limit)
 
-// 	if page <= 0 {
-// 		page = 1
-// 	}
+	var err error
+	var filter interface{}
 
-// 	offset := page*limit - limit
-// 	filterObj.Offset = int(offset)
+	if len(filterObj.Query) > 2 {
+		filter = bson.M{"name": bson.M{operator.Regex: query, "$options": "i"}}
+	} else {
+		filter = bson.M{}
+	}
+	err = mgm.Coll(&common.PNftCollectionData{}).SimpleFind(&result, filter, &options.FindOptions{
+		Limit: &limit,
+		Skip:  &offset,
+		Sort:  bson.D{{sort, order}},
+	})
 
-// 	// page -= 1
+	if err != nil {
+		return nil, err
+	}
 
-// 	filterObj.Page = int(page)
-
-// 	sort := "volume_one_day"
-// 	order := -1
-
-// 	if len(filterObj.Sort) > 0 {
-// 		sort = filterObj.Sort
-// 	}
-
-// 	if filterObj.Order == "asc" {
-// 		order = 1
-// 	}
-// 	query := filterObj.Query
-
-// 	fmt.Println("query: ", query)
-// 	fmt.Println("sort: ", sort)
-// 	fmt.Println("order: ", order)
-// 	fmt.Println("page: ", page)
-// 	fmt.Println("offset: ", offset)
-// 	fmt.Println("limit: ", limit)
-
-// 	var err error
-// 	var filter interface{}
-
-// 	if len(filterObj.Query) > 2 {
-// 		//filter = bson.D{{operator.Text, bson.D{{"$search", "+\"" + query + "\""}}}}
-
-// 		// filter = bson.D{{operator.Text, bson.D{{"$search", "/" + query + "/"}}}}
-
-// 		// filter = bson.M{"name": "/" + query + "/"}
-
-// 		// filter = bson.M{"name": bson.M{operator.Regex: "/.*digi.*/"}}
-
-// 		// filter = bson.D{{operator.Regex, "/Ape/"}}
-// 		// filter = bson.M{"name": bson.M{operator.Expr: "/.*Ape.*/"}}
-// 		// filter = bson.D{{operator.Text, bson.D{{"$search", "/" + query + "/"}}}}
-
-// 		// filter = bson.M{"name": bson.M{operator.Eq: "/.*Ape.*/"}}
-
-// 		// filter = bson.M{"name": "/Club/"}
-// 		//db.users.find({ "name": { "$regex": "m", "$options": "i" } })
-// 		filter = bson.M{"name": bson.M{operator.Regex: query, "$options": "i"}}
-
-// 		// filter = bson.D{{"name", primitive.Regex{Pattern: "ape", Options: "i"}}}
-
-// 	} else {
-// 		filter = bson.M{}
-// 	}
-// 	err = mgm.Coll(&common.NftCollectionData{}).SimpleFind(&result, filter, &options.FindOptions{
-// 		Limit: &limit,
-// 		Skip:  &offset,
-// 		Sort:  bson.D{{sort, order}},
-// 	})
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return result, nil
-// }
+	return result, nil
+}

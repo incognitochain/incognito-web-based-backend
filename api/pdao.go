@@ -601,7 +601,7 @@ func estimatePDaoFee(feeType int) (*PDaoNetworkFeeResp, error) {
 		return nil, err
 	}
 
-	gasPrice := networkFees.GasPrice[wcommon.NETWORK_BSC]
+	gasPrice := networkFees.GasPrice[wcommon.NETWORK_ETH]
 
 	gasLimit := PDAO_CREATE_PROPOSAL_GAS_LIMIT // 1
 	if feeType == pdao.VOTE_PROP {             // 2

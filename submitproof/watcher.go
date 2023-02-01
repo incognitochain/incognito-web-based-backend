@@ -575,6 +575,8 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 
 func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uint64, finalizeRange uint64, endpoints []string) error {
 	networkID := wcommon.GetNetworkID(tx.Network)
+	i := 0
+retry:
 	for _, endpoint := range endpoints {
 		evmClient, _ := ethclient.Dial(endpoint)
 		txHash := common.Hash{}
@@ -601,6 +603,11 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 				continue
 			}
 			if err == ethereum.NotFound {
+				if i < 10 {
+					i++
+					time.Sleep(3 * time.Second)
+					goto retry
+				}
 				switch tx.Type {
 				case wcommon.ExternalTxTypeSwap, wcommon.ExternalTxTypeOpensea:
 					err = database.DBUpdatePappTxStatus(tx.IncRequestTx, wcommon.StatusPending, "")

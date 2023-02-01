@@ -14,11 +14,11 @@ type Proposal struct {
 	Proposer            string `bson:"proposer"`
 	Targets             string `bson:"targets"`
 	Values              string `bson:"values"`
-	Signatures          string `bson:"signatures"`
-	Calldatas           string `bson:"calldatas"`
-	CreatePropSignature string `bson:"create_prop_signature"`
-	PropVoteSignature   string
-	ReShieldSignature   string
+	Signatures          string `bson:"signatures" json:"-"`
+	Calldatas           string `bson:"calldatas" json:"-"`
+	CreatePropSignature string `bson:"create_prop_signature" json:"-"`
+	PropVoteSignature   string `json:"-"`
+	ReShieldSignature   string `json:"-"`
 }
 
 type Vote struct {

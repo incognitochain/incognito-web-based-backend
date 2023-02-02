@@ -118,7 +118,7 @@ func DBVoteAgainstPdaoProposal(proposal_id string) error {
 	filter := bson.M{"proposal_id": bson.M{operator.Eq: proposal_id}}
 	update := bson.M{"$inc": bson.M{"vote_against": 1}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update)
+	_, err := mgm.Coll(&common.Proposal{}).UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func DBUpdatePdaoVoteStatus(incTx string, status string) error {
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
-	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update)
+	_, err := mgm.Coll(&common.Proposal{}).UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}

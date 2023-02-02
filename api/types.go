@@ -483,7 +483,7 @@ type SubmitVoteReq struct {
 	Txhash            string `json:"Txhash" binding:"required"`
 	TxRaw             string
 	ProposalID        string `json:"ProposalID" binding:"required"`
-	Vote              uint8  `json:"Vote" binding:"required"`
+	Vote              uint8  `json:"Vote"`
 	PropVoteSignature string `json:"PropVoteSignature" binding:"required"`
 	ReShieldSignature string `json:"ReShieldSignature" binding:"required"`
 }

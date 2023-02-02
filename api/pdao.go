@@ -564,6 +564,13 @@ func APIPDaoVoting(c *gin.Context) {
 	}
 	log.Println("Insert the voting to db successful!")
 
+	// update increate vote for/agains of proposal:
+	if vote.Vote == 1 {
+		database.DBVoteForPdaoProposal(vote.ProposalID)
+	} else {
+		database.DBVoteAgainstPdaoProposal(vote.ProposalID)
+	}
+
 	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}})
 
 	return

@@ -114,7 +114,6 @@ func APISubmitUnshieldTxNew(c *gin.Context) {
 	}
 	var mdUnified *bridge.UnshieldRequest
 	var md *bridge.BurningRequest
-
 	md, ok := mdRaw.(*bridge.BurningRequest)
 	if !ok {
 		mdUnified, ok = mdRaw.(*bridge.UnshieldRequest)
@@ -383,7 +382,7 @@ func checkValidUnshield(md *bridge.BurningRequest, mdUnified *bridge.UnshieldReq
 		if md.Type == metadata.BurningPRVBEP20RequestMeta {
 			callNetwork = wcommon.NETWORK_BSC
 		}
-		if md.Type == metadata.BurningPRVERC20RequestMeta {
+		if md.Type == metadata.BurningPRVRequestMeta {
 			callNetwork = wcommon.NETWORK_ETH
 		}
 		burnAmount = md.BurningAmount

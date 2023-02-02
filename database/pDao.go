@@ -104,6 +104,27 @@ func DBUpdatePdaoProposalStatus(incTx string, status string) error {
 	return nil
 }
 
+func DBVoteForPdaoProposal(proposal_id string) error {
+	filter := bson.M{"proposal_id": bson.M{operator.Eq: proposal_id}}
+	update := bson.M{"$inc": bson.M{"vote_for": 1}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func DBVoteAgainstPdaoProposal(proposal_id string) error {
+	filter := bson.M{"proposal_id": bson.M{operator.Eq: proposal_id}}
+	update := bson.M{"$inc": bson.M{"vote_against": 1}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.Vote{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func DBUpdatePdaoVoteStatus(incTx string, status string) error {
 	filter := bson.M{"submit_burn_tx": bson.M{operator.Eq: incTx}}
 	update := bson.M{"$set": bson.M{"status": status}}
@@ -188,6 +209,11 @@ func DBCreateVoteFromProposalIncTxTable(tx string) error {
 			ReShieldSignature: p.ReShieldSignature,
 			AutoVoted:         true,           // auto vote for owner of proposal.
 			SubmitBurnTx:      p.SubmitBurnTx, // use proposal burn prv tx for tracking
+		}
+		// increase vor for:
+		err = DBVoteAgainstPdaoProposal(vote.ProposalID)
+		if err != nil {
+			return err
 		}
 		return DBInsertVoteTable(vote)
 	}

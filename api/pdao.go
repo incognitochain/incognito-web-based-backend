@@ -422,7 +422,7 @@ func APIPDaoVoting(c *gin.Context) {
 
 	currentBlock := header.Number
 
-	if prop.StartBlock.Cmp(currentBlock) >= 0 {
+	if prop.StartBlock.Cmp(currentBlock) < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "can not vote this time"})
 		return
 	}
@@ -564,6 +564,13 @@ func APIPDaoVoting(c *gin.Context) {
 	}
 	log.Println("Insert the voting to db successful!")
 
+	// update increate vote for/agains of proposal:
+	if vote.Vote == 1 {
+		database.DBVoteForPdaoProposal(vote.ProposalID)
+	} else {
+		database.DBVoteAgainstPdaoProposal(vote.ProposalID)
+	}
+
 	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}})
 
 	return
@@ -601,7 +608,7 @@ func estimatePDaoFee(feeType int) (*PDaoNetworkFeeResp, error) {
 		return nil, err
 	}
 
-	gasPrice := networkFees.GasPrice[wcommon.NETWORK_BSC]
+	gasPrice := networkFees.GasPrice[wcommon.NETWORK_ETH]
 
 	gasLimit := PDAO_CREATE_PROPOSAL_GAS_LIMIT // 1
 	if feeType == pdao.VOTE_PROP {             // 2

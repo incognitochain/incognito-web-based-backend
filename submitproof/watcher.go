@@ -814,6 +814,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					if err != nil {
 						return err
 					}
+					// update increate vote for/agains of proposal:
+
 				}
 			case wcommon.ExternalTxTypePdaoReShieldPRV:
 				txtype = "pdao-reshield"

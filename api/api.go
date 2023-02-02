@@ -57,10 +57,10 @@ func StartAPIservice(cfg common.Config) {
 		panic(err)
 	}
 
-	go cacheVaultState()
-	go cacheSupportedPappsTokens()
-	go cacheTokenList()
-	go cacheBridgeNetworkInfos()
+	// go cacheVaultState()
+	// go cacheSupportedPappsTokens()
+	// go cacheTokenList()
+	// go cacheBridgeNetworkInfos()
 
 	r := gin.Default()
 

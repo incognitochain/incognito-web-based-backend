@@ -19,6 +19,9 @@ type Proposal struct {
 	CreatePropSignature string `bson:"create_prop_signature" json:"-"`
 	PropVoteSignature   string `json:"-"`
 	ReShieldSignature   string `json:"-"`
+
+	VoteFor     int `bson:"vote_for" json:"VoteFor"`
+	VoteAgainst int `bson:"vote_against" json:"VoteAgainst"`
 }
 
 type Vote struct {

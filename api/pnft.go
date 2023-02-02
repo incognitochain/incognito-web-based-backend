@@ -257,3 +257,51 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"Result": result})
 }
+
+// TODO: implement
+func APIPNftListing(c *gin.Context) {
+	var req PnftListingReq
+	userAgent := c.Request.UserAgent()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	_ = userAgent
+}
+
+// TODO: implement
+func APIPNftDelisting(c *gin.Context) {
+	var req PnftDelistingReq
+	userAgent := c.Request.UserAgent()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	_ = userAgent
+}
+
+// TODO: implement
+func APIPNftSubmitDelist(c *gin.Context) {
+	var req SubmitSwapTxRequest
+	userAgent := c.Request.UserAgent()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	_ = userAgent
+}
+
+// TODO: implement
+func APIPNftSubmitBuy(c *gin.Context) {
+	var req SubmitSwapTxRequest
+	userAgent := c.Request.UserAgent()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	_ = userAgent
+}

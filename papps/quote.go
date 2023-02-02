@@ -425,6 +425,11 @@ func BuildOpenSeaCalldata(nftDetal *popensea.NFTDetail, recipient string) (strin
 
 func DecodeOpenSeaCalldata() {}
 
+func BuildpNFTCalldata(nftDetal *popensea.NFTDetail, recipient string) (string, error) {
+	var result string
+	return result, nil
+}
+
 func toByte32(s []byte) [32]byte {
 	a := [32]byte{}
 	copy(a[:], s)

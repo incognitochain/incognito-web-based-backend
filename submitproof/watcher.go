@@ -450,7 +450,7 @@ func watchPendingPappTx() {
 			log.Println("DBRetrievePendingPappTxs Swap err:", err)
 		}
 		for _, txdata := range txList {
-			err := processPendingSwapTx(txdata)
+			err := processPendingPappsTx(txdata, wcommon.ExternalTxTypeSwap)
 			if err != nil {
 				log.Println("processPendingShieldTxs Swap err:", txdata.IncTx)
 			}
@@ -461,9 +461,31 @@ func watchPendingPappTx() {
 			log.Println("DBRetrievePendingPappTxs OpenSea err:", err)
 		}
 		for _, txdata := range txList {
-			err := processPendingOpenseaTx(txdata)
+			err := processPendingPappsTx(txdata, wcommon.ExternalTxTypeOpensea)
 			if err != nil {
-				log.Println("processPendingOpenseaTx OpenSea err:", txdata.IncTx)
+				log.Println("processPendingPappsTx OpenSea err:", txdata.IncTx)
+			}
+		}
+
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypePNFT_Buy, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs ExternalTxTypePNFT_Buy err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingPappsTx(txdata, wcommon.ExternalTxTypePNFT_Buy)
+			if err != nil {
+				log.Println("processPendingPappsTx ExternalTxTypePNFT_Buy err:", txdata.IncTx)
+			}
+		}
+
+		txList, err = database.DBRetrievePendingPappTxs(wcommon.ExternalTxTypePNFT_Delist, 0, 0)
+		if err != nil {
+			log.Println("DBRetrievePendingPappTxs ExternalTxTypePNFT_Delist err:", err)
+		}
+		for _, txdata := range txList {
+			err := processPendingPappsTx(txdata, wcommon.ExternalTxTypePNFT_Delist)
+			if err != nil {
+				log.Println("processPendingPappsTx ExternalTxTypePNFT_Delist err:", txdata.IncTx)
 			}
 		}
 
@@ -792,6 +814,8 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 					if err != nil {
 						return err
 					}
+					// update increate vote for/agains of proposal:
+
 				}
 			case wcommon.ExternalTxTypePdaoReShieldPRV:
 				txtype = "pdao-reshield"
@@ -949,7 +973,16 @@ func processPendingExternalTxs(tx wcommon.ExternalTxStatus, currentEVMHeight uin
 	return errors.New("no endpoints reachable")
 }
 
-func processPendingSwapTx(tx wcommon.PappTxData) error {
+func processPendingPappsTx(tx wcommon.PappTxData, txType int) error {
+	txTypeStr := "swaptx"
+	switch txType {
+	case wcommon.ExternalTxTypeOpensea:
+		txTypeStr = "opensea"
+	case wcommon.ExternalTxTypePNFT_Buy:
+		txTypeStr = "pnft_buy"
+	case wcommon.ExternalTxTypePNFT_Delist:
+		txTypeStr = "pnft_delist"
+	}
 	txDetail, err := incClient.GetTxDetail(tx.IncTx)
 	if err != nil {
 		if strings.Contains(err.Error(), "RPC returns an error:") {
@@ -958,7 +991,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` submit swaptx failed 😵 `%v` \n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` submit tx failed 😵 `%v` \n", txTypeStr, tx.IncTx))
 			return nil
 		}
 		return err
@@ -975,9 +1008,9 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 			if err != nil {
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` rejected by beacon 😢\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` inctx `%v` rejected by beacon 😢\n", txTypeStr, tx.IncTx))
 		case 1:
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[swaptx]` inctx `%v` accepted by beacon 👌\n", tx.IncTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` inctx `%v` accepted by beacon 👌\n", txTypeStr, tx.IncTx))
 			err = database.DBUpdatePappTxStatus(tx.IncTx, wcommon.StatusAccepted, "")
 			if err != nil {
 				return err
@@ -987,7 +1020,7 @@ func processPendingSwapTx(tx wcommon.PappTxData) error {
 				return err
 			}
 			for _, network := range tx.Networks {
-				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, wcommon.ExternalTxTypeSwap)
+				_, err := SubmitOutChainTx(tx.IncTx, network, tx.IsUnifiedToken, false, txType)
 				if err != nil {
 					return err
 				}

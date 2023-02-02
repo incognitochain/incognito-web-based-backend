@@ -204,6 +204,8 @@ const (
 	ExternalTxTypeUnknown = iota
 	ExternalTxTypeSwap
 	ExternalTxTypeUnshield
+	ExternalTxTypePNFT_Buy        = 35
+	ExternalTxTypePNFT_Delist     = 36
 	ExternalTxTypeOpensea         = 96
 	ExternalTxTypePdaoProposal    = 69
 	ExternalTxTypePdaoVote        = 70

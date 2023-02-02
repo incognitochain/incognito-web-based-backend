@@ -143,6 +143,8 @@ func SubmitPappTx(txhash string, rawTxData []byte, isPRVTx bool, feeToken string
 		txTypeStr = "txswap"
 	case common.ExternalTxTypeOpensea:
 		txTypeStr = "opensea"
+	case common.ExternalTxTypePNFT_Buy:
+		txTypeStr = "pnft_buy"
 	}
 	go func() {
 		tkInfo, _ := getTokenInfo(feeToken)
@@ -209,7 +211,7 @@ func SubmitOutChainTx(incTxHash string, network string, isUnifiedToken bool, ret
 
 	ctx := context.Background()
 	switch txType {
-	case common.ExternalTxTypeSwap, common.ExternalTxTypeOpensea:
+	case common.ExternalTxTypeSwap, common.ExternalTxTypeOpensea, common.ExternalTxTypePNFT_Buy, common.ExternalTxTypePNFT_Delist:
 		msg := &pubsub.Message{
 			Attributes: map[string]string{
 				"txhash": incTxHash,

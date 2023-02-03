@@ -566,5 +566,24 @@ func DBCreatePNftIndex() error {
 		return err
 	}
 
+	sellOrderModel := []mongo.IndexModel{
+		{
+			Keys:    bsonx.Doc{{Key: "contract_address", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.M{"name": "text"},
+		},
+		{
+			Keys:    bsonx.Doc{{Key: "salt", Value: bsonx.Int32(1)}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	_, err = mgm.Coll(&common.PNftSellOrder{}).Indexes().CreateMany(context.Background(), sellOrderModel)
+	if err != nil {
+		log.Printf("failed to index op-collection in %v", time.Since(startTime))
+		return err
+	}
+
 	return nil
 }

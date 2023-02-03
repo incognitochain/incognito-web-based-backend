@@ -189,3 +189,21 @@ func DBPNftGetCollectionList(filterObj *common.Filter) ([]common.PNftCollectionD
 
 	return result, nil
 }
+
+func DBPNftInsertSellOrder(data *common.PNftSellOrder) error {
+	return mgm.Coll(data).Create(data)
+}
+
+func DBPNftGetNFTSellOrder(address string, nftids []string) ([]common.PNftSellOrder, error) {
+	var result []common.PNftSellOrder
+
+	fmt.Println("address: ", address)
+	fmt.Println("nftids: ", nftids)
+
+	filter := bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.All: nftids}}
+	err := mgm.Coll(&common.PNftSellOrder{}).SimpleFind(&result, filter, &options.FindOptions{})
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}

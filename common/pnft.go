@@ -60,9 +60,13 @@ type Filter struct {
 
 type PNftSellOrder struct {
 	mgm.DefaultModel `bson:",inline"`
+	IsCanceling      bool   `bson:"is_canceling"`
+	Seller           string `bson:"seller"`
 	ContractAddress  string `bson:"contract_address"`
 	TokenID          string `bson:"token_id"`
-	Amount           string `json:"amount"`
-	Currency         string `json:"currency"`
-	IsCanceling      bool   `bson:"is_canceling"`
+	PaymentToken     string `bson:"payment_token"`
+	Amount           string `bson:"amount"`
+	Salt             string `bson:"salt"`
+	OrderInput       string `bson:"order_input"` //this is bridge-eth/pnft.Input
+	Network          int    `bson:"network"`
 }

@@ -11,10 +11,17 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	pnftContract "github.com/incognitochain/bridge-eth/bridge/pnft"
+	"github.com/incognitochain/go-incognito-sdk-v2/coin"
+	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
+	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
+	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
 	"github.com/incognitochain/incognito-web-based-backend/common"
 	wcommon "github.com/incognitochain/incognito-web-based-backend/common"
 	"github.com/incognitochain/incognito-web-based-backend/database"
+	"github.com/incognitochain/incognito-web-based-backend/papps"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pnft"
+	"github.com/incognitochain/incognito-web-based-backend/submitproof"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -219,32 +226,37 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	mycontract, exist := pappList.AppContracts["pnft"] // todo: Lam -> need to add config
+	proxyContract, exist := pappList.AppContracts["pnft"] // todo: Lam -> need to add config
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "blur contract not found"})
 		return
 	}
-	log.Println("mycontract: ", mycontract)
+	log.Println("proxyContract: ", proxyContract)
 	log.Println("recipient: ", recipient)
 
 	// get list asset of the collection:
-	listDataAsset, _ := database.DBPNftGetNFTDetailByIDs(contract, strings.Split(nftids, ","))
-
-	if len(listDataAsset) == 0 {
-		fmt.Println("DBNftGetNFTDetailByIDs empty")
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "list nft empty"})
+	listNFTOrder, err := database.DBPNftGetNFTSellOrder(contract, strings.Split(nftids, ","))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	var sellInputs []pnftContract.Execution
 
-	// get detail only:
-	var listNftDetail []pnft.NFTDetail
-	for _, asset := range listDataAsset {
-		listNftDetail = append(listNftDetail, asset.Detail)
+	for _, order := range listNFTOrder {
+		var input pnftContract.Input
+		err := json.Unmarshal([]byte(order.OrderInput), &input)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		sellInputs = append(sellInputs, pnftContract.Execution{Sell: input})
 	}
 
-	// todo: get call data here...
-
-	callData := ""
+	callData, err := papps.BuildpNFTCalldata(sellInputs, proxyContract, recipient)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
 
 	receiveToken := strings.ToLower("6722ec501bE09fb221bCC8a46F9660868d0a6c63")
 	if config.NetworkID == "testnet" {
@@ -265,6 +277,20 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 	c.JSON(200, gin.H{"Result": result})
 }
 
+func APIPNftGetInfoForListing(c *gin.Context) {
+	collection := c.Query("collection")
+	_ = collection
+	//TODO: implement
+	//get fee information for a collection
+	//get MatchingPolicy address
+
+	result := struct {
+		Fee            map[string]uint
+		MatchingPolicy string
+	}{}
+	c.JSON(200, gin.H{"Result": result})
+}
+
 // TODO: implement
 func APIPNftListing(c *gin.Context) {
 	var req PnftListingReq
@@ -275,6 +301,32 @@ func APIPNftListing(c *gin.Context) {
 		return
 	}
 	_ = userAgent
+
+	newListing := []common.PNftSellOrder{}
+
+	for _, item := range req.Items {
+		listingItem := common.PNftSellOrder{}
+
+		itemData, err := json.Marshal(item)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+
+		listingItem.OrderInput = string(itemData)
+	}
+
+	listingErr := make(map[string]map[string]string)
+	for _, item := range newListing {
+		err := database.DBPNftInsertSellOrder(&item)
+		if err != nil {
+			if len(listingErr[item.ContractAddress]) == 0 {
+				listingErr[item.ContractAddress] = map[string]string{}
+			}
+			listingErr[item.ContractAddress][item.TokenID] = err.Error()
+		}
+	}
+
 }
 
 // TODO: implement
@@ -310,5 +362,87 @@ func APIPNftSubmitBuy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	_ = userAgent
+
+	if req.FeeRefundOTA != "" && req.FeeRefundAddress != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA & FeeRefundAddress can't be used as the same time"})
+		return
+	}
+
+	var md *bridge.BurnForCallRequest
+	var mdRaw metadataCommon.Metadata
+	var isPRVTx bool
+	var isUnifiedToken bool
+	var outCoins []coin.Coin
+	var txHash string
+	var rawTxBytes []byte
+
+	if req.FeeRefundOTA == "" && req.FeeRefundAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "FeeRefundOTA/FeeRefundAddress need to be provided one of these values"})
+		return
+	}
+
+	var ok bool
+	rawTxBytes, _, err = base58.Base58Check{}.Decode(req.TxRaw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid txhash")})
+		return
+	}
+
+	mdRaw, isPRVTx, outCoins, txHash, err = extractDataFromRawTx(rawTxBytes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	spTkList := getSupportedTokenList()
+
+	statusResult := checkPappTxSwapStatus(txHash, spTkList)
+	if len(statusResult) > 0 {
+		if er, ok := statusResult["error"]; ok {
+			if er != "not found" {
+				c.JSON(200, gin.H{"Result": statusResult})
+				return
+			}
+		} else {
+			c.JSON(200, gin.H{"Result": statusResult})
+			return
+		}
+	}
+
+	if mdRaw == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+	md, ok = mdRaw.(*bridge.BurnForCallRequest)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+
+	burnTokenInfo, err := getTokenInfo(md.BurnTokenID.String())
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("invalid tx metadata type")})
+		return
+	}
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		isUnifiedToken = true
+	}
+
+	valid, networkList, feeToken, feeAmount, pfeeAmount, feeDiff, swapInfo, err := checkValidTxSwap(md, outCoins, spTkList, wcommon.ExternalTxTypePNFT_Buy)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "invalid tx err:" + err.Error()})
+		return
+	}
+	// valid = true
+
+	burntAmount, _ := md.TotalBurningAmount()
+	if valid {
+		status, err := submitproof.SubmitPappTx(txHash, []byte(req.TxRaw), isPRVTx, feeToken, feeAmount, pfeeAmount, md.BurnTokenID.String(), burntAmount, swapInfo, isUnifiedToken, networkList, req.FeeRefundOTA, req.FeeRefundAddress, userAgent, wcommon.ExternalTxTypePNFT_Buy)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}, "feeDiff": feeDiff})
+		return
+	}
 }

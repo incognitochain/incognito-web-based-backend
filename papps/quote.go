@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/incognitochain/bridge-eth/bridge/blur"
+	"github.com/incognitochain/bridge-eth/bridge/pnft"
 	pancakeproxy "github.com/incognitochain/incognito-web-based-backend/papps/pancake"
 	"github.com/incognitochain/incognito-web-based-backend/papps/pcurve"
 	"github.com/incognitochain/incognito-web-based-backend/papps/popensea"
@@ -425,9 +427,38 @@ func BuildOpenSeaCalldata(nftDetal *popensea.NFTDetail, recipient string) (strin
 
 func DecodeOpenSeaCalldata() {}
 
-func BuildpNFTCalldata(nftDetal *popensea.NFTDetail, recipient string) (string, error) {
-	var result string
-	return result, nil
+func BuildpNFTCalldata(sellInputs []pnft.Execution, proxyAddrStr string, recipientStr string) (string, error) {
+	proxyAddr := common.HexToAddress(proxyAddrStr)
+	recipient := common.HexToAddress(recipientStr)
+	blurProxy, _ := abi.JSON(strings.NewReader(blur.BlurMetaData.ABI))
+	// buyOrder := sellInput.Order
+	// buyOrder.Trader = proxyAddr
+	// buyOrder.Side = 0
+	// buyInput := pnft.Input{
+	// 	Order:       buyOrder,
+	// 	BlockNumber: big.NewInt(0),
+	// }
+	// calldata, err := blurProxy.Pack("execute", sellInput, buyInput, recipient)
+	// if err != nil {
+	// 	return "", err
+	// }
+	// return hex.EncodeToString(calldata), nil
+	for i, _ := range sellInputs {
+		_buyOrder := sellInputs[i].Sell.Order
+		_buyOrder.Trader = proxyAddr
+		_buyOrder.Side = 0
+		_buyInput := pnft.Input{
+			Order:       _buyOrder,
+			BlockNumber: big.NewInt(0),
+		}
+		sellInputs[i].Buy = _buyInput
+	}
+	calldata, err := blurProxy.Pack("bulkExecute", sellInputs, recipient)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(calldata), nil
 }
 
 func toByte32(s []byte) [32]byte {

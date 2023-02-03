@@ -3,6 +3,7 @@ package api
 import (
 	"time"
 
+	"github.com/incognitochain/bridge-eth/bridge/pnft"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common"
 	metadataCommon "github.com/incognitochain/go-incognito-sdk-v2/metadata/common"
@@ -511,24 +512,14 @@ type PDaoNetworkFeeResp struct {
 }
 
 type PnftListingReq struct {
-	Items []PnftListingItem `json:"items"`
+	Items []pnft.Input `json:"items"`
 }
 
-type PnftListingItem struct {
-	//TODO add more
-	Collection string `json:"collection"`
-	TokenID    string `json:"token_id"`
-	Amount     string `json:"amount"`
-	Signature  string `json:"signature"`
-}
 type PnftDelistingReq struct {
 	Items []PnftDelistingItem `json:"items"`
 }
 
 type PnftDelistingItem struct {
-	//TODO add more
 	Collection string `json:"collection"`
 	TokenID    string `json:"token_id"`
-	Amount     string `json:"amount"`
-	Signature  string `json:"signature"`
 }

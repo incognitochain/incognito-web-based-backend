@@ -40,6 +40,7 @@ func APIPDaoFeeEstimate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+
 	c.JSON(200, gin.H{"Result": feeAmount})
 }
 
@@ -329,6 +330,9 @@ func APIPDaoCreateNewProposal(c *gin.Context) {
 		ReShieldSignature:   req.ReShieldSignature,
 		Description:         req.Description,
 		Title:               req.Title,
+		// VoteForAmount:       burntAmount,
+		// VoteFor:             1,
+		Amount: burntAmount,
 	}
 	// insert db
 	if err = database.DBCreateAProposalTable(proposal); err != nil {
@@ -556,6 +560,7 @@ func APIPDaoVoting(c *gin.Context) {
 
 		Vote:      req.Vote,
 		AutoVoted: false,
+		Amount:    burntAmount,
 	}
 	// insert db
 	if err = database.DBInsertVoteTable(vote); err != nil {
@@ -566,9 +571,9 @@ func APIPDaoVoting(c *gin.Context) {
 
 	// update increate vote for/agains of proposal:
 	if vote.Vote == 1 {
-		database.DBVoteForPdaoProposal(vote.ProposalID)
+		database.DBVoteForPdaoProposal(vote.ProposalID, burntAmount)
 	} else {
-		database.DBVoteAgainstPdaoProposal(vote.ProposalID)
+		database.DBVoteAgainstPdaoProposal(vote.ProposalID, burntAmount)
 	}
 
 	c.JSON(200, gin.H{"Result": map[string]interface{}{"inc_request_tx_status": status}})

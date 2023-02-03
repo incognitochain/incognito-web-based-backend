@@ -22,6 +22,11 @@ type Proposal struct {
 
 	VoteFor     int `bson:"vote_for"`
 	VoteAgainst int `bson:"vote_against"`
+
+	VoteForAmount     uint64 `bson:"vote_for_amount"`
+	VoteAgainstAmount uint64 `bson:"vote_against_amount"`
+
+	Amount uint64 `json:"-"`
 }
 
 type Vote struct {
@@ -29,6 +34,7 @@ type Vote struct {
 	Status            string `bson:"status"`
 	ProposalID        string
 	Vote              uint8
+	Amount            uint64
 	PropVoteSignature string
 	SubmitBurnTx      string `bson:"submit_burn_tx"`
 	SubmitVoteTx      string `bson:"submit_vote_tx"`

@@ -104,9 +104,9 @@ func DBUpdatePdaoProposalStatus(incTx string, status string) error {
 	return nil
 }
 
-func DBVoteForPdaoProposal(proposal_id string) error {
+func DBVoteForPdaoProposal(proposal_id string, amount uint64) error {
 	filter := bson.M{"proposal_id": bson.M{operator.Eq: proposal_id}}
-	update := bson.M{"$inc": bson.M{"vote_for": 1}}
+	update := bson.M{"$inc": bson.M{"vote_for": 1, "vote_against_amount": amount}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.Proposal{}).UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -114,9 +114,9 @@ func DBVoteForPdaoProposal(proposal_id string) error {
 	}
 	return nil
 }
-func DBVoteAgainstPdaoProposal(proposal_id string) error {
+func DBVoteAgainstPdaoProposal(proposal_id string, amount uint64) error {
 	filter := bson.M{"proposal_id": bson.M{operator.Eq: proposal_id}}
-	update := bson.M{"$inc": bson.M{"vote_against": 1}}
+	update := bson.M{"$inc": bson.M{"vote_against": 1, "vote_against_amount": amount}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	_, err := mgm.Coll(&common.Proposal{}).UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -209,9 +209,10 @@ func DBCreateVoteFromProposalIncTxTable(tx string) error {
 			ReShieldSignature: p.ReShieldSignature,
 			AutoVoted:         true,           // auto vote for owner of proposal.
 			SubmitBurnTx:      p.SubmitBurnTx, // use proposal burn prv tx for tracking
+			Amount:            p.Amount,
 		}
 		// increase vor for:
-		err = DBVoteAgainstPdaoProposal(vote.ProposalID)
+		err = DBVoteAgainstPdaoProposal(vote.ProposalID, p.Amount)
 		if err != nil {
 			return err
 		}

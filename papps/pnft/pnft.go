@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-///v1/user/nft_list
+// /v1/user/nft_list
 func RetrieveGetNftListDeBank(APIEndpoint, apiToken, address string) (string, error) {
 
 	url := fmt.Sprintf("%v/v1/user/nft_list?id=%s&chain_id=eth&is_all=true", APIEndpoint, address)
@@ -117,7 +117,6 @@ func RetrieveGetNftListQuickNode(APIEndpoint, address string) (string, error) {
 }
 
 func RetrieveGetNftListFromMoralis(APIEndpoint, token, address string) (string, error) {
-
 	var respond struct {
 		Total    interface{} `json:"total"`
 		Page     int         `json:"page"`
@@ -286,5 +285,54 @@ func CheckNFTOwnerQuicknode(OSEndpoint, address string, assets map[string][]stri
 		}
 	}
 
+	return notBelongAsset, nil
+}
+
+func CheckNFTsOwnerMoralis(APIEndpoint, token, address string, assetsToCheck map[string][]string) (map[string][]string, error) {
+	notBelongAsset := make(map[string][]string)
+	type AddressAssetsStruct struct {
+		TokenAddress       string      `json:"token_address"`
+		TokenID            string      `json:"token_id"`
+		OwnerOf            string      `json:"owner_of"`
+		BlockNumber        string      `json:"block_number"`
+		BlockNumberMinted  string      `json:"block_number_minted"`
+		TokenHash          string      `json:"token_hash"`
+		Amount             string      `json:"amount"`
+		ContractType       string      `json:"contract_type"`
+		Name               string      `json:"name"`
+		Symbol             string      `json:"symbol"`
+		TokenURI           string      `json:"token_uri"`
+		Metadata           string      `json:"metadata"`
+		NormalizedMetadata interface{} `json:"normalized_metadata"`
+		LastTokenURISync   time.Time   `json:"last_token_uri_sync"`
+		LastMetadataSync   time.Time   `json:"last_metadata_sync"`
+		MinterAddress      string      `json:"minter_address"`
+	}
+	addressAssetsStr, err := RetrieveGetNftListFromMoralis(APIEndpoint, token, address)
+	if err != nil {
+		return nil, err
+	}
+
+	var addressAssets []AddressAssetsStruct
+
+	err = json.Unmarshal([]byte(addressAssetsStr), &addressAssets)
+	if err != nil {
+		return nil, err
+	}
+
+	for collection, assets := range assetsToCheck {
+		for _, asset := range assets {
+			isBelong := false
+			for _, v := range addressAssets {
+				if asset == v.TokenID && strings.EqualFold(collection, v.TokenAddress) {
+					isBelong = true
+					break
+				}
+			}
+			if !isBelong {
+				notBelongAsset[collection] = append(notBelongAsset[collection], asset)
+			}
+		}
+	}
 	return notBelongAsset, nil
 }

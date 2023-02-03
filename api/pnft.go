@@ -226,7 +226,7 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	proxyContract, exist := pappList.AppContracts["pnft"] // todo: Lam -> need to add config
+	proxyContract, exist := pappList.AppContracts["pnft"] // TODO:
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "blur contract not found"})
 		return
@@ -241,6 +241,7 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		return
 	}
 	var sellInputs []pnftContract.Execution
+	sellerNFTMap := make(map[string]map[string][]string)
 
 	for _, order := range listNFTOrder {
 		var input pnftContract.Input
@@ -250,6 +251,27 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 			return
 		}
 		sellInputs = append(sellInputs, pnftContract.Execution{Sell: input})
+	}
+
+	notBuyAble := make(map[string][]string)
+	for seller, nftMap := range sellerNFTMap {
+		notBuyAble, err = pnft.CheckNFTsOwnerMoralis(config.MoralisAPI, config.MoralisToken, seller, nftMap)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+	}
+
+	if len(notBuyAble) > 0 {
+		result := struct {
+			Message string
+			Data    map[string][]string
+		}{
+			Message: "these NFTs are not available to purchase",
+			Data:    notBuyAble,
+		}
+		c.JSON(500, gin.H{"Result": result})
+		return
 	}
 
 	callData, err := papps.BuildpNFTCalldata(sellInputs, proxyContract, recipient)

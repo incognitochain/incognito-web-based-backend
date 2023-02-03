@@ -144,6 +144,7 @@ func StartAPIservice(cfg common.Config) {
 	pNft.GET("/collections", APIPNftGetCollections)
 	pNft.GET("/collections/:slug/tokens", APIPNftGetCollectionDetail)
 	pNft.GET("/estimatebuyfee", APIPNftEstimateBuyFee)
+	pNft.GET("/info-for-listing", APIPNftGetInfoForListing)
 	pNft.POST("/listingnft", APIPNftListing)
 	pNft.GET("/estimate-delist-fee", APIPNftDelisting)
 	pNft.POST("/submitdelisttx", APIPNftSubmitDelist)

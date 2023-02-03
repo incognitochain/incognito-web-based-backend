@@ -46,11 +46,18 @@ func APIPnftGetNftsFromAddress(c *gin.Context) {
 		// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 
 		// }
-		response, err = pnft.RetrieveGetNftListQuickNode(config.QuickNodeAPI, address)
+		// response, err = pnft.RetrieveGetNftListQuickNode(config.QuickNodeAPI, address)
+		// if err != nil {
+		// 	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+
+		// }
+
+		response, err = pnft.RetrieveGetNftListFromMoralis(config.MoralisAPI, config.MoralisToken, address)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-
+			return
 		}
+
 		// save db:
 		database.DBPNftInsertListNftCacheTable(&common.ListNftCache{
 			Address: address,

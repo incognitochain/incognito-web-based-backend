@@ -33,6 +33,8 @@ type Config struct {
 
 	QuickNodeAPI string
 
+	MoralisAPI, MoralisToken string
+
 	// Interswap
 	ISIncPrivKeys map[string]string
 }

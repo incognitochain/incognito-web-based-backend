@@ -14,12 +14,16 @@ type NFTDetail struct {
 	AnimationURL         interface{} `json:"animation_url"`
 	AnimationOriginalURL interface{} `json:"animation_original_url"`
 
-	Traits      interface{} `json:"traits"`
-	RarityScore float64     `json:"rarityScore"`
-	RarityRank  int         `json:"rarityRank"`
-	Price       Price       `json:"price"`
-	HighestBid  interface{} `json:"highestBid"`
-	LastSale    struct {
+	Traits interface{} `json:"traits"`
+
+	RarityScore float64 `json:"rarityScore"`
+	RarityRank  int     `json:"rarityRank"`
+	Price       Price   `json:"price"`
+
+	ListingInfo string `bson:"listing_info"`
+
+	HighestBid interface{} `json:"highestBid"`
+	LastSale   struct {
 		Amount   string    `json:"amount"`
 		Unit     string    `json:"unit"`
 		ListedAt time.Time `json:"listedAt"`
@@ -39,7 +43,7 @@ type Price struct {
 }
 
 // just for crawl data from quicknode.
-type Asset struct {
+type QuicknodeNftDataResp struct {
 	Name              string `json:"name"`
 	CollectionTokenID string `json:"collectionTokenId"`
 	CollectionName    string `json:"collectionName"`
@@ -62,7 +66,7 @@ type Asset struct {
 	CurrentOwner string `json:"currentOwner"`
 }
 
-type OpenCollectionResp struct {
+type OpenSeaCollectionResp struct {
 	BannerImageURL    string `json:"banner_image_url"`
 	Description       string `json:"description"`
 	ExternalURL       string `json:"external_url"`
@@ -75,4 +79,37 @@ type OpenCollectionResp struct {
 	TwitterUsername   string `json:"twitter_username"`
 	InstagramUsername string `json:"instagram_username"`
 	WikiURL           string `json:"wiki_url"`
+}
+
+type MoralisNftDataResp struct {
+	TokenAddress       string `json:"token_address"`
+	TokenID            string `json:"token_id"`
+	OwnerOf            string `json:"owner_of"`
+	BlockNumber        string `json:"block_number"`
+	BlockNumberMinted  string `json:"block_number_minted"`
+	TokenHash          string `json:"token_hash"`
+	Amount             string `json:"amount"`
+	ContractType       string `json:"contract_type"`
+	Name               string `json:"name"`
+	Symbol             string `json:"symbol"`
+	TokenURI           string `json:"token_uri"`
+	Metadata           string `json:"metadata"`
+	NormalizedMetadata *struct {
+		Name         string      `json:"name"`
+		Description  string      `json:"description"`
+		AnimationURL interface{} `json:"animation_url"`
+		ExternalLink interface{} `json:"external_link"`
+		Image        string      `json:"image"`
+		Attributes   []struct {
+			TraitType   string      `json:"trait_type"`
+			Value       string      `json:"value"`
+			DisplayType interface{} `json:"display_type"`
+			MaxValue    interface{} `json:"max_value"`
+			TraitCount  int         `json:"trait_count"`
+			Order       interface{} `json:"order"`
+		} `json:"attributes"`
+	} `json:"normalized_metadata"`
+	LastTokenURISync time.Time `json:"last_token_uri_sync"`
+	LastMetadataSync time.Time `json:"last_metadata_sync"`
+	MinterAddress    string    `json:"minter_address"`
 }

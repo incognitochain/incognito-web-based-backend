@@ -44,12 +44,15 @@ type PNftCollectionData struct {
 
 type PNftAssetData struct {
 	mgm.DefaultModel `bson:",inline"`
-	UID              string         `bson:"uid"`
-	ContractAddress  string         `bson:"contract_address"`
-	TokenID          string         `bson:"token_id"`
-	Name             string         `bson:"name"`
-	Price            string         `bson:"price"`
-	Detail           pnft.NFTDetail `bson:"detail"`
+	UID              string `bson:"uid"`
+	ContractAddress  string `bson:"contract_address"`
+	TokenID          string `bson:"token_id"`
+	Name             string `bson:"name"`
+	Price            string `bson:"price"`
+	Listing          bool   `bson:"listing"`
+	ListingInfo      string `bson:"listing_info"`
+
+	Detail pnft.NFTDetail `bson:"detail"`
 }
 
 type Filter struct {

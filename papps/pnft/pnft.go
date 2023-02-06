@@ -55,7 +55,7 @@ func RetrieveGetNftListQuickNode(APIEndpoint, address string) (string, error) {
 		ID      int    `json:"id"`
 		Status  int    `json:"status"`
 		Result  struct {
-			Assets []Asset `json:"assets"`
+			Assets []QuicknodeNftDataResp `json:"assets"`
 		} `json:"result"`
 		Error *struct {
 			Code    int    `json:"code"`
@@ -118,43 +118,12 @@ func RetrieveGetNftListQuickNode(APIEndpoint, address string) (string, error) {
 
 func RetrieveGetNftListFromMoralis(APIEndpoint, token, address string) (string, error) {
 	var respond struct {
-		Total    interface{} `json:"total"`
-		Page     int         `json:"page"`
-		PageSize int         `json:"page_size"`
-		Cursor   interface{} `json:"cursor"`
-		Result   []struct {
-			TokenAddress       string `json:"token_address"`
-			TokenID            string `json:"token_id"`
-			OwnerOf            string `json:"owner_of"`
-			BlockNumber        string `json:"block_number"`
-			BlockNumberMinted  string `json:"block_number_minted"`
-			TokenHash          string `json:"token_hash"`
-			Amount             string `json:"amount"`
-			ContractType       string `json:"contract_type"`
-			Name               string `json:"name"`
-			Symbol             string `json:"symbol"`
-			TokenURI           string `json:"token_uri"`
-			Metadata           string `json:"metadata"`
-			NormalizedMetadata struct {
-				Name         string      `json:"name"`
-				Description  string      `json:"description"`
-				AnimationURL interface{} `json:"animation_url"`
-				ExternalLink interface{} `json:"external_link"`
-				Image        string      `json:"image"`
-				Attributes   []struct {
-					TraitType   string      `json:"trait_type"`
-					Value       string      `json:"value"`
-					DisplayType interface{} `json:"display_type"`
-					MaxValue    interface{} `json:"max_value"`
-					TraitCount  int         `json:"trait_count"`
-					Order       interface{} `json:"order"`
-				} `json:"attributes"`
-			} `json:"normalized_metadata"`
-			LastTokenURISync time.Time `json:"last_token_uri_sync"`
-			LastMetadataSync time.Time `json:"last_metadata_sync"`
-			MinterAddress    string    `json:"minter_address"`
-		} `json:"result"`
-		Status string `json:"status"`
+		Total    interface{}          `json:"total"`
+		Page     int                  `json:"page"`
+		PageSize int                  `json:"page_size"`
+		Cursor   interface{}          `json:"cursor"`
+		Result   []MoralisNftDataResp `json:"result"`
+		Status   string               `json:"status"`
 	}
 
 	url := fmt.Sprintf("%s/%s/nft?chain=eth&format=decimal&normalizeMetadata=true&limit=100", APIEndpoint, address)
@@ -302,10 +271,10 @@ func CheckNFTOwnerQuicknode(OSEndpoint, address string, assets map[string][]stri
 	return notBelongAsset, nil
 }
 
-func RetrieveGetCollectionInfoFromOpensea(APIEndpoint, apiToken, contract string) (*OpenCollectionResp, error) {
+func RetrieveGetCollectionInfoFromOpensea(APIEndpoint, apiToken, contract string) (*OpenSeaCollectionResp, error) {
 	var respond struct {
 		// Collections struct {
-		Collection OpenCollectionResp `json:"collection"`
+		Collection OpenSeaCollectionResp `json:"collection"`
 		// }
 	}
 	url := fmt.Sprintf("%v/api/v1/collections?format=json", APIEndpoint)

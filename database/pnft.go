@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/incognitochain/incognito-web-based-backend/common"
@@ -11,6 +12,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func DBPNftInsertPNftAssetDataTable(data *common.PNftAssetData) error {
+	return mgm.Coll(data).Create(data)
+}
+func DBPNftInsertPNftCollectionDataTable(data *common.PNftCollectionData) error {
+	return mgm.Coll(data).Create(data)
+}
 
 func DBPNftInsertListNftCacheTable(data *common.ListNftCache) error {
 	return mgm.Coll(data).Create(data)
@@ -57,11 +65,23 @@ func DBPNftGetNFTDetailByIDs(address string, nftids []string) ([]common.PNftAsse
 	return result, nil
 }
 
-// get by id
+// get collection by slug
 func DBPNftGetCollectionDetail(slug string) (*common.PNftCollectionData, error) {
 
 	p := &common.PNftCollectionData{}
 	filter := bson.M{"collection_slug": bson.M{operator.Eq: slug}}
+	err := mgm.Coll(p).First(filter, p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// get collection by contract address
+func DBBlurGetCollectionByAddressDetail(address string) (*common.PNftCollectionData, error) {
+
+	p := &common.PNftCollectionData{}
+	filter := bson.M{"contract_address": bson.M{operator.Eq: strings.ToLower(address)}}
 	err := mgm.Coll(p).First(filter, p)
 	if err != nil {
 		return nil, err

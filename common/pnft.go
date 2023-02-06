@@ -16,27 +16,30 @@ type PNftCollectionData struct {
 	ContractAddress  string `bson:"contract_address"`
 	Name             string `bson:"name"`
 	CollectionSlug   string `bson:"collection_slug"`
-	ImageUrl         string `bson:"image_url"`
-	TotalSupply      int    `bson:"total_supply"`
-	NumberOwners     int    `bson:"number_owners"`
+
+	ImageUrl       string `bson:"image_url"`
+	LargeImageURL  string `bson:"large_image_url"`
+	BannerImageURL string `bson:"banner_image_url"`
+
+	ExternalURL       string `bson:"external_url"`
+	TelegramURL       string `bson:"telegram_url"`
+	TwitterUsername   string `bson:"twitter_username"`
+	InstagramUsername string `bson:"instagram_username"`
+	WikiURL           string `bson:"wiki_url"`
+
+	TotalSupply  int `bson:"total_supply"`
+	NumberOwners int `bson:"number_owners"`
 
 	FloorPrice string `bson:"floor_price"`
 
-	FloorPriceOneDay string `bson:"floor_price_one_day"`
-
-	FloorPriceOneWeek string `bson:"floor_price_one_week"`
-
-	VolumeFifteenMinutes string `bson:"volume_fifteen_minutes"`
-
-	VolumeOneDay string `bson:"volume_one_day"`
-
-	VolumeOneWeek string `bson:"volume_one_week"`
-
-	BestCollectionBid string `bson:"best_collection_bid"`
-
-	TotalCollectionBidValue string `bson:"total_collection_bid_value"`
-
-	TraitFrequencies interface{} `bson:"trait_frequencies"`
+	FloorPriceOneDay        string      `bson:"floor_price_one_day"`
+	FloorPriceOneWeek       string      `bson:"floor_price_one_week"`
+	VolumeFifteenMinutes    string      `bson:"volume_fifteen_minutes"`
+	VolumeOneDay            string      `bson:"volume_one_day"`
+	VolumeOneWeek           string      `bson:"volume_one_week"`
+	BestCollectionBid       string      `bson:"best_collection_bid"`
+	TotalCollectionBidValue string      `bson:"total_collection_bid_value"`
+	TraitFrequencies        interface{} `bson:"trait_frequencies"`
 }
 
 type PNftAssetData struct {

@@ -150,6 +150,8 @@ func StartAPIservice(cfg common.Config) {
 	pNft.POST("/submitdelisttx", APIPNftSubmitDelist)
 	pNft.POST("/submitbuytx", APIPNftSubmitBuy)
 
+	pNft.GET("/asset_contract/:contract", APIPNftGetCollectionInfo_Test)
+
 	//end pnft router ================================================
 
 	go prefetchSupportedTokenList()

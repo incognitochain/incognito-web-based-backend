@@ -427,7 +427,7 @@ func BuildOpenSeaCalldata(nftDetal *popensea.NFTDetail, recipient string) (strin
 
 func DecodeOpenSeaCalldata() {}
 
-func BuildpNFTCalldata(sellInputs []pnft.Execution, proxyAddrStr string, recipientStr string) (string, error) {
+func BuildpNFTBuyCalldata(sellInputs []pnft.Execution, proxyAddrStr string, recipientStr string) (string, error) {
 	proxyAddr := common.HexToAddress(proxyAddrStr)
 	recipient := common.HexToAddress(recipientStr)
 	blurProxy, _ := abi.JSON(strings.NewReader(blur.BlurMetaData.ABI))

@@ -294,7 +294,7 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		return
 	}
 
-	callData, err := papps.BuildpNFTCalldata(sellInputs, proxyContract, recipient)
+	callData, err := papps.BuildpNFTBuyCalldata(sellInputs, proxyContract, recipient)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -362,7 +362,7 @@ func APIPNftListing(c *gin.Context) {
 
 	newListing := []common.PNftSellOrder{}
 
-	for _, item := range req.Items {
+	for orderHash, item := range req.Items {
 		listingItem := common.PNftSellOrder{}
 
 		itemData, err := json.Marshal(item)
@@ -372,6 +372,7 @@ func APIPNftListing(c *gin.Context) {
 		}
 
 		listingItem.OrderInput = string(itemData)
+		listingItem.OrderHash = orderHash
 	}
 
 	listingErr := make(map[string]map[string]string)
@@ -387,28 +388,22 @@ func APIPNftListing(c *gin.Context) {
 
 }
 
-// TODO: implement
-func APIPNftDelisting(c *gin.Context) {
-	var req PnftDelistingReq
-	userAgent := c.Request.UserAgent()
-	err := c.ShouldBindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
-	_ = userAgent
-}
+// // TODO: implement
+// func APIPNftDelisting(c *gin.Context) {
+// 	var req PnftDelistingReq
+// 	userAgent := c.Request.UserAgent()
+// 	err := c.ShouldBindJSON(&req)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+// 		return
+// 	}
+// 	_ = userAgent
+// }
 
 // TODO: implement
 func APIPNftSubmitDelist(c *gin.Context) {
-	var req SubmitSwapTxRequest
-	userAgent := c.Request.UserAgent()
-	err := c.ShouldBindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
-	_ = userAgent
+	txhash := c.Query("txhash")
+	_ = txhash
 }
 
 // TODO: implement

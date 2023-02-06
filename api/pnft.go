@@ -446,3 +446,88 @@ func APIPNftSubmitBuy(c *gin.Context) {
 		return
 	}
 }
+
+func APIPNftGetCollectionInfo_Test(c *gin.Context) {
+
+	contractAddress, _ := c.Params.Get("contract")
+
+	log.Println("contractAddress: ", contractAddress)
+
+	dataCollection, err := pnft.RetrieveGetCollectionInfoFromOpensea(config.OpenSeaAPI, config.OpenSeaAPIKey, contractAddress)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error})
+		return
+	}
+	pnftCollection, err := convertOpenCollectionToPNftCollection(contractAddress, dataCollection)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error})
+		return
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"Result": pnftCollection})
+	return
+}
+
+func convertOpenCollectionToPNftCollection(contractAddress string, osCollection *pnft.OpenCollectionResp) (*common.PNftCollectionData, error) {
+	if osCollection == nil {
+		return nil, errors.New("collection is nil")
+	}
+	return &common.PNftCollectionData{
+		ContractAddress: contractAddress,
+		Name:            osCollection.Name,
+		CollectionSlug:  osCollection.Slug,
+
+		ImageUrl:       osCollection.ImageURL,
+		LargeImageURL:  osCollection.LargeImageURL,
+		BannerImageURL: osCollection.BannerImageURL,
+
+		ExternalURL:       osCollection.ExternalURL,
+		TelegramURL:       osCollection.TelegramURL,
+		TwitterUsername:   osCollection.TwitterUsername,
+		InstagramUsername: osCollection.InstagramUsername,
+		WikiURL:           osCollection.WikiURL,
+	}, nil
+}
+func convertOpenNftToPNftNft(contractAddress string, osNft *common.OpenseaAssetData) (*common.PNftAssetData, error) {
+	if osNft == nil {
+		return nil, errors.New("osNft is nil")
+	}
+	price := "0"
+	if len(osNft.Detail.SeaportSellOrders) > 0 {
+		price = osNft.Detail.SeaportSellOrders[0].CurrentPrice
+	}
+
+	priceInfo := pnft.Price{
+		Amount: price,
+		Unit:   "ETH",
+		// ListedAt:    osNft.ListedAt,
+		Marketplace: "opensea",
+	}
+
+	return &common.PNftAssetData{
+		UID:             osNft.Address + osNft.TokenID,
+		ContractAddress: osNft.Address,
+		TokenID:         osNft.TokenID,
+		Name:            osNft.Name,
+		Price:           price,
+		Detail: pnft.NFTDetail{
+			TokenID:  osNft.TokenID,
+			Name:     osNft.Name,
+			ImageURL: osNft.Detail.ImageURL,
+			Traits:   osNft.Detail.Traits,
+			// RarityScore: osNft.Detail.RarityScore,
+			// RarityRank:  osNft.Detail.RarityRank,
+			Price: priceInfo,
+			// HighestBid: osNft.TokenID,
+			// LastSale: map[string]interface{}{
+			// 	Amount:   osNft.TokenID,
+			// 	Unit:     osNft.TokenID,
+			// 	ListedAt: osNft.TokenID,
+			// },
+			// LastCostBasis: map[string]interface{}{
+			// 	Amount:   osNft.TokenID,
+			// 	Unit:     osNft.TokenID,
+			// 	ListedAt: osNft.TokenID,
+			// },
+		},
+	}, nil
+}

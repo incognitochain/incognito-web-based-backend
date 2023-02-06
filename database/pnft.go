@@ -16,11 +16,10 @@ func DBPNftInsertListNftCacheTable(data *common.ListNftCache) error {
 	return mgm.Coll(data).Create(data)
 }
 
-// get by address
+// get nft list cache by address
 func DBPNftGetListNftCacheTableByAddress(address string) (*common.ListNftCache, error) {
 
 	p := &common.ListNftCache{}
-	// filter := bson.M{"pid": pid}
 	filter := bson.M{"address": bson.M{operator.Eq: address}}
 	err := mgm.Coll(p).First(filter, p)
 	if err != nil {

@@ -65,6 +65,24 @@ func DBPNftGetNFTDetailByIDs(address string, nftids []string) ([]common.PNftAsse
 	return result, nil
 }
 
+func DBPNftListingAsset(address, nftID string, listing bool) error {
+
+	uid := strings.ToLower(address) + "-" + strings.ToLower(nftID)
+	filter := bson.M{"uid": bson.M{operator.Eq: uid}}
+
+	update := bson.M{"$set": bson.M{"listing": listing}}
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
+	_, err := mgm.Coll(&common.PNftAssetData{}).UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DBPNftUpdateAssetTable(data *common.PNftAssetData) error {
+	return mgm.Coll(&common.PNftAssetData{}).Update(data)
+}
+
 // get collection by slug
 func DBPNftGetCollectionDetail(slug string) (*common.PNftCollectionData, error) {
 

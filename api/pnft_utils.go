@@ -59,6 +59,8 @@ func createNftAndCollectionToInsertDBWhenListing(orderList []common.PNftSellOrde
 
 					if pNftData != nil {
 
+						pNftData.Listing = true
+
 						log.Println("insert pnft to pnft marketplace now:")
 						err := database.DBPNftInsertPNftAssetDataTable(pNftData)
 						if err != nil {
@@ -114,8 +116,14 @@ func createNftAndCollectionToInsertDBWhenListing(orderList []common.PNftSellOrde
 			}
 		} else {
 			log.Println("Nft data is exits, updated new price: ", order.Amount)
+			pNftData.Listing = true
 			pNftData.Price = order.Amount
 			pNftData.Detail.Price.Amount = order.Amount
+			err = database.DBPNftUpdateAssetTable(pNftData)
+			if err != nil {
+				fmt.Println("can not DBPNftUpdateAssetTable: ", err)
+				return err
+			}
 
 		}
 

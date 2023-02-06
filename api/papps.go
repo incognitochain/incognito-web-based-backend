@@ -1421,7 +1421,8 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 				log.Println("estimateSwapFee error", err)
 				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
 			}
-		} else {
+		}
+		if pappType == wcommon.ExternalTxTypeOpensea {
 			openseaFee, err := estimateOpenSeaFee(v.BurningAmount, tokenInfo, callNetworkList[0], networkFees, spTkList)
 			if err != nil {
 				log.Println("estimateSwapFee error", err)
@@ -1447,6 +1448,32 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 			})
 		}
 
+		if pappType == wcommon.ExternalTxTypePNFT_Buy {
+			openseaFee, err := estimatePNFTFee(v.BurningAmount, tokenInfo, callNetworkList[0], networkFees, spTkList)
+			if err != nil {
+				log.Println("estimateSwapFee error", err)
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+			}
+			pappList, err := database.DBRetrievePAppsByNetwork(callNetworkList[0])
+			if err != nil {
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+
+			}
+			contract, exist := pappList.AppContracts["pnft"]
+			if !exist {
+				return result, callNetworkList, feeToken, feeAmount, pfeeAmount, feeDiff, nil, errors.New("can't validate fee at the moment, please try again later")
+
+			}
+			quoteDatas = append(quoteDatas, QuoteDataResp{
+				AppName:      "pnft",
+				CallContract: contract,
+				Fee: []PappNetworkFee{{
+					TokenID: openseaFee.TokenID,
+					Amount:  openseaFee.Amount,
+				}},
+			})
+		}
+
 		for _, quote := range quoteDatas {
 			if strings.EqualFold(quote.CallContract, "0x"+v.ExternalCallAddress) {
 				requireFeeToken = quote.Fee[0].TokenID
@@ -1457,6 +1484,7 @@ func checkValidTxSwap(md *bridge.BurnForCallRequest, outCoins []coin.Coin, spTkL
 					TokenOut: receiveToken,
 				}
 				switch quote.AppName {
+				case "pnft":
 				case "opensea":
 					//TODO: opensea
 				case "curve":

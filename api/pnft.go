@@ -340,9 +340,11 @@ func APIPNftGetInfoForListing(c *gin.Context) {
 	result := struct {
 		Fee            map[string]uint
 		MatchingPolicy string
+		PaymentToken   string
 	}{
 		Fee:            make(map[string]uint),
 		MatchingPolicy: proxyContract,
+		PaymentToken:   "0x0000000000000000000000000000000000000000",
 	}
 	c.JSON(200, gin.H{"Result": result})
 }

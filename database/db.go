@@ -16,6 +16,7 @@ func ConnectDB(dbName string, mongoAddr string, network string) error {
 		return err
 	}
 	_, cd, _, _ := mgm.DefaultConfigs()
+
 	err = cd.Ping(context.Background(), nil)
 	if err != nil {
 		return err

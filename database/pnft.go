@@ -28,7 +28,7 @@ func DBPNftInsertListNftCacheTable(data *common.ListNftCache) error {
 func DBPNftGetListNftCacheTableByAddress(address string) (*common.ListNftCache, error) {
 
 	p := &common.ListNftCache{}
-	filter := bson.M{"address": bson.M{operator.Eq: address}}
+	filter := bson.M{"address": bson.M{operator.Eq: strings.ToLower(address)}}
 	err := mgm.Coll(p).First(filter, p)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func DBPNftGetListNftCacheTableByAddress(address string) (*common.ListNftCache, 
 }
 func DBPNftGetNFTDetail(address string, nftid string) (*common.PNftAssetData, error) {
 	var result common.PNftAssetData
-	uid := address + "-" + nftid
+	uid := strings.ToLower(address) + "-" + strings.ToLower(nftid)
 	filter := bson.M{"uid": bson.M{operator.Eq: uid}}
 	ctx, _ := context.WithTimeout(context.Background(), time.Duration(1)*DB_OPERATION_TIMEOUT)
 	dbresult := mgm.Coll(&common.PNftAssetData{}).FindOne(ctx, filter)
@@ -57,7 +57,7 @@ func DBPNftGetNFTDetailByIDs(address string, nftids []string) ([]common.PNftAsse
 	fmt.Println("address: ", address)
 	fmt.Println("nftids: ", nftids)
 
-	filter := bson.M{"contract_address": bson.M{operator.Eq: address}, "token_id": bson.M{operator.All: nftids}}
+	filter := bson.M{"contract_address": bson.M{operator.Eq: strings.ToLower(address)}, "token_id": bson.M{operator.All: nftids}}
 	err := mgm.Coll(&common.PNftAssetData{}).SimpleFind(&result, filter, &options.FindOptions{})
 	if err != nil {
 		return result, err

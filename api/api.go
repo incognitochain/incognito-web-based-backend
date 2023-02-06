@@ -140,7 +140,7 @@ func StartAPIservice(cfg common.Config) {
 
 	//begin pnft router ================================================
 	pNft := pAppsGroup.Group("/pnft")
-	pNft.GET("/nft_list", APIPnftGetNftsFromAddress)
+	pNft.GET("/nft-list", APIPnftGetNftsFromAddress)
 	pNft.GET("/collections", APIPNftGetCollections)
 	pNft.GET("/collections/:slug/tokens", APIPNftGetCollectionDetail)
 	pNft.POST("/estimatebuyfee", APIPNftEstimateBuyFee)
@@ -150,7 +150,8 @@ func StartAPIservice(cfg common.Config) {
 	pNft.POST("/submitdelisttx", APIPNftSubmitDelist)
 	pNft.POST("/submitbuytx", APIPNftSubmitBuy)
 
-	pNft.GET("/asset_contract/:contract", APIPNftGetCollectionInfo_Test)
+	pNft.GET("/asset-contract/:contract", APIPNftGetCollectionInfo_Test)
+	pNft.POST("/asset/add", APIPNftAddAssetData_Test)
 
 	//end pnft router ================================================
 

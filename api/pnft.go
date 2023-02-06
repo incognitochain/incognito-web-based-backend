@@ -519,6 +519,33 @@ func APIPNftGetCollectionInfo_Test(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error})
 		return
 	}
-	c.JSON(http.StatusBadRequest, gin.H{"Result": pnftCollection})
+	c.JSON(200, gin.H{"Result": pnftCollection})
 	return
+}
+
+func APIPNftAddAssetData_Test(c *gin.Context) {
+	var req PNftAddAssetReq
+
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	// call func to check and create nft data:
+	pNftSellOrder := wcommon.PNftSellOrder{
+		Seller:          req.SellerAddress,
+		ContractAddress: req.ContractAddress,
+		TokenID:         req.TokenID,
+		Amount:          req.Price,
+	}
+	err = createNftAndCollectionToInsertDBWhenListing([]wcommon.PNftSellOrder{pNftSellOrder})
+
+	if err == nil {
+		c.JSON(http.StatusOK, gin.H{"Result": "OK"})
+		return
+	}
+
+	c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+	return
+
 }

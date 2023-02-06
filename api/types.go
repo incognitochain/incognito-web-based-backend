@@ -535,3 +535,10 @@ type MarketItem struct {
 	Collection string `json:"collection"`
 	TokenID    string `json:"token_id"`
 }
+
+type PNftAddAssetReq struct {
+	ContractAddress string
+	TokenID         string
+	Price           string
+	SellerAddress   string
+}

@@ -146,8 +146,8 @@ func StartAPIservice(cfg common.Config) {
 	pNft.POST("/estimatebuyfee", APIPNftEstimateBuyFee)
 	pNft.GET("/info-for-listing", APIPNftGetInfoForListing)
 	pNft.POST("/listingnft", APIPNftListing)
-	pNft.GET("/estimate-delist-fee", APIPNftDelisting)
-	pNft.POST("/submitdelisttx", APIPNftSubmitDelist)
+	// pNft.GET("/estimate-delist-fee", APIPNftDelisting)
+	pNft.GET("/submitdelisttx", APIPNftSubmitDelist)
 	pNft.POST("/submitbuytx", APIPNftSubmitBuy)
 
 	pNft.GET("/asset-contract/:contract", APIPNftGetCollectionInfo_Test)

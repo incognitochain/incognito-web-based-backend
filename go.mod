@@ -17,6 +17,7 @@ require (
 	github.com/gin-contrib/cache v1.2.0
 	github.com/gin-contrib/cors v1.4.0
 	github.com/google/uuid v1.3.0
+	github.com/gosimple/slug v1.13.1
 	github.com/incognitochain/bridge-eth v0.0.0-20230202025329-cc7576b44d60
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/mileusna/useragent v1.2.1
@@ -56,7 +57,6 @@ require (
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/gosimple/slug v1.13.1 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect

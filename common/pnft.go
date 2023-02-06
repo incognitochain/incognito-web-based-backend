@@ -61,6 +61,7 @@ type Filter struct {
 type PNftSellOrder struct {
 	mgm.DefaultModel `bson:",inline"`
 	IsCanceling      bool   `bson:"is_canceling"`
+	OrderHash        string `bson:"order_hash"`
 	Seller           string `bson:"seller"`
 	ContractAddress  string `bson:"contract_address"`
 	TokenID          string `bson:"token_id"`

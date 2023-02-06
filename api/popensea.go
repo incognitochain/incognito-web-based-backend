@@ -440,3 +440,123 @@ func estimateOpenSeaFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network
 
 	return &result, nil
 }
+
+// TODO: update this
+func estimatePNFTFee(amount uint64, burnTokenInfo *wcommon.TokenInfo, network string, networkFees *wcommon.ExternalNetworksFeeData, spTkList []PappSupportedTokenData) (*OpenSeaFee, error) {
+
+	networkID := wcommon.GetNetworkID(network)
+	isSupportedOutNetwork := false
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, childToken := range burnTokenInfo.ListUnifiedToken {
+			childNetID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
+			if err != nil {
+				return nil, err
+			}
+			if childNetID == networkID {
+				isSupportedOutNetwork = true
+				break
+			}
+		}
+
+	} else {
+		netID, err := getNetworkIDFromCurrencyType(burnTokenInfo.CurrencyType)
+		if err != nil {
+			return nil, err
+		}
+		if netID == networkID {
+			isSupportedOutNetwork = true
+		}
+	}
+	if !isSupportedOutNetwork {
+		return nil, errors.New("unsupported network")
+	}
+
+	feeTokenWhiteList, err := retrieveFeeTokenWhiteList()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	isFeeWhitelist := false
+	if _, ok := feeTokenWhiteList[burnTokenInfo.TokenID]; ok {
+		isFeeWhitelist = true
+	}
+
+	if _, ok := networkFees.GasPrice[network]; !ok {
+		return nil, errors.New("network gasPrice not found")
+	}
+	gasPrice := networkFees.GasPrice[network]
+
+	nativeCurrentType := wcommon.GetNativeNetworkCurrencyType(network)
+	nativeToken, err := getNativeTokenData(spTkList, nativeCurrentType)
+	if err != nil {
+		return nil, err
+	}
+
+	isUnifiedNativeToken := false
+
+	if burnTokenInfo.CurrencyType == nativeCurrentType {
+		isUnifiedNativeToken = true
+	}
+	if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+		for _, v := range burnTokenInfo.ListUnifiedToken {
+			if v.CurrencyType == nativeCurrentType {
+				isUnifiedNativeToken = true
+				break
+			}
+		}
+	}
+	gasFee := (wcommon.EVMGasLimitOpensea * gasPrice)
+	amountInBig0 := new(big.Float).SetUint64(amount)
+
+	additionalTokenInFee := amountInBig0.Mul(amountInBig0, new(big.Float).SetFloat64(0.003))
+	additionalTokenInFee = additionalTokenInFee.Mul(additionalTokenInFee, new(big.Float).SetFloat64(math.Pow10(-burnTokenInfo.PDecimals)))
+	fees := getFee(isFeeWhitelist, isUnifiedNativeToken, nativeToken, new(big.Float).SetInt64(1), gasFee, burnTokenInfo.TokenID, burnTokenInfo, &PappSupportedTokenData{
+		CurrencyType: burnTokenInfo.CurrencyType,
+	}, new(big.Float).SetInt64(1), additionalTokenInFee, true)
+	if len(fees) == 0 {
+		return nil, errors.New("can't get fee")
+	}
+	// burntAmount := uint64(0)
+	// protocolFee := uint64(0)
+	// if burnTokenInfo.CurrencyType == wcommon.UnifiedCurrencyType {
+	// 	var tokenID string
+
+	// 	for _, childToken := range burnTokenInfo.ListUnifiedToken {
+	// 		childNetID, err := wcommon.GetNetworkIDFromCurrencyType(childToken.CurrencyType)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		if childNetID == networkID {
+	// 			tokenID = childToken.TokenID
+	// 			break
+	// 		}
+	// 	}
+	// 	burntAmount, protocolFee, err = getUnifiedUnshieldFee(tokenID, burnTokenInfo.TokenID, amount)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// } else {
+	// 	burntAmount = amount
+	// }
+
+	feeAddress := ""
+	feeAddressShardID := byte(0)
+	if incFeeKeySet != nil {
+		feeAddress, err = incFeeKeySet.GetPaymentAddress()
+		if err != nil {
+			return nil, err
+		}
+		_, feeAddressShardID = common.GetShardIDsFromPublicKey(incFeeKeySet.KeySet.PaymentAddress.Pk)
+	}
+	result := OpenSeaFee{
+		FeeAddress:        feeAddress,
+		FeeAddressShardID: int(feeAddressShardID),
+		TokenID:           fees[0].TokenID,
+		Amount:            fees[0].Amount,
+		PrivacyFee:        fees[0].PrivacyFee,
+		// ProtocolFee:       protocolFee,
+		FeeInUSD: fees[0].FeeInUSD,
+	}
+
+	return &result, nil
+}

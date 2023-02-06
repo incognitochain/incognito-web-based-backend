@@ -157,13 +157,20 @@ func APIPNftGetCollectionDetail(c *gin.Context) {
 
 // est fee:
 func APIPNftEstimateBuyFee(c *gin.Context) {
-	contract := c.Query("contract")
-	nftids := c.Query("nftids")
-	burnToken := c.Query("burntoken")
-	burnAmount := c.Query("burnamount")
-	recipient := c.Query("recipient")
+	var req PnftEstimateBuyFeeReq
+	userAgent := c.Request.UserAgent()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	_ = userAgent
+	// contract := c.Query("contract")
+	// nftids := c.Query("nftids")
+	burnToken := req.BurnToken
+	burnAmount := req.BurnAmount
+	recipient := req.Recipient
 
-	_ = contract
 	// currently only supports eth
 	network := "eth"
 	networkID := wcommon.GetNetworkID(network)
@@ -208,8 +215,6 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		burnAmountInc = amountUint64
 	}
 
-	log.Println("nftids: ", nftids)
-
 	feeAmount, err := estimateOpenSeaFee(burnAmountInc, burnTokenInfo, network, networkFees, spTkList)
 	if err != nil {
 		fmt.Println("estimateNftFee", err.Error())
@@ -226,7 +231,7 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	proxyContract, exist := pappList.AppContracts["pnft"] // TODO:
+	proxyContract, exist := pappList.AppContracts["pnft"]
 	if !exist {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "blur contract not found"})
 		return
@@ -234,31 +239,46 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 	log.Println("proxyContract: ", proxyContract)
 	log.Println("recipient: ", recipient)
 
-	// get list asset of the collection:
-	listNFTOrder, err := database.DBPNftGetNFTSellOrder(contract, strings.Split(nftids, ","))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
 	var sellInputs []pnftContract.Execution
-	sellerNFTMap := make(map[string]map[string][]string)
-
-	for _, order := range listNFTOrder {
-		var input pnftContract.Input
-		err := json.Unmarshal([]byte(order.OrderInput), &input)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-			return
-		}
-		sellInputs = append(sellInputs, pnftContract.Execution{Sell: input})
-	}
-
 	notBuyAble := make(map[string][]string)
-	for seller, nftMap := range sellerNFTMap {
-		notBuyAble, err = pnft.CheckNFTsOwnerMoralis(config.MoralisAPI, config.MoralisToken, seller, nftMap)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-			return
+	for market, items := range req.Markets {
+		if market == "popensea" {
+
+		}
+		if market == "pnft" {
+			collectionItems := make(map[string][]string)
+			for _, item := range items {
+				collectionItems[item.Collection] = append(collectionItems[item.Collection], item.TokenID)
+			}
+			for coll, nfts := range collectionItems {
+				listNFTOrder, err := database.DBPNftGetNFTSellOrder(coll, nfts)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+					return
+				}
+				sellerNFTMap := make(map[string]map[string][]string)
+
+				for _, order := range listNFTOrder {
+					var input pnftContract.Input
+					err := json.Unmarshal([]byte(order.OrderInput), &input)
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+						return
+					}
+					sellInputs = append(sellInputs, pnftContract.Execution{Sell: input})
+				}
+				for seller, nftMap := range sellerNFTMap {
+					list, err := pnft.CheckNFTsOwnerMoralis(config.MoralisAPI, config.MoralisToken, seller, nftMap)
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+						return
+					}
+					for _, v := range list {
+						notBuyAble[coll] = append(notBuyAble[coll], v...)
+					}
+				}
+			}
+
 		}
 	}
 
@@ -293,7 +313,7 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 	}{
 		Fee:          feeAmount,
 		Calldata:     callData,
-		CallContract: contract[2:],
+		CallContract: proxyContract[2:],
 		ReceiveToken: receiveToken,
 	}
 	c.JSON(200, gin.H{"Result": result})
@@ -303,13 +323,27 @@ func APIPNftGetInfoForListing(c *gin.Context) {
 	collection := c.Query("collection")
 	_ = collection
 	//TODO: implement
-	//get fee information for a collection
-	//get MatchingPolicy address
-
+	pappList, err := database.DBRetrievePAppsByNetwork("eth")
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("no supported papps found").Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	proxyContract, exist := pappList.AppContracts["pnft-matching-policy"]
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "blur contract not found"})
+		return
+	}
 	result := struct {
 		Fee            map[string]uint
 		MatchingPolicy string
-	}{}
+	}{
+		Fee:            make(map[string]uint),
+		MatchingPolicy: proxyContract,
+	}
 	c.JSON(200, gin.H{"Result": result})
 }
 

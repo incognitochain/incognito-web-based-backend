@@ -512,14 +512,26 @@ type PDaoNetworkFeeResp struct {
 }
 
 type PnftListingReq struct {
-	Items []pnft.Input `json:"items"`
+	Items map[string]pnft.Input `json:"items"` //map[orderhash]input
 }
 
 type PnftDelistingReq struct {
-	Items []PnftDelistingItem `json:"items"`
+	Items map[string]PnftDelistingItem `json:"items"` //map[orderhash]input
 }
 
 type PnftDelistingItem struct {
+	Collection string `json:"collection"`
+	TokenID    string `json:"token_id"`
+}
+
+type PnftEstimateBuyFeeReq struct {
+	BurnToken  string                  `json:"burn_token"`
+	BurnAmount string                  `json:"burn_amount"`
+	Recipient  string                  `json:"recipient"`
+	Markets    map[string][]MarketItem `json:"markets"`
+}
+
+type MarketItem struct {
 	Collection string `json:"collection"`
 	TokenID    string `json:"token_id"`
 }

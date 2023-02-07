@@ -1,6 +1,7 @@
 package pnft
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/incognitochain/bridge-eth/bridge/pnft"
 )
 
 // /v1/user/nft_list
@@ -354,4 +360,32 @@ func CheckNFTsOwnerMoralis(APIEndpoint, token, chain, address string, assetsToCh
 		}
 	}
 	return notBelongAsset, nil
+}
+
+func VerifyOrderSignature(order *pnft.Input, orderHash string, ethClient *ethclient.Client, exchangeAddress string) error {
+	orderHashBytes, err := hex.DecodeString(orderHash)
+	if err != nil {
+		return err
+	}
+	pnftInst, err := pnft.NewBlurExchange(common.HexToAddress(exchangeAddress), ethClient)
+	if err != nil {
+		return err
+	}
+	domainSeparator, _ := pnftInst.DOMAINSEPARATOR(nil)
+
+	hashToSign := crypto.Keccak256Hash([]byte("\x19\x01"), domainSeparator[:], orderHashBytes[:])
+
+	signature := []byte{}
+
+	signature = append(signature, order.R[:]...)
+	signature = append(signature, order.S[:]...)
+	signature = append(signature, order.V-27)
+
+	pubkey, _ := crypto.SigToPub(hashToSign[:], signature)
+	pubkeyBytes := crypto.FromECDSAPub(pubkey)
+
+	if !crypto.VerifySignature(pubkeyBytes, hashToSign[:], signature[:len(signature)-1]) {
+		return errors.New("invalid signature")
+	}
+	return nil
 }

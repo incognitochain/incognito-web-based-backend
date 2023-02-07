@@ -18,7 +18,7 @@ require (
 	github.com/gin-contrib/cors v1.4.0
 	github.com/google/uuid v1.3.0
 	github.com/gosimple/slug v1.13.1
-	github.com/incognitochain/bridge-eth v0.0.0-20230202025329-cc7576b44d60
+	github.com/incognitochain/bridge-eth v0.0.0-20230206033646-a9efba307014
 	github.com/kamva/mgm/v3 v3.1.0
 	github.com/mileusna/useragent v1.2.1
 	github.com/pkg/errors v0.9.1

@@ -353,6 +353,8 @@ github.com/incognitochain/bridge-eth v0.0.0-20220923060843-965bd65e8622 h1:X1gXu
 github.com/incognitochain/bridge-eth v0.0.0-20220923060843-965bd65e8622/go.mod h1:dj6Yznx5Rqwud4I80Rf/6S+fCz8V+ZtkDLw+5tanBI0=
 github.com/incognitochain/bridge-eth v0.0.0-20230202025329-cc7576b44d60 h1:Kq/80hy/0hzCJ3uq0QNbnfTGyghXaU5yMOf+7VsmxOg=
 github.com/incognitochain/bridge-eth v0.0.0-20230202025329-cc7576b44d60/go.mod h1:wiN0rMQEowwekNKXyDR5m0xr/eksmfu6jpfRQxv3s4o=
+github.com/incognitochain/bridge-eth v0.0.0-20230206033646-a9efba307014 h1:bd3dYk3QTEWiAMeFsWYaa0Cv4NjaDJ+7ZLoyJTeOfYg=
+github.com/incognitochain/bridge-eth v0.0.0-20230206033646-a9efba307014/go.mod h1:wiN0rMQEowwekNKXyDR5m0xr/eksmfu6jpfRQxv3s4o=
 github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221229031737-3f952692d247 h1:lFFqKpfOM6RFCFQjfdR0jJ6LoPZrN4MyGmpiG5dgB+k=
 github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221229031737-3f952692d247/go.mod h1:qeVeFPGr/AyLZiYQO/v+pjXhvDVIt93zYYrivb5Nitc=
 github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20221230121213-27eae06a17ed h1:QiUjrssVdFWUOQxQscrzpMr4QXKjn5Lt9Snnr2QmsK4=

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,8 +11,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/gin-gonic/gin"
 	pnftContract "github.com/incognitochain/bridge-eth/bridge/pnft"
+	"github.com/incognitochain/bridge-eth/bridge/pnft/adapter"
 	"github.com/incognitochain/go-incognito-sdk-v2/coin"
 	"github.com/incognitochain/go-incognito-sdk-v2/common/base58"
 	"github.com/incognitochain/go-incognito-sdk-v2/metadata/bridge"
@@ -244,6 +247,8 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 	log.Println("recipient: ", recipient)
 
 	var sellInputs []pnftContract.Execution
+
+	var pNFTCalldata, openseaCalldata, finalCalldata string
 	notBuyAble := make(map[string][]string)
 	for market, items := range req.Markets {
 		if market == "popensea" {
@@ -298,11 +303,38 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		c.JSON(500, gin.H{"Result": result})
 		return
 	}
-
-	callData, err := papps.BuildpNFTBuyCalldata(sellInputs, proxyContract, recipient)
+	pNFTCalldata, err = papps.BuildpNFTBuyCalldata(sellInputs, proxyContract, recipient)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
+	}
+	pNFTCalldataBytes, err := hex.DecodeString(pNFTCalldata)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	adapterProxy, _ := abi.JSON(strings.NewReader(adapter.AdapterMetaData.ABI))
+	if openseaCalldata == "" {
+		calldata, err := adapterProxy.Pack("buyBatchETH", []uint8{0}, [][]byte{pNFTCalldataBytes})
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		finalCalldata = hex.EncodeToString(calldata)
+	} else {
+		openseaCalldataBytes, err := hex.DecodeString(openseaCalldata)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+
+		calldata, err := adapterProxy.Pack("buyBatchETH", []uint8{0, 1}, [][]byte{pNFTCalldataBytes, openseaCalldataBytes})
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		finalCalldata = hex.EncodeToString(calldata)
 	}
 
 	receiveToken := strings.ToLower("6722ec501bE09fb221bCC8a46F9660868d0a6c63")
@@ -317,7 +349,7 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 		ReceiveToken string
 	}{
 		Fee:          feeAmount,
-		Calldata:     callData,
+		Calldata:     finalCalldata,
 		CallContract: proxyContract[2:],
 		ReceiveToken: receiveToken,
 	}

@@ -28,8 +28,12 @@ import (
 func APIPnftGetNftsFromAddress(c *gin.Context) {
 
 	address, _ := c.GetQuery("address")
-
 	log.Println("address: ", address)
+
+	chain, ok := c.Params.Get("chain")
+	if !ok {
+		chain = "goerli"
+	}
 
 	if len(address) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "address is empty"})
@@ -59,7 +63,7 @@ func APIPnftGetNftsFromAddress(c *gin.Context) {
 
 		// }
 
-		response, err = pnft.RetrieveGetNftListFromMoralis(config.MoralisAPI, config.MoralisToken, address)
+		response, err = pnft.RetrieveGetNftListFromMoralis(config.MoralisAPI, config.MoralisToken, chain, address)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
@@ -268,7 +272,8 @@ func APIPNftEstimateBuyFee(c *gin.Context) {
 					sellInputs = append(sellInputs, pnftContract.Execution{Sell: input})
 				}
 				for seller, nftMap := range sellerNFTMap {
-					list, err := pnft.CheckNFTsOwnerMoralis(config.MoralisAPI, config.MoralisToken, seller, nftMap)
+					// TODO lam
+					list, err := pnft.CheckNFTsOwnerMoralis(config.MoralisAPI, config.MoralisToken, "goerli", seller, nftMap)
 					if err != nil {
 						c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 						return

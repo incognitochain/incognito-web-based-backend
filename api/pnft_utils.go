@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: Lam
-// this func is called before user listing nfts:
+// this func is called before user listing nfts (create collection, nft, update price, listing = true):
 func createNftAndCollectionToInsertDBWhenListing(orderList []common.PNftSellOrder) error {
 
 	if len(orderList) == 0 {

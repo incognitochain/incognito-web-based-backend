@@ -116,7 +116,7 @@ func RetrieveGetNftListQuickNode(APIEndpoint, address string) (string, error) {
 	return string(b), nil
 }
 
-func RetrieveGetNftListFromMoralis(APIEndpoint, token, address string) (string, error) {
+func RetrieveGetNftListFromMoralis(APIEndpoint, token, chain, address string) (string, error) {
 	var respond struct {
 		Total    interface{}          `json:"total"`
 		Page     int                  `json:"page"`
@@ -126,7 +126,7 @@ func RetrieveGetNftListFromMoralis(APIEndpoint, token, address string) (string, 
 		Status   string               `json:"status"`
 	}
 
-	url := fmt.Sprintf("%s/%s/nft?chain=eth&format=decimal&normalizeMetadata=true&limit=100", APIEndpoint, address)
+	url := fmt.Sprintf("%s/%s/nft?chain=%s&format=decimal&normalizeMetadata=true&limit=100", APIEndpoint, address, chain)
 
 	log.Println("url: ", url)
 
@@ -307,7 +307,7 @@ func RetrieveGetCollectionInfoFromOpensea(APIEndpoint, apiToken, contract string
 	return &respond.Collection, nil
 }
 
-func CheckNFTsOwnerMoralis(APIEndpoint, token, address string, assetsToCheck map[string][]string) (map[string][]string, error) {
+func CheckNFTsOwnerMoralis(APIEndpoint, token, chain, address string, assetsToCheck map[string][]string) (map[string][]string, error) {
 	notBelongAsset := make(map[string][]string)
 	type AddressAssetsStruct struct {
 		TokenAddress       string      `json:"token_address"`
@@ -327,7 +327,7 @@ func CheckNFTsOwnerMoralis(APIEndpoint, token, address string, assetsToCheck map
 		LastMetadataSync   time.Time   `json:"last_metadata_sync"`
 		MinterAddress      string      `json:"minter_address"`
 	}
-	addressAssetsStr, err := RetrieveGetNftListFromMoralis(APIEndpoint, token, address)
+	addressAssetsStr, err := RetrieveGetNftListFromMoralis(APIEndpoint, token, chain, address)
 	if err != nil {
 		return nil, err
 	}

@@ -566,7 +566,7 @@ func processPendingShieldTxs(txdata wcommon.ShieldTxData) error {
 				log.Println("DBUpdateShieldTxStatus err:", err)
 				return err
 			}
-			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]` inctx shield/redeposit have rejected needed check 😵, exttx `%v`\n", txdata.ExternalTx))
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[shieldtx]`<@UB10TL3UM> inctx shield/redeposit have rejected needed check 😵, exttx `%v`\n", txdata.ExternalTx))
 			return nil
 		}
 	}
@@ -834,7 +834,7 @@ retry:
 				txtype = "unknown"
 			}
 			if otherInfo.IsFailed {
-				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]` tx outchain have failed outcome needed check 😵, exttx `%v`, network `%v`\n", txtype, tx.Txhash, tx.Network))
+				go slacknoti.SendSlackNoti(fmt.Sprintf("`[%v]`<@UB10TL3UM> tx outchain have failed outcome needed check 😵, exttx `%v`, network `%v`\n", txtype, tx.Txhash, tx.Network))
 			} else {
 				if tx.Type == wcommon.ExternalTxTypeSwap {
 					go func() {

@@ -88,7 +88,7 @@ func StartAPIservice(cfg common.Config) {
 
 	r.POST("/submitshieldtx", APISubmitShieldTx) //depercated
 
-	r.POST("/shieldstatus", APIGetShieldStatus)
+	r.GET("/shieldstatus", APIGetStatusByShieldService)
 
 	r.POST("/dexswap", APITrackDEXSwap)
 

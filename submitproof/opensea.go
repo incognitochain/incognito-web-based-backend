@@ -114,8 +114,8 @@ func updateOpenSeaCollectionAssets() {
 					time.Sleep(500 * time.Millisecond)
 					list, nextStr, err := popensea.RetrieveCollectionListing(config.OpenSeaAPIKey, collection.Slug, next)
 					if err != nil {
-						log.Println("RetrieveCollectionListing error: ", err)
-						go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection listing", collection.Slug))
+						// log.Println("RetrieveCollectionListing error: ", err)
+						// go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection listing", collection.Slug))
 						break
 					}
 					log.Println("next", next, nextStr)
@@ -150,8 +150,8 @@ func updateOpenSeaCollectionAssets() {
 					time.Sleep(500 * time.Millisecond)
 					assets, err := popensea.RetrieveCollectionAssetByIDs(config.OpenSeaAPIKey, collection.Address, nftBatch)
 					if err != nil {
-						log.Println("RetrieveCollectionAssetByIDs error: ", err)
-						go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection assets", collection.Slug))
+						// log.Println("RetrieveCollectionAssetByIDs error: ", err)
+						// go slacknoti.SendSlackNoti(fmt.Sprintf("`[opensea]` can't retrieve %v collection assets", collection.Slug))
 						continue
 					}
 					err = database.DBSaveNFTDetail(assets)

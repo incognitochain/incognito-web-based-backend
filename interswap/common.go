@@ -24,9 +24,9 @@ func InitIncClient(network string, config common.Config) error {
 	var err error
 	switch network {
 	case MainnetStr:
-		incClient, err = incclient.NewIncClient(config.FullnodeURL, incclient.MainNetETHHost, 2, network)
+		incClient, err = incclient.NewIncClientWithCache(config.FullnodeURL, incclient.MainNetETHHost, 2, network)
 	default:
-		incClient, err = incclient.NewIncClient(config.FullnodeURL, "", 2, network)
+		incClient, err = incclient.NewIncClientWithCache(config.FullnodeURL, "", 2, network)
 	}
 	if err != nil {
 		return err

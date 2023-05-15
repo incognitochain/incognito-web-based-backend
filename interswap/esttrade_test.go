@@ -44,13 +44,13 @@ func TestGetTxsByCoinPubKey(t *testing.T) {
 		FullnodeURL: "https://beta-fullnode.incognito.org/fullnode",
 	}
 	InitIncClient(MainnetStr, cfg)
-	fmt.Printf("incClient: %+v\n", incClient)
-	findResponseUTXOs("", "", "", 0, config)
+	// fmt.Printf("incClient: %+v\n", incClient)
+	// findResponseUTXOs("", "", "", 0, config)
 
-	// txMap, err := incClient.GetTxs([]string{"3d54bc8e85d318d383e263312ff623885ac4c7456cfab03747dd63d2f2dbc836"},
-	// 	true)
-	// if err != nil {
-	// 	fmt.Printf("Err: %v\n", err)
-	// }
-	// fmt.Printf("txMap: %+v\n", txMap)
+	txMap, err := incClient.GetTxs([]string{"3d54bc8e85d318d383e263312ff623885ac4c7456cfab03747dd63d2f2dbc836"},
+		true)
+	if err != nil {
+		fmt.Printf("Err: %v\n", err)
+	}
+	fmt.Printf("txMap: %+v\n", txMap)
 }

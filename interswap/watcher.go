@@ -127,6 +127,7 @@ type ResponseInfo struct {
 
 func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataType int, config beCommon.Config) (*ResponseInfo, error) {
 	// get UTXOs
+
 	utxos, utxoIndices, err := incClient.GetUnspentOutputCoins(privKey, tokenID, 0)
 	if err != nil {
 		return nil, fmt.Errorf("Error get utxos %v", err)
@@ -135,9 +136,13 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 	for _, u := range utxos {
 		coinPubKey := base58.Base58Check{}.Encode(u.GetPublicKey().ToBytesS(), common.ZeroByte)
 		log.Printf("findResponseUTXOs: coinPubKey %v \n", coinPubKey)
+
+		// TODO: skip this coin temporarily
+		if coinPubKey == "12a7ddtiANkUGUi7FFs16WtgPUhj1FGq7vf8bpEQcKr2WpQqEYE" {
+			continue
+		}
 		coinPubKeys = append(coinPubKeys, coinPubKey)
 	}
-
 	txResponses, err := CallGetTxsByCoinPubKeys2(coinPubKeys, config, incClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error get txs by coin pubkeys %v", err)
@@ -208,12 +213,12 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 	if foundIndex == nil {
 		return nil, errors.New("Invalid coin pub key and index")
 	}
+
 	return &ResponseInfo{
 		Coin:      utxos[*foundIndex],
 		CoinIndex: utxoIndices[*foundIndex],
 		TxID:      foundTxID,
 	}, nil
-
 }
 
 func MarshalCoin(utxos []coin.PlainCoin) []string {

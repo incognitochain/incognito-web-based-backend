@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/incognitochain/incognito-web-based-backend/common"
 )
 
 func TestEstimateSwap(t *testing.T) {
@@ -27,8 +29,7 @@ func TestEstimateSwap(t *testing.T) {
 }
 
 func TestMashalListKeys(t *testing.T) {
-	keys := map[string]string{
-	}
+	keys := map[string]string{}
 	keyBytes, err := json.Marshal(keys)
 	if err != nil {
 		fmt.Printf("Err: $%v\n", err)
@@ -36,4 +37,20 @@ func TestMashalListKeys(t *testing.T) {
 
 	fmt.Printf(string(keyBytes))
 
+}
+
+func TestGetTxsByCoinPubKey(t *testing.T) {
+	cfg := common.Config{
+		FullnodeURL: "https://beta-fullnode.incognito.org/fullnode",
+	}
+	InitIncClient(MainnetStr, cfg)
+	fmt.Printf("incClient: %+v\n", incClient)
+	findResponseUTXOs("", "", "", 0, config)
+
+	// txMap, err := incClient.GetTxs([]string{"3d54bc8e85d318d383e263312ff623885ac4c7456cfab03747dd63d2f2dbc836"},
+	// 	true)
+	// if err != nil {
+	// 	fmt.Printf("Err: %v\n", err)
+	// }
+	// fmt.Printf("txMap: %+v\n", txMap)
 }

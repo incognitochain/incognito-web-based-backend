@@ -137,10 +137,10 @@ func findResponseUTXOs(privKey string, txReq string, tokenID string, metadataTyp
 		coinPubKey := base58.Base58Check{}.Encode(u.GetPublicKey().ToBytesS(), common.ZeroByte)
 		log.Printf("findResponseUTXOs: coinPubKey %v \n", coinPubKey)
 
-		// TODO: skip this coin temporarily
-		if coinPubKey == "12a7ddtiANkUGUi7FFs16WtgPUhj1FGq7vf8bpEQcKr2WpQqEYE" {
-			continue
-		}
+		// // TODO: skip this coin temporarily
+		// if coinPubKey == "12a7ddtiANkUGUi7FFs16WtgPUhj1FGq7vf8bpEQcKr2WpQqEYE" {
+		// 	continue
+		// }
 		coinPubKeys = append(coinPubKeys, coinPubKey)
 	}
 	txResponses, err := CallGetTxsByCoinPubKeys2(coinPubKeys, config, incClient)

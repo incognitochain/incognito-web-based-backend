@@ -55,8 +55,8 @@ func StartWatcher(keylist []string, cfg wcommon.Config, serviceID uuid.UUID) err
 	go forwardCollectedFee()
 	go watchVaultState()
 	go trackDexSwap()
-	go updateOpenSeaCollectionAssets()
-	go updateOpenSeaCollectionDetail()
+	// go updateOpenSeaCollectionAssets()
+	// go updateOpenSeaCollectionDetail()
 
 	go watchPendingProposal()
 	go watchPendingVoting()
@@ -155,12 +155,14 @@ func forwardCollectedFee() {
 		pendingToken, err := getPendingPappsFee(-1)
 		if err != nil {
 			log.Println("getPendingPappsFee", err)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` failed getPendingPappsFee\n %v", err))
 			continue
 		}
 
 		pendingTokenUnshield, err := getPendingUnshieldsFee(-1)
 		if err != nil {
 			log.Println("getPendingUnshieldsFee", err)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` failed getPendingUnshieldsFee\n %v", err))
 			continue
 		}
 
@@ -171,6 +173,7 @@ func forwardCollectedFee() {
 		coins, _, err := incClient.GetAllUTXOsV2(config.IncKey)
 		if err != nil {
 			log.Println("GetAllUTXOsV2", err)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` failed GetAllUTXOsV2\n %v", err))
 			continue
 		}
 
@@ -214,6 +217,7 @@ func forwardCollectedFee() {
 		collectFeeTkBytes, err := json.MarshalIndent(collectFeeTk, "", "\t")
 		if err != nil {
 			log.Println("GetAllUTXOsV2", err)
+			go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` failed MarshalIndent\n %v", err))
 			continue
 		}
 		go slacknoti.SendSlackNoti(fmt.Sprintf("`[collectedfee]` we have collected\n %v", string(collectFeeTkBytes)))

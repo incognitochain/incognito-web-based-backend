@@ -45,6 +45,39 @@ func APIEstimateReward(c *gin.Context) {
 	c.JSON(200, responseBodyData)
 }
 
+func APICheckUnshieldable(c *gin.Context) {
+	var req CheckUnshieldableRequest
+	err := c.MustBindWith(&req, binding.JSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+
+	tokenInfo, err := getTokenInfo(req.UnifiedTokenID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	if len(tokenInfo.ListUnifiedToken) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": errors.New("token not supported")})
+		return
+	}
+
+	var result []string
+	for _, tk := range tokenInfo.ListUnifiedToken {
+		isEnoughVault, err := checkEnoughVault(req.UnifiedTokenID, tk.TokenID, req.Amount)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		if isEnoughVault {
+			result = append(result, tk.TokenID)
+		}
+	}
+
+	c.JSON(200, gin.H{"Result": result})
+}
+
 func APIEstimateUnshield(c *gin.Context) {
 	var req EstimateUnshieldRequest
 	err := c.MustBindWith(&req, binding.JSON)

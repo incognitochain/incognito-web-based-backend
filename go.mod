@@ -7,7 +7,7 @@ require (
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20230515073925-fd4ce545e29f
+	github.com/incognitochain/go-incognito-sdk-v2 v1.0.1-beta.0.20230829072600-f41bc370a926
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 

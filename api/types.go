@@ -106,6 +106,11 @@ type EstimateUnshieldRequest struct {
 	Network string
 }
 
+type CheckUnshieldableRequest struct {
+	UnifiedTokenID string `json:"unshieldTokenId"`
+	Amount         uint64 `json:"amount"`
+}
+
 type EstimateUnshieldRespond struct {
 	BurntAmount       uint64
 	Fee               uint64

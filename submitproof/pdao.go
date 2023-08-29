@@ -397,7 +397,7 @@ func watchReadyToVote() {
 			continue
 		}
 
-		evmClient, err := ethclient.Dial(networkInfo.Endpoints[1])
+		evmClient, err := ethclient.Dial(networkInfo.Endpoints[0])
 		if err != nil {
 			log.Println("watchReadyToVote DBGetSuccessProposalNoVoted err:" + err.Error())
 			continue

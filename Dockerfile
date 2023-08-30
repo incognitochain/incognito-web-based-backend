@@ -15,7 +15,8 @@ FROM alpine:3.16
 EXPOSE 8080
 
 WORKDIR /app
+COPY devenv/service/run.sh /app/run.sh
+COPY --from=build /app/incognito-web-based-backend /app/webservice
 
-COPY --from=build /app/incognito-web-based-backend /app/incognito-web-based-backend
-
-CMD [ "./incognito-web-based-backend" ]
+RUN chmod +x /app/run.sh /app/webservice
+ENTRYPOINT [ "/app/run.sh" ]

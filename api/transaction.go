@@ -85,10 +85,10 @@ func APISubmitUnshieldTx(c *gin.Context) {
 				PaymentAddress:      PaymentAddress,
 				PrivacyTokenAddress: PrivacyTokenAddress,
 				WalletAddress:       req.WalletAddress,
-				UserFeeLevel:        1,
+				UserFeeLevel:        2,
 				IncognitoTx:         req.IncognitoTx,
 				ID:                  ID,
-				UserFeeSelection:    1,
+				UserFeeSelection:    2,
 			}
 
 			a, _ := json.Marshal(newReq)

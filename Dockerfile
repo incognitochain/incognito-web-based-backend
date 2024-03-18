@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -tags=jsoniter -ldflags "-linkmode external -extldflags -static" -o incognito-web-based-backend
+RUN go build -tags=jsoniter -o incognito-web-based-backend
 
 FROM alpine:3.16
 EXPOSE 8080

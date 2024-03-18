@@ -17,10 +17,11 @@ import (
 	"github.com/adjust/rmq/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/light"
+	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/incognitochain/bridge-eth/bridge/vault"
@@ -93,7 +94,7 @@ func getETHDepositProof(
 	}
 	siblingTxs := blk.Body().Transactions
 	keybuf := new(bytes.Buffer)
-	receiptTrie := new(trie.Trie)
+	receiptTrie := trie.NewEmpty(trie.NewDatabase(rawdb.NewMemoryDatabase(), nil))
 	receipts := make([]*types.Receipt, 0)
 
 	for i, siblingTx := range siblingTxs {
@@ -244,22 +245,27 @@ func getETHDepositProof(
 	}
 
 	// Constructing the proof for the current receipt (source: go-ethereum/trie/proof.go)
-	proof := light.NewNodeSet()
+	proof := memorydb.New()
 	keybuf.Reset()
 	err = rlp.Encode(keybuf, uint(txIndex))
 	if err != nil {
 		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
 	}
-	err = receiptTrie.Prove(keybuf.Bytes(), 0, proof)
+	err = receiptTrie.Prove(keybuf.Bytes(), proof)
 	if err != nil {
 		return nil, "", 0, nil, "", "", false, "", 0, "", isTxPass, err
 	}
-	nodeList := proof.NodeList()
+	// nodeList := proof.NodeList()
+
+	nodeList := proof.NewIterator(nil, nil)
 	encNodeList := make([]string, 0)
-	for _, node := range nodeList {
-		str := base64.StdEncoding.EncodeToString(node)
-		encNodeList = append(encNodeList, str)
+	for nodeList.Next() {
+		encNodeList = append(encNodeList, base64.StdEncoding.EncodeToString(nodeList.Value()))
 	}
+	// for _, node := range nodeList {
+	// 	str := base64.StdEncoding.EncodeToString(node)
+	// 	encNodeList = append(encNodeList, str)
+	// }
 	return blockNumber, blockHash, uint(txIndex), encNodeList, contractID, paymentaddress, isRedeposit, otaStr, shieldAmount, logResult, isTxPass, nil
 }
 
